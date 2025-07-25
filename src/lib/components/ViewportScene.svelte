@@ -5,10 +5,18 @@
         OrbitControls,
         TransformControls,
         interactivity,
+        Outlines,
     } from "@threlte/extras";
     import type * as Types from "$lib/types";
 
-    let { scene, activeTool } = $props();
+    let {
+        scene,
+        activeTool = "select",
+        transformMode = "translate",
+        transformSpace = "local",
+    } = $props();
+    let selectedObjectId = $state(null);
+    let isDragging = $state(false);
 
     interactivity();
 
@@ -29,31 +37,59 @@
 <!-- Scene Rendering -->
 {#each scene.objects as object (object.id)}
     <T.Group
-        key={object.id}
+        bind:ref={object.groupRef}
         position={[object.position.x, object.position.y, object.position.z]}
         rotation={[object.rotation.x, object.rotation.y, object.rotation.z]}
         scale={[object.scale.x, object.scale.y, object.scale.z]}
     >
+        <T.Mesh
+            castShadow
+            receiveShadow
+            onclick={() => {
+                if (!isDragging) {
+                    selectedObjectId = object.id;
+                }
+            }}
+        >
+            <T.BoxGeometry args={[1, 1, 1]} />
+            <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+
+            {#if selectedObjectId === object.id}
+                <Outlines color="#00aaff" />
+            {/if}
+        </T.Mesh>
+    </T.Group>
+
+    {#if activeTool !== "select" && selectedObjectId === object.id}
         <TransformControls
-            mode="translate"
-            space="local"
+            object={object.groupRef}
+            mode={transformMode}
+            space={transformSpace}
             translationSnap={0.5}
             rotationSnap={Math.PI / 12}
             scaleSnap={0.1}
-        >
-            <T.Mesh castShadow receiveShadow>
-                <T.BoxGeometry args={[1, 1, 1]} />
-                <T.MeshStandardMaterial color={object.color || "#ffffff"} />
-            </T.Mesh>
-        </TransformControls>
-    </T.Group>
+            ondragstart={() => {
+                isDragging = true;
+            }}
+            ondragend={() => {
+                setTimeout(() => {
+                    isDragging = false;
+                }, 10);
+            }}
+            onobjectchange={(e) => {
+                const transform = e.target.object;
+                object.position.x = transform.position.x;
+                object.position.y = transform.position.y;
+                object.position.z = transform.position.z;
+                object.rotation.x = transform.rotation.x;
+                object.rotation.y = transform.rotation.y;
+                object.rotation.z = transform.rotation.z;
+                object.scale.x = transform.scale.x;
+                object.scale.y = transform.scale.y;
+                object.scale.z = transform.scale.z;
+            }}
+        />
+    {/if}
 {/each}
-
-<T.Group>
-    <T.Mesh position.y={1} castShadow receiveShadow>
-        <T.SphereGeometry args={[1]} />
-        <T.MeshStandardMaterial color="#FE3D00" toneMapped={false} />
-    </T.Mesh>
-</T.Group>
 
 <Grid cellColor="#303030" sectionColor="#353535" />

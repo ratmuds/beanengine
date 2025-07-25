@@ -30,6 +30,7 @@
         RotateCw,
         Scale,
         House,
+        Earth,
         LayoutDashboard,
         MousePointer2,
         Scaling,
@@ -395,10 +396,20 @@
     testPart.position = new Types.BVector3(0, 5, 0);
     testPart.scale = new Types.BVector3(1, 1, 10);
     testScene.addObject(testPart);
+    let testPart2 = new Types.BPart("Test Object 2", null, null);
+    testPart2.position = new Types.BVector3(2, 5, 0);
+    testPart2.scale = new Types.BVector3(1, 1, 10);
+    testScene.addObject(testPart2);
 
     // Loading state
     let isViewportLoading = true;
     let loadingText = "Starting...";
+
+    // Transform tool state
+    let activeTool = "select";
+    let transformMode = "translate";
+    let transformSpace = "local";
+    let selectedObjectId = null;
 
     // Simulate loading process
     async function initializeViewport() {
@@ -479,32 +490,65 @@
                 <Separator orientation="vertical" class="h-6 mx-2" />
 
                 <Button
-                    variant="secondary"
+                    variant={activeTool === "select" ? "secondary" : "ghost"}
                     size="sm"
                     class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    onclick={() => (activeTool = "select")}
                 >
                     <MousePointer2 class="w-4 h-4" />
                 </Button>
                 <Button
-                    variant="ghost"
+                    variant={activeTool === "move" ? "secondary" : "ghost"}
                     size="sm"
                     class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    onclick={() => {
+                        activeTool = "move";
+                        transformMode = "translate";
+                    }}
                 >
                     <Move class="w-4 h-4" />
                 </Button>
                 <Button
-                    variant="ghost"
+                    variant={activeTool === "rotate" ? "secondary" : "ghost"}
                     size="sm"
                     class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    onclick={() => {
+                        activeTool = "rotate";
+                        transformMode = "rotate";
+                    }}
                 >
                     <RotateCw class="w-4 h-4" />
                 </Button>
                 <Button
-                    variant="ghost"
+                    variant={activeTool === "scale" ? "secondary" : "ghost"}
                     size="sm"
                     class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    onclick={() => {
+                        activeTool = "scale";
+                        transformMode = "scale";
+                    }}
                 >
                     <Scaling class="w-4 h-4" />
+                </Button>
+
+                <Separator orientation="vertical" class="h-6 mx-1" />
+
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-8 px-3 text-slate-300 hover:bg-slate-600 text-xs"
+                    onclick={() =>
+                        (transformSpace =
+                            transformSpace === "world" ? "local" : "world")}
+                >
+                    {#if transformSpace === "world"}
+                        <Earth class="w-4 h-4 mr-1" />
+                        <span>World</span>
+                    {/if}
+                    {#if transformSpace === "local"}
+                        <Box class="w-4 h-4 mr-1" />
+                        <span>Local</span>
+                    {/if}
                 </Button>
             </div>
         </div>
@@ -597,7 +641,7 @@
                                         <DropdownMenuCheckboxItem
                                             class="text-gray-300 hover:bg-gray-700/60"
                                             checked={tab.visible}
-                                            on:click={() => {
+                                            onclick={() => {
                                                 if (tab.visible) {
                                                     closeTab(tab.id);
                                                 } else {
@@ -631,7 +675,12 @@
                                             transition:fade={{ duration: 500 }}
                                         >
                                             <Canvas>
-                                                <Scene scene={testScene} />
+                                                <Scene
+                                                    scene={testScene}
+                                                    {activeTool}
+                                                    {transformMode}
+                                                    {transformSpace}
+                                                />
                                             </Canvas>
                                         </div>
                                     {/if}
@@ -682,7 +731,7 @@
                                                 variant="ghost"
                                                 size="sm"
                                                 class="h-7 px-3 text-xs text-green-400 hover:bg-green-500/20"
-                                                on:click={() =>
+                                                onclick={() =>
                                                     console.log(
                                                         "Run script:",
                                                         selectedScript

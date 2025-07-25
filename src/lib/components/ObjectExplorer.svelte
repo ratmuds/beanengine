@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher } from "svelte";
     import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
     import ItemSwitcher from "./ItemSwitcher.svelte";
@@ -20,7 +20,7 @@
         EyeOff,
         Lock,
         Unlock,
-        Navigation
+        Navigation,
     } from "lucide-svelte";
 
     export let sceneObjects: Array<{
@@ -46,24 +46,30 @@
         gotoObject: { id: string };
     }>();
 
-    let searchQuery = '';
+    let searchQuery = "";
     let contextMenu: { x: number; y: number; objectId: string } | null = null;
     let selectedObjectId: string | null = null;
 
     $: filteredObjects = searchQuery.trim()
-        ? sceneObjects.filter(obj => 
-            obj.name.toLowerCase().includes(searchQuery.toLowerCase())
+        ? sceneObjects.filter((obj) =>
+              obj.name.toLowerCase().includes(searchQuery.toLowerCase())
           )
         : sceneObjects;
 
     function getObjectIcon(type: string) {
         switch (type) {
-            case "camera": return Camera;
-            case "light": return Lightbulb;
-            case "folder": return Folder;
-            case "mesh": return Box;
-            case "script": return FileImage;
-            default: return Box;
+            case "camera":
+                return Camera;
+            case "light":
+                return Lightbulb;
+            case "folder":
+                return Folder;
+            case "mesh":
+                return Box;
+            case "script":
+                return FileImage;
+            default:
+                return Box;
         }
     }
 
@@ -72,17 +78,17 @@
         contextMenu = {
             x: event.clientX,
             y: event.clientY,
-            objectId
+            objectId,
         };
     }
 
     function handleObjectClick(objectId: string) {
         selectedObjectId = objectId;
-        dispatch('selectObject', { id: objectId });
+        dispatch("selectObject", { id: objectId });
     }
 
     function handleToggleExpanded(objectId: string) {
-        dispatch('toggleExpanded', { id: objectId });
+        dispatch("toggleExpanded", { id: objectId });
     }
 
     function closeContextMenu() {
@@ -91,34 +97,34 @@
 
     function handleContextAction(action: string) {
         if (!contextMenu) return;
-        
+
         const objectId = contextMenu.objectId;
         closeContextMenu();
 
         switch (action) {
-            case 'copy':
-                dispatch('copyObject', { id: objectId });
+            case "copy":
+                dispatch("copyObject", { id: objectId });
                 break;
-            case 'duplicate':
-                dispatch('duplicateObject', { id: objectId });
+            case "duplicate":
+                dispatch("duplicateObject", { id: objectId });
                 break;
-            case 'delete':
-                dispatch('deleteObject', { id: objectId });
+            case "delete":
+                dispatch("deleteObject", { id: objectId });
                 break;
-            case 'goto':
-                dispatch('gotoObject', { id: objectId });
+            case "goto":
+                dispatch("gotoObject", { id: objectId });
                 break;
         }
     }
 
     function handleToggleVisibility(event: MouseEvent, objectId: string) {
         event.stopPropagation();
-        dispatch('toggleVisibility', { id: objectId });
+        dispatch("toggleVisibility", { id: objectId });
     }
 
     function handleToggleLock(event: MouseEvent, objectId: string) {
         event.stopPropagation();
-        dispatch('toggleLock', { id: objectId });
+        dispatch("toggleLock", { id: objectId });
     }
 
     // Close context menu when clicking elsewhere
@@ -129,7 +135,9 @@
 
 <svelte:document on:click={handleDocumentClick} />
 
-<div class="h-full bg-gray-900/60 backdrop-blur-sm border-r border-gray-700/30 flex flex-col">
+<div
+    class="h-full bg-gray-900/60 backdrop-blur-sm border-r border-gray-700/30 flex flex-col"
+>
     <!-- Header -->
     <div class="p-4 border-b border-gray-700/30">
         <div class="flex items-center justify-between mb-3">
@@ -138,7 +146,7 @@
                 variant="ghost"
                 size="sm"
                 class="h-7 w-7 p-0 text-gray-400 hover:text-green-400 hover:bg-green-500/20"
-                on:click={() => dispatch('addObject', {})}
+                on:click={() => dispatch("addObject", {})}
             >
                 <Plus class="w-4 h-4" />
             </Button>
@@ -155,7 +163,9 @@
 
         <!-- Search -->
         <div class="mt-3 relative">
-            <Search class="absolute left-3 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-500" />
+            <Search
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+            />
             <Input
                 bind:value={searchQuery}
                 type="text"
@@ -172,7 +182,10 @@
                 {@const Icon = getObjectIcon(obj.type)}
                 {@const hasChildren = obj.children && obj.children.length > 0}
                 <div
-                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-gray-300 hover:bg-gray-800/60 cursor-pointer transition-colors {selectedObjectId === obj.id ? 'bg-blue-600/20 text-blue-300' : ''}"
+                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-gray-300 hover:bg-gray-800/60 cursor-pointer transition-colors {selectedObjectId ===
+                    obj.id
+                        ? 'bg-blue-600/20 text-blue-300'
+                        : ''}"
                     style="margin-left: {obj.depth * 16}px"
                     on:click={() => handleObjectClick(obj.id)}
                     on:contextmenu={(e) => handleRightClick(e, obj.id)}
@@ -183,12 +196,14 @@
                     {#if obj.depth > 0}
                         <div class="absolute left-0 top-0 bottom-0 flex">
                             {#each Array(obj.depth) as _, i}
-                                <div 
+                                <div
                                     class="w-4 flex justify-center"
                                     style="margin-left: {i * 16}px"
                                 >
                                     {#if i === obj.depth - 1}
-                                        <div class="w-px bg-gray-600/40 h-full"></div>
+                                        <div
+                                            class="w-px bg-gray-600/40 h-full"
+                                        ></div>
                                     {/if}
                                 </div>
                             {/each}
@@ -196,11 +211,14 @@
                     {/if}
 
                     <!-- Expand/Collapse button -->
-                    <div class="w-4 h-4 flex items-center justify-center relative z-10">
+                    <div
+                        class="w-4 h-4 flex items-center justify-center relative z-10"
+                    >
                         {#if hasChildren}
                             <button
                                 class="w-3 h-3 text-gray-500 hover:text-gray-300 transition-colors"
-                                on:click|stopPropagation={() => handleToggleExpanded(obj.id)}
+                                on:click|stopPropagation={() =>
+                                    handleToggleExpanded(obj.id)}
                             >
                                 {#if obj.expanded}
                                     <ChevronDown class="w-3 h-3" />
@@ -228,7 +246,9 @@
                     <span class="flex-1 font-medium truncate">{obj.name}</span>
 
                     <!-- Controls -->
-                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div
+                        class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
                         <button
                             class="w-5 h-5 p-0.5 text-gray-500 hover:text-gray-300 transition-colors"
                             on:click={(e) => handleToggleVisibility(e, obj.id)}
@@ -266,14 +286,14 @@
     >
         <button
             class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
-            on:click={() => handleContextAction('copy')}
+            on:click={() => handleContextAction("copy")}
         >
             <Copy class="w-4 h-4" />
             Copy
         </button>
         <button
             class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
-            on:click={() => handleContextAction('duplicate')}
+            on:click={() => handleContextAction("duplicate")}
         >
             <FileImage class="w-4 h-4" />
             Duplicate
@@ -281,7 +301,7 @@
         <div class="h-px bg-gray-700/50 my-1"></div>
         <button
             class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
-            on:click={() => handleContextAction('goto')}
+            on:click={() => handleContextAction("goto")}
         >
             <Navigation class="w-4 h-4" />
             Go to Object
@@ -289,7 +309,7 @@
         <div class="h-px bg-gray-700/50 my-1"></div>
         <button
             class="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/20 flex items-center gap-2 transition-colors"
-            on:click={() => handleContextAction('delete')}
+            on:click={() => handleContextAction("delete")}
         >
             <Trash2 class="w-4 h-4" />
             Delete
