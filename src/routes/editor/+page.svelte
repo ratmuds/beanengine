@@ -1653,8 +1653,8 @@
         font-weight: 500 !important;
     }
 
-    :global(.blocklyBlockBackground) {
-        fill: #1e293b !important;
+    :global(.blocklyBlockBackground[fill="#50ad50"]) {
+        fill: #334155 !important;
         stroke: #334155 !important;
         stroke-width: 1 !important;
     }
