@@ -8,7 +8,7 @@
     } from "@threlte/extras";
     import type * as Types from "$lib/types";
 
-    let { scene } = $props();
+    let { scene, activeTool } = $props();
 
     interactivity();
 
@@ -34,20 +34,26 @@
         rotation={[object.rotation.x, object.rotation.y, object.rotation.z]}
         scale={[object.scale.x, object.scale.y, object.scale.z]}
     >
-        <T.Mesh castShadow receiveShadow>
-            <T.BoxGeometry args={[1, 1, 1]} />
-            <T.MeshStandardMaterial color={object.color || "#ffffff"} />
-        </T.Mesh>
+        <TransformControls
+            mode="translate"
+            space="local"
+            translationSnap={0.5}
+            rotationSnap={Math.PI / 12}
+            scaleSnap={0.1}
+        >
+            <T.Mesh castShadow receiveShadow>
+                <T.BoxGeometry args={[1, 1, 1]} />
+                <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+            </T.Mesh>
+        </TransformControls>
     </T.Group>
 {/each}
 
 <T.Group>
-    <TransformControls>
-        <T.Mesh position.y={1} castShadow receiveShadow>
-            <T.SphereGeometry args={[1]} />
-            <T.MeshStandardMaterial color="#FE3D00" toneMapped={false} />
-        </T.Mesh>
-    </TransformControls>
+    <T.Mesh position.y={1} castShadow receiveShadow>
+        <T.SphereGeometry args={[1]} />
+        <T.MeshStandardMaterial color="#FE3D00" toneMapped={false} />
+    </T.Mesh>
 </T.Group>
 
 <Grid cellColor="#303030" sectionColor="#353535" />
