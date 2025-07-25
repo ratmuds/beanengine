@@ -13,12 +13,7 @@
     } from "$lib/components/ui/resizable";
     import { Separator } from "$lib/components/ui/separator";
     import { Skeleton } from "$lib/components/ui/skeleton";
-    import {
-        Tabs,
-        TabsList,
-        TabsTrigger,
-        TabsContent,
-    } from "$lib/components/ui/tabs";
+    import * as Tabs from "$lib/components/ui/tabs/index.js";
     import {
         DropdownMenu,
         DropdownMenuContent,
@@ -34,6 +29,8 @@
         Move,
         RotateCw,
         Scale,
+        House,
+        LayoutDashboard,
         MousePointer2,
         Scaling,
         Folder,
@@ -59,40 +56,154 @@
         Plus,
     } from "lucide-svelte";
 
+    import { fade } from "svelte/transition";
+
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/ViewportScene.svelte";
     import ScratchBlocksEditor from "$lib/components/ScratchBlocksEditor.svelte";
     import ItemSwitcher from "$lib/components/ItemSwitcher.svelte";
+    import ClassSelector from "$lib/components/ClassSelector.svelte";
+    import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
+    import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
+    import ViewportLoader from "$lib/components/ViewportLoader.svelte";
     import * as Types from "$lib/types";
+    import Input from "$lib/components/ui/input/input.svelte";
 
     // Mock data for object explorer
-    const sceneObjects = [
-        { name: "Main Camera", type: "camera", expanded: false, depth: 0 },
-        { name: "Directional Light", type: "light", expanded: false, depth: 0 },
-        { name: "Player", type: "object", expanded: true, depth: 0 },
-        { name: "PlayerModel", type: "mesh", expanded: false, depth: 1 },
-        { name: "PlayerController", type: "script", expanded: false, depth: 1 },
-        { name: "Environment", type: "folder", expanded: true, depth: 0 },
-        { name: "Ground", type: "mesh", expanded: false, depth: 1 },
-        { name: "Buildings", type: "folder", expanded: false, depth: 1 },
-        { name: "Trees", type: "folder", expanded: false, depth: 1 },
+    let sceneObjects = [
+        {
+            id: "camera1",
+            name: "Main Camera",
+            type: "camera",
+            expanded: false,
+            depth: 0,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "light1",
+            name: "Directional Light",
+            type: "light",
+            expanded: false,
+            depth: 0,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "player1",
+            name: "Player",
+            type: "object",
+            expanded: true,
+            depth: 0,
+            visible: true,
+            locked: false,
+            children: ["playermodel1", "playercontroller1"],
+        },
+        {
+            id: "playermodel1",
+            name: "PlayerModel",
+            type: "mesh",
+            expanded: false,
+            depth: 1,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "playercontroller1",
+            name: "PlayerController",
+            type: "script",
+            expanded: false,
+            depth: 1,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "env1",
+            name: "Environment",
+            type: "folder",
+            expanded: true,
+            depth: 0,
+            visible: true,
+            locked: false,
+            children: ["ground1", "buildings1", "trees1"],
+        },
+        {
+            id: "ground1",
+            name: "Ground",
+            type: "mesh",
+            expanded: false,
+            depth: 1,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "buildings1",
+            name: "Buildings",
+            type: "folder",
+            expanded: false,
+            depth: 1,
+            visible: true,
+            locked: false,
+            children: [],
+        },
+        {
+            id: "trees1",
+            name: "Trees",
+            type: "folder",
+            expanded: false,
+            depth: 1,
+            visible: true,
+            locked: false,
+            children: [],
+        },
     ];
 
-    // Mock properties
-    const selectedObjectProps = {
-        name: "Player",
-        transform: {
-            position: { x: 0, y: 0, z: 0 },
+    // Mock objects for properties panel demonstration
+    const mockObjects = [
+        {
+            name: "Player",
+            id: "player1",
+            type: "Part" as const,
+            position: { x: 0, y: 5, z: 0 },
             rotation: { x: 0, y: 0, z: 0 },
             scale: { x: 1, y: 1, z: 1 },
+            material: "Metal",
+            castShadows: true,
+            receiveShadows: true,
+            visible: true,
         },
-        components: [
-            "Transform",
-            "MeshRenderer",
-            "PlayerController",
-            "Rigidbody",
-        ],
-    };
+        {
+            name: "Main Camera",
+            id: "camera1",
+            type: "Node3D" as const,
+            position: { x: -10, y: 10, z: 10 },
+            rotation: { x: -25, y: 45, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+        },
+        {
+            name: "Directional Light",
+            id: "light1",
+            type: "Light" as const,
+            position: { x: 0, y: 20, z: 0 },
+            rotation: { x: -45, y: 30, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            color: "#fff5b3",
+            intensity: 2.5,
+            lightType: "directional" as const,
+        },
+        {
+            name: "Environment",
+            id: "env1",
+            type: "Object" as const,
+        },
+    ];
+
+    let selectedObject = mockObjects[0];
 
     // Tab management state
     interface TabInfo {
@@ -166,6 +277,9 @@
     let activeTab = "viewport";
     let selectedScript = "PlayerController";
 
+    // Class management
+    let currentClasses = ["Transform", "MeshRenderer", "PlayerController"];
+
     function closeTab(tabId: string) {
         if (tabId === activeTab && openTabs.length > 1) {
             const currentIndex = openTabs.findIndex((tab) => tab.id === tabId);
@@ -201,18 +315,132 @@
         }
     }
 
+    function handleAddClass(event: CustomEvent<{ className: string }>) {
+        const { className } = event.detail;
+        if (!currentClasses.includes(className)) {
+            currentClasses = [...currentClasses, className];
+        }
+    }
+
+    function handleRemoveClass(event: CustomEvent<{ className: string }>) {
+        const { className } = event.detail;
+        currentClasses = currentClasses.filter((c) => c !== className);
+    }
+
+    // Object Explorer handlers
+    function handleSelectObject(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        console.log("Selected object:", id);
+
+        // Find mock object by ID
+        const foundObject = mockObjects.find((obj) => obj.id === id);
+        if (foundObject) {
+            selectedObject = foundObject;
+        }
+    }
+
+    function handleToggleExpanded(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        sceneObjects = sceneObjects.map((obj) =>
+            obj.id === id ? { ...obj, expanded: !obj.expanded } : obj
+        );
+    }
+
+    function handleAddObject(event: CustomEvent<{ parentId?: string }>) {
+        console.log("Add object:", event.detail);
+    }
+
+    function handleDeleteObject(event: CustomEvent<{ id: string }>) {
+        console.log("Delete object:", event.detail.id);
+    }
+
+    function handleDuplicateObject(event: CustomEvent<{ id: string }>) {
+        console.log("Duplicate object:", event.detail.id);
+    }
+
+    function handleCopyObject(event: CustomEvent<{ id: string }>) {
+        console.log("Copy object:", event.detail.id);
+    }
+
+    function handleToggleVisibility(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        sceneObjects = sceneObjects.map((obj) =>
+            obj.id === id ? { ...obj, visible: !obj.visible } : obj
+        );
+    }
+
+    function handleToggleLock(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        sceneObjects = sceneObjects.map((obj) =>
+            obj.id === id ? { ...obj, locked: !obj.locked } : obj
+        );
+    }
+
+    function handleGotoObject(event: CustomEvent<{ id: string }>) {
+        console.log("Go to object:", event.detail.id);
+    }
+
+    // Properties panel handlers
+    function handlePropertyChange(
+        event: CustomEvent<{ property: string; value: any }>
+    ) {
+        const { property, value } = event.detail;
+        if (selectedObject) {
+            selectedObject = { ...selectedObject, [property]: value };
+        }
+    }
+
     const testScene = new Types.BScene();
     let testPart = new Types.BPart("Test Object", null, null);
     testPart.position = new Types.BVector3(0, 5, 0);
     testPart.scale = new Types.BVector3(1, 1, 10);
     testScene.addObject(testPart);
+
+    // Loading state
+    let isViewportLoading = true;
+    let loadingText = "Starting...";
+
+    // Simulate loading process
+    async function initializeViewport() {
+        const loadingSteps = [
+            { text: "Loading components...", delay: 800 },
+            { text: "Finalizing", delay: 400 },
+        ];
+
+        for (const step of loadingSteps) {
+            loadingText = step.text;
+            await new Promise((resolve) => setTimeout(resolve, step.delay));
+        }
+
+        isViewportLoading = false;
+    }
+
+    // Start loading when component mounts
+    import { onMount } from "svelte";
+    onMount(() => {
+        initializeViewport();
+    });
 </script>
 
 <div class="h-screen w-full bg-gray-950 flex flex-col overflow-hidden relative">
-    <!-- Global gradient overlay -->
-    <div
-        class="absolute inset-0 bg-gradient-to-t from-blue-500/15 via-blue-500/5 to-transparent pointer-events-none z-0"
-    ></div>
+    <!-- Blurred blob overlay -->
+    <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+        <!-- Main bottom-right blob cluster -->
+        <div
+            class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"
+        ></div>
+        <div
+            class="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl"
+        ></div>
+
+        <!-- Subtle top-left ambient -->
+        <div
+            class="absolute -top-24 -left-24 w-72 h-72 bg-blue-600/35 rounded-full blur-3xl"
+        ></div>
+        <div
+            class="absolute top-32 -left-16 w-40 h-40 bg-indigo-500/25 rounded-full blur-2xl"
+        ></div>
+    </div>
 
     <!-- Top Navigation Bar -->
     <div
@@ -220,14 +448,23 @@
     >
         <div class="flex items-center gap-4 flex-1">
             <!-- Project Name -->
-            <div class="flex items-center gap-2">
+            <Button class="flex items-center gap-2" variant="ghost">
                 <div
                     class="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded"
                 ></div>
                 <span class="text-gray-200 font-medium text-sm"
                     >Test Project</span
                 >
-            </div>
+            </Button>
+
+            <!-- Top Bar Tabs -->
+            <Tabs.Root value="home">
+                <Tabs.List>
+                    <Tabs.Trigger value="home"><House /></Tabs.Trigger>
+                    <Tabs.Trigger value="object"><Box /></Tabs.Trigger>
+                    <Tabs.Trigger value="ui"><LayoutDashboard /></Tabs.Trigger>
+                </Tabs.List>
+            </Tabs.Root>
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-1 ml-8">
@@ -242,30 +479,30 @@
                 <Separator orientation="vertical" class="h-6 mx-2" />
 
                 <Button
-                    variant="ghost"
+                    variant="secondary"
                     size="sm"
-                    class="h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
                 >
                     <MousePointer2 class="w-4 h-4" />
                 </Button>
                 <Button
                     variant="ghost"
                     size="sm"
-                    class="h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
                 >
                     <Move class="w-4 h-4" />
                 </Button>
                 <Button
                     variant="ghost"
                     size="sm"
-                    class="h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
                 >
                     <RotateCw class="w-4 h-4" />
                 </Button>
                 <Button
                     variant="ghost"
                     size="sm"
-                    class="h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
                 >
                     <Scaling class="w-4 h-4" />
                 </Button>
@@ -289,62 +526,18 @@
         <ResizablePaneGroup direction="horizontal" class="h-full">
             <!-- Left Panel - Object Explorer -->
             <ResizablePane defaultSize={20} minSize={15} maxSize={35}>
-                <div
-                    class="h-full bg-gray-900/60 backdrop-blur-sm border-r border-gray-700/30"
-                >
-                    <div class="p-4">
-                        <h2 class="text-gray-200 font-semibold mb-2">
-                            Object Explorer
-                        </h2>
-
-                        <ItemSwitcher
-                            name="Scene"
-                            options={["Default"]}
-                            defaultOption="Default"
-                        >
-                            <FolderOpen class="w-4 h-4" /></ItemSwitcher
-                        >
-
-                        <Separator class="my-2" />
-
-                        <div class="space-y-1">
-                            {#each sceneObjects as obj}
-                                {@const Icon = getObjectIcon(obj.type)}
-                                <div
-                                    class="flex items-center gap-2 px-2 py-2 rounded text-sm text-gray-300 hover:bg-gray-800/60 cursor-pointer"
-                                    style="margin-left: {obj.depth * 12}px"
-                                >
-                                    {#if obj.type === "folder"}
-                                        {#if obj.expanded}
-                                            <FolderOpen
-                                                class="w-4 h-4 text-gray-400"
-                                            />
-                                        {:else}
-                                            <Folder
-                                                class="w-4 h-4 text-gray-400"
-                                            />
-                                        {/if}
-                                    {:else}
-                                        <Icon class="w-4 h-4 text-gray-400" />
-                                    {/if}
-                                    <span class="flex-1 font-medium"
-                                        >{obj.name}</span
-                                    >
-                                    <div
-                                        class="flex items-center gap-1 opacity-0 group-hover:opacity-100"
-                                    >
-                                        <Eye
-                                            class="w-3.5 h-3.5 text-gray-500 hover:text-gray-300"
-                                        />
-                                        <Unlock
-                                            class="w-3.5 h-3.5 text-gray-500 hover:text-gray-300"
-                                        />
-                                    </div>
-                                </div>
-                            {/each}
-                        </div>
-                    </div>
-                </div>
+                <ObjectExplorer
+                    {sceneObjects}
+                    on:selectObject={handleSelectObject}
+                    on:toggleExpanded={handleToggleExpanded}
+                    on:addObject={handleAddObject}
+                    on:deleteObject={handleDeleteObject}
+                    on:duplicateObject={handleDuplicateObject}
+                    on:copyObject={handleCopyObject}
+                    on:toggleVisibility={handleToggleVisibility}
+                    on:toggleLock={handleToggleLock}
+                    on:gotoObject={handleGotoObject}
+                />
             </ResizablePane>
 
             <ResizableHandle />
@@ -352,15 +545,18 @@
             <!-- Center Panel - Tabbed Interface -->
             <ResizablePane defaultSize={60} minSize={40}>
                 <div class="h-full bg-gray-900/40 backdrop-blur-sm">
-                    <Tabs bind:value={activeTab} class="h-full flex flex-col">
+                    <Tabs.Root
+                        bind:value={activeTab}
+                        class="h-full flex flex-col"
+                    >
                         <!-- Tab Header with Close Buttons and More Menu -->
                         <div
                             class="h-8 bg-gray-800/60 backdrop-blur-sm border-b border-gray-700/30 flex items-center px-1"
                         >
-                            <TabsList class="h-6 bg-transparent p-0 flex-1">
+                            <Tabs.List class="h-6 bg-transparent p-0 flex-1">
                                 {#each openTabs as tab}
                                     <div class="flex items-center relative">
-                                        <TabsTrigger
+                                        <Tabs.Trigger
                                             value={tab.id}
                                             class="h-6 px-2 text-xs rounded-none border-r border-gray-700/30 data-[state=active]:bg-gray-700/60 data-[state=active]:text-gray-200 text-gray-400 hover:text-gray-200"
                                         >
@@ -369,7 +565,7 @@
                                                 class="w-3 h-3 mr-1"
                                             />
                                             {tab.label}
-                                        </TabsTrigger>
+                                        </Tabs.Trigger>
                                         {#if tab.closeable}
                                             <button
                                                 class="absolute -right-1 top-0 h-4 w-4 p-0 hover:bg-red-500/20 rounded-sm flex items-center justify-center z-10"
@@ -381,7 +577,7 @@
                                         {/if}
                                     </div>
                                 {/each}
-                            </TabsList>
+                            </Tabs.List>
 
                             <!-- Three Dots Menu -->
                             <DropdownMenu>
@@ -422,24 +618,33 @@
 
                         <!-- Tab Contents -->
                         <div class="flex-1 overflow-hidden">
-                            <TabsContent
+                            <Tabs.Content
                                 value="viewport"
                                 class="h-full m-0 p-0"
                             >
                                 <div
                                     class="h-full bg-transparent relative overflow-hidden"
                                 >
-                                    <div
-                                        class="absolute inset-0 flex items-center justify-center"
-                                    >
-                                        <Canvas>
-                                            <Scene scene={testScene} />
-                                        </Canvas>
-                                    </div>
-                                </div>
-                            </TabsContent>
+                                    {#if !isViewportLoading}
+                                        <div
+                                            class="absolute inset-0 flex items-center justify-center"
+                                            transition:fade={{ duration: 500 }}
+                                        >
+                                            <Canvas>
+                                                <Scene scene={testScene} />
+                                            </Canvas>
+                                        </div>
+                                    {/if}
 
-                            <TabsContent value="script" class="h-full m-0 p-0">
+                                    <!-- Loading overlay -->
+                                    <ViewportLoader
+                                        isLoading={isViewportLoading}
+                                        {loadingText}
+                                    />
+                                </div>
+                            </Tabs.Content>
+
+                            <Tabs.Content value="script" class="h-full m-0 p-0">
                                 <div
                                     class="h-full bg-gray-900/20 flex flex-col"
                                 >
@@ -492,10 +697,10 @@
                                     <!-- Blockly Workspace -->
                                     <ScratchBlocksEditor />
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
                             <!-- Placeholder content for other tabs -->
-                            <TabsContent
+                            <Tabs.Content
                                 value="materials"
                                 class="h-full m-0 p-0"
                             >
@@ -514,9 +719,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
-                            <TabsContent value="assets" class="h-full m-0 p-0">
+                            <Tabs.Content value="assets" class="h-full m-0 p-0">
                                 <div
                                     class="h-full bg-gray-900/20 flex items-center justify-center"
                                 >
@@ -532,9 +737,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
-                            <TabsContent
+                            <Tabs.Content
                                 value="textures"
                                 class="h-full m-0 p-0"
                             >
@@ -553,9 +758,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
-                            <TabsContent value="audio" class="h-full m-0 p-0">
+                            <Tabs.Content value="audio" class="h-full m-0 p-0">
                                 <div
                                     class="h-full bg-gray-900/20 flex items-center justify-center"
                                 >
@@ -571,9 +776,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
-                            <TabsContent value="input" class="h-full m-0 p-0">
+                            <Tabs.Content value="input" class="h-full m-0 p-0">
                                 <div
                                     class="h-full bg-gray-900/20 flex items-center justify-center"
                                 >
@@ -589,9 +794,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
 
-                            <TabsContent
+                            <Tabs.Content
                                 value="animation"
                                 class="h-full m-0 p-0"
                             >
@@ -610,9 +815,9 @@
                                         </p>
                                     </div>
                                 </div>
-                            </TabsContent>
+                            </Tabs.Content>
                         </div>
-                    </Tabs>
+                    </Tabs.Root>
                 </div>
             </ResizablePane>
 
@@ -620,151 +825,13 @@
 
             <!-- Right Panel - Properties -->
             <ResizablePane defaultSize={20} minSize={15} maxSize={35}>
-                <div
-                    class="h-full bg-gray-900/60 backdrop-blur-sm border-l border-gray-700/30"
-                >
-                    <div class="p-4">
-                        <h3
-                            class="text-gray-300 font-medium text-sm mb-4 flex items-center gap-2"
-                        >
-                            <Settings class="w-4 h-4" />
-                            Properties
-                        </h3>
-
-                        {#if selectedObjectProps}
-                            <Card
-                                class="bg-gray-800/40 backdrop-blur-sm border-gray-700/30 mb-4"
-                            >
-                                <CardHeader class="pb-2 p-4">
-                                    <CardTitle
-                                        class="text-gray-200 text-sm font-medium"
-                                        >{selectedObjectProps.name}</CardTitle
-                                    >
-                                </CardHeader>
-                                <CardContent class="pt-0 p-4">
-                                    <!-- Transform Section -->
-                                    <div class="space-y-6">
-                                        <div>
-                                            <h4
-                                                class="text-gray-300 text-sm font-medium mb-3"
-                                            >
-                                                Position
-                                            </h4>
-                                            <div class="grid grid-cols-3 gap-3">
-                                                <div>
-                                                    <label
-                                                        for="pos-x"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >X</label
-                                                    >
-                                                    <input
-                                                        id="pos-x"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.position
-                                                            .x}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label
-                                                        for="pos-y"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >Y</label
-                                                    >
-                                                    <input
-                                                        id="pos-y"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.position
-                                                            .y}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label
-                                                        for="pos-z"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >Z</label
-                                                    >
-                                                    <input
-                                                        id="pos-z"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.position
-                                                            .z}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <h4
-                                                class="text-gray-300 text-sm font-medium mb-3"
-                                            >
-                                                Scale
-                                            </h4>
-                                            <div class="grid grid-cols-3 gap-3">
-                                                <div>
-                                                    <label
-                                                        for="scale-x"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >X</label
-                                                    >
-                                                    <input
-                                                        id="scale-x"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.scale.x}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label
-                                                        for="scale-y"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >Y</label
-                                                    >
-                                                    <input
-                                                        id="scale-y"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.scale.y}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label
-                                                        for="scale-z"
-                                                        class="text-gray-400 text-xs block mb-2"
-                                                        >Z</label
-                                                    >
-                                                    <input
-                                                        id="scale-z"
-                                                        type="number"
-                                                        value={selectedObjectProps
-                                                            .transform.scale.z}
-                                                        class="w-full bg-gray-700/50 border border-gray-600/30 text-gray-200 text-sm px-3 py-2 rounded focus:border-blue-500 focus:outline-none"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        {:else}
-                            <div class="text-center py-8">
-                                <Box
-                                    class="w-8 h-8 mx-auto mb-3 text-gray-600"
-                                />
-                                <p class="text-gray-500 text-sm">
-                                    Select an object to view properties
-                                </p>
-                            </div>
-                        {/if}
-                    </div>
-                </div>
+                <PropertiesPanel
+                    {selectedObject}
+                    {currentClasses}
+                    on:propertyChange={handlePropertyChange}
+                    on:addClass={handleAddClass}
+                    on:removeClass={handleRemoveClass}
+                />
             </ResizablePane>
         </ResizablePaneGroup>
     </div>
