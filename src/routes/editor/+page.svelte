@@ -347,8 +347,63 @@
         );
     }
 
-    function handleAddObject(event: CustomEvent<{ parentId?: string }>) {
-        console.log("Add object:", event.detail);
+    function handleAddObject(
+        event: CustomEvent<{ parentId?: string; type?: string }>
+    ) {
+        const { type } = event.detail;
+
+        if (type === "Part") {
+            createPartInFrontOfCamera();
+        } else {
+            console.log("Add object:", event.detail);
+        }
+    }
+
+    function createPartInFrontOfCamera() {
+        const partCount = sceneObjects.filter((obj) =>
+            obj.name.startsWith("Part")
+        ).length;
+        const partName = `Part${partCount + 1}`;
+        const partId = `part_${Date.now()}`;
+
+        // Create new part in the scene
+        const newPart = new Types.BPart(partName, null, null);
+        newPart.position = new Types.BVector3(0, 0, 0); // Position in front of camera
+        newPart.scale = new Types.BVector3(1, 1, 1);
+        testScene.addObject(newPart);
+        
+        // Trigger reactive update by reassigning the objects array
+        testScene.objects = [...testScene.objects];
+
+        // Add to scene objects for display in explorer
+        const newSceneObject = {
+            id: partId,
+            name: partName,
+            type: "mesh",
+            expanded: false,
+            depth: 0,
+            visible: true,
+            locked: false,
+            children: [],
+        };
+
+        sceneObjects = [...sceneObjects, newSceneObject];
+
+        // Add to mock objects for properties panel
+        const newMockObject = {
+            name: partName,
+            id: partId,
+            type: "Part" as const,
+            position: { x: 0, y: 0, z: -5 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+            material: "Plastic",
+            castShadows: true,
+            receiveShadows: true,
+            visible: true,
+        };
+
+        mockObjects.push(newMockObject);
     }
 
     function handleDeleteObject(event: CustomEvent<{ id: string }>) {

@@ -2,6 +2,9 @@
     import { createEventDispatcher } from "svelte";
     import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
+    import * as Popover from "$lib/components/ui/popover/index.js";
+    import * as Command from "$lib/components/ui/command/index.js";
+    import { buttonVariants } from "$lib/components/ui/button/index.js";
     import ItemSwitcher from "./ItemSwitcher.svelte";
     import {
         FolderOpen,
@@ -22,6 +25,7 @@
         Unlock,
         Navigation,
     } from "lucide-svelte";
+    import Separator from "./ui/separator/separator.svelte";
 
     export let sceneObjects: Array<{
         id: string;
@@ -37,7 +41,7 @@
     const dispatch = createEventDispatcher<{
         selectObject: { id: string };
         toggleExpanded: { id: string };
-        addObject: { parentId?: string };
+        addObject: { parentId?: string; type?: string };
         deleteObject: { id: string };
         duplicateObject: { id: string };
         copyObject: { id: string };
@@ -131,6 +135,10 @@
     function handleDocumentClick() {
         closeContextMenu();
     }
+
+    function handleAddObjectType(type: string) {
+        dispatch("addObject", { type });
+    }
 </script>
 
 <svelte:document on:click={handleDocumentClick} />
@@ -142,14 +150,40 @@
     <div class="p-4 border-b border-gray-700/30">
         <div class="flex items-center justify-between mb-3">
             <h2 class="text-gray-200 font-semibold">Object Explorer</h2>
-            <Button
-                variant="ghost"
-                size="sm"
-                class="h-7 w-7 p-0 text-gray-400 hover:text-green-400 hover:bg-green-500/20"
-                on:click={() => dispatch("addObject", {})}
-            >
-                <Plus class="w-4 h-4" />
-            </Button>
+
+            <Popover.Root>
+                <Popover.Trigger
+                    size="sm"
+                    class="{buttonVariants({
+                        variant: 'ghost',
+                    })} h-7 w-7 p-0 text-gray-400 hover:text-green-400 hover:bg-green-500/20"
+                    on:click={() => dispatch("addObject", {})}
+                >
+                    <Plus class="w-4 h-4" />
+                </Popover.Trigger>
+                <Popover.Content class="w-80">
+                    <h2 class="font-semibold mb-1">Add Object</h2>
+
+                    <Command.Root>
+                        <Command.Input placeholder="Search for objects..." />
+                        <Command.List>
+                            <Command.Empty>No results found.</Command.Empty>
+                            <Command.Group heading="Common">
+                                <Command.Item value="part" onSelect={() => handleAddObjectType('Part')}>Part</Command.Item>
+                                <Command.Item>Script</Command.Item>
+                                <Command.Item>Light</Command.Item>
+                            </Command.Group>
+                            <Command.Separator />
+                            <Command.Group heading="Other">
+                                <Command.Item>Folder</Command.Item>
+                                <Command.Item>Spawn</Command.Item>
+                                <Command.Item>Particles</Command.Item>
+                                <Command.Item>Constraint</Command.Item>
+                            </Command.Group>
+                        </Command.List>
+                    </Command.Root>
+                </Popover.Content>
+            </Popover.Root>
         </div>
 
         <!-- Scene Selector -->
