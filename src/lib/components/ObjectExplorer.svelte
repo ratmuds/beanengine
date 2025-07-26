@@ -137,6 +137,7 @@
     }
 
     function handleAddObjectType(type: string) {
+        console.log(`Adding object of type: ${type}`);
         dispatch("addObject", { type });
     }
 </script>
@@ -169,7 +170,11 @@
                         <Command.List>
                             <Command.Empty>No results found.</Command.Empty>
                             <Command.Group heading="Common">
-                                <Command.Item value="part" onSelect={() => handleAddObjectType('Part')}>Part</Command.Item>
+                                <Command.Item
+                                    value="part"
+                                    onSelect={() => handleAddObjectType("Part")}
+                                    >Part</Command.Item
+                                >
                                 <Command.Item>Script</Command.Item>
                                 <Command.Item>Light</Command.Item>
                             </Command.Group>

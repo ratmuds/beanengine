@@ -1,50 +1,35 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+    import { fade } from "svelte/transition";
+
     import { Button } from "$lib/components/ui/button";
-    import {
-        Card,
-        CardContent,
-        CardHeader,
-        CardTitle,
-    } from "$lib/components/ui/card";
     import {
         ResizablePaneGroup,
         ResizablePane,
         ResizableHandle,
     } from "$lib/components/ui/resizable";
     import { Separator } from "$lib/components/ui/separator";
-    import { Skeleton } from "$lib/components/ui/skeleton";
     import * as Tabs from "$lib/components/ui/tabs/index.js";
     import {
         DropdownMenu,
         DropdownMenuContent,
         DropdownMenuCheckboxItem,
         DropdownMenuTrigger,
-        DropdownMenuSeparator,
     } from "$lib/components/ui/dropdown-menu";
+
     import {
         Play,
-        Square,
-        Pause,
-        RotateCcw,
         Move,
         RotateCw,
-        Scale,
+        Scaling,
         House,
         Earth,
         LayoutDashboard,
         MousePointer2,
-        Scaling,
-        Folder,
-        FolderOpen,
         Box,
         Camera,
         Lightbulb,
         Settings,
-        Eye,
-        EyeOff,
-        Lock,
-        Unlock,
-        MoreHorizontal,
         X,
         Code2,
         Monitor,
@@ -57,21 +42,18 @@
         Plus,
     } from "lucide-svelte";
 
-    import { fade } from "svelte/transition";
-
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/ViewportScene.svelte";
     import ScratchBlocksEditor from "$lib/components/ScratchBlocksEditor.svelte";
-    import ItemSwitcher from "$lib/components/ItemSwitcher.svelte";
-    import ClassSelector from "$lib/components/ClassSelector.svelte";
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
     import ViewportLoader from "$lib/components/ViewportLoader.svelte";
+
     import * as Types from "$lib/types";
-    import Input from "$lib/components/ui/input/input.svelte";
+    import { sceneStore } from "$lib/sceneStore";
 
     // Mock data for object explorer
-    let sceneObjects = [
+    let sceneObjects = $state([
         {
             id: "camera1",
             name: "Main Camera",
@@ -162,10 +144,10 @@
             locked: false,
             children: [],
         },
-    ];
+    ]);
 
     // Mock objects for properties panel demonstration
-    const mockObjects = [
+    const mockObjects = $state([
         {
             name: "Player",
             id: "player1",
@@ -202,9 +184,9 @@
             id: "env1",
             type: "Object" as const,
         },
-    ];
+    ]);
 
-    let selectedObject = mockObjects[0];
+    let selectedObject = $state(mockObjects[0]);
 
     // Tab management state
     interface TabInfo {
@@ -274,12 +256,16 @@
         },
     ];
 
-    let openTabs = availableTabs.filter((tab) => tab.visible);
-    let activeTab = "viewport";
-    let selectedScript = "PlayerController";
+    let openTabs = $state(availableTabs.filter((tab) => tab.visible));
+    let activeTab = $state("viewport");
+    let selectedScript = $state("PlayerController");
 
     // Class management
-    let currentClasses = ["Transform", "MeshRenderer", "PlayerController"];
+    let currentClasses = $state([
+        "Transform",
+        "MeshRenderer",
+        "PlayerController",
+    ]);
 
     function closeTab(tabId: string) {
         if (tabId === activeTab && openTabs.length > 1) {
@@ -360,25 +346,17 @@
     }
 
     function createPartInFrontOfCamera() {
-        const partCount = sceneObjects.filter((obj) =>
-            obj.name.startsWith("Part")
-        ).length;
-        const partName = `Part${partCount + 1}`;
         const partId = `part_${Date.now()}`;
+        sceneStore.createPartInFrontOfCamera();
 
-        // Create new part in the scene
-        const newPart = new Types.BPart(partName, null, null);
-        newPart.position = new Types.BVector3(0, 0, 0); // Position in front of camera
-        newPart.scale = new Types.BVector3(1, 1, 1);
-        testScene.addObject(newPart);
-        
-        // Trigger reactive update by reassigning the objects array
-        testScene.objects = [...testScene.objects];
+        // Get the latest part that was just added
+        const scene = $sceneStore.getScene();
+        const latestPart = scene.objects[scene.objects.length - 1];
 
         // Add to scene objects for display in explorer
         const newSceneObject = {
             id: partId,
-            name: partName,
+            name: latestPart.name,
             type: "mesh",
             expanded: false,
             depth: 0,
@@ -391,10 +369,10 @@
 
         // Add to mock objects for properties panel
         const newMockObject = {
-            name: partName,
+            name: latestPart.name,
             id: partId,
             type: "Part" as const,
-            position: { x: 0, y: 0, z: -5 },
+            position: { x: 0, y: 0, z: 0 },
             rotation: { x: 0, y: 0, z: 0 },
             scale: { x: 1, y: 1, z: 1 },
             material: "Plastic",
@@ -446,25 +424,30 @@
         }
     }
 
-    const testScene = new Types.BScene();
-    let testPart = new Types.BPart("Test Object", null, null);
-    testPart.position = new Types.BVector3(0, 5, 0);
-    testPart.scale = new Types.BVector3(1, 1, 10);
-    testScene.addObject(testPart);
-    let testPart2 = new Types.BPart("Test Object 2", null, null);
-    testPart2.position = new Types.BVector3(2, 5, 0);
-    testPart2.scale = new Types.BVector3(1, 1, 10);
-    testScene.addObject(testPart2);
+    // Add initial test objects on mount
+    onMount(() => {
+        const testPart = new Types.BPart("Test Object", null, null);
+        testPart.position = new Types.BVector3(0, 5, 0);
+        testPart.scale = new Types.BVector3(1, 1, 10);
+        sceneStore.addObject(testPart);
+
+        const testPart2 = new Types.BPart("Test Object 2", null, null);
+        testPart2.position = new Types.BVector3(2, 5, 0);
+        testPart2.scale = new Types.BVector3(1, 1, 10);
+        sceneStore.addObject(testPart2);
+
+        initializeViewport();
+    });
 
     // Loading state
-    let isViewportLoading = true;
-    let loadingText = "Starting...";
+    let isViewportLoading = $state(true);
+    let loadingText = $state("Starting...");
 
     // Transform tool state
-    let activeTool = "select";
-    let transformMode = "translate";
-    let transformSpace = "local";
-    let selectedObjectId = null;
+    let activeTool = $state("select");
+    let transformMode = $state("translate");
+    let transformSpace = $state("local");
+    let selectedObjectId = $state(null);
 
     // Simulate loading process
     async function initializeViewport() {
@@ -480,12 +463,6 @@
 
         isViewportLoading = false;
     }
-
-    // Start loading when component mounts
-    import { onMount } from "svelte";
-    onMount(() => {
-        initializeViewport();
-    });
 </script>
 
 <div class="h-screen w-full bg-gray-950 flex flex-col overflow-hidden relative">
@@ -588,22 +565,28 @@
 
                 <Separator orientation="vertical" class="h-6 mx-1" />
 
+                <!-- Transform Space Mode -->
                 <Button
                     variant="outline"
                     size="sm"
-                    class="h-8 px-3 text-slate-300 hover:bg-slate-600 text-xs"
+                    class="h-8 px-2 text-slate-300 hover:bg-slate-600 flex flex-col items-center py-1 gap-0"
                     onclick={() =>
                         (transformSpace =
                             transformSpace === "world" ? "local" : "world")}
                 >
-                    {#if transformSpace === "world"}
-                        <Earth class="w-4 h-4 mr-1" />
-                        <span>World</span>
-                    {/if}
-                    {#if transformSpace === "local"}
-                        <Box class="w-4 h-4 mr-1" />
-                        <span>Local</span>
-                    {/if}
+                    <span class="text-[9px] text-gray-500 leading-none"
+                        >Space</span
+                    >
+                    <div class="flex items-center gap-1">
+                        {#if transformSpace === "world"}
+                            <Earth class="w-4 h-4" />
+                            <span class="text-xs">World</span>
+                        {/if}
+                        {#if transformSpace === "local"}
+                            <Box class="w-4 h-4" />
+                            <span class="text-xs">Local</span>
+                        {/if}
+                    </div>
                 </Button>
             </div>
         </div>
@@ -731,7 +714,7 @@
                                         >
                                             <Canvas>
                                                 <Scene
-                                                    scene={testScene}
+                                                    sceneStore={$sceneStore}
                                                     {activeTool}
                                                     {transformMode}
                                                     {transformSpace}

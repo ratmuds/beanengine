@@ -3,6 +3,7 @@
     import { createEventBlocks, createControlBlocks } from "$lib/scratchBlocks";
 
     let blocklyWorkspace = null;
+    let blocklyContainer: HTMLDivElement;
 
     // Define a scratch-blocks toolbox (in XML format)
     const toolboxXml = `
@@ -106,7 +107,8 @@
         if (
             typeof window !== "undefined" &&
             window.Blockly &&
-            !blocklyWorkspace
+            !blocklyWorkspace &&
+            blocklyContainer
         ) {
             try {
                 // A map of object types to their available properties
@@ -470,7 +472,7 @@
                     },
                 };
 
-                blocklyWorkspace = window.Blockly.inject("blocklyDiv", {
+                blocklyWorkspace = window.Blockly.inject(blocklyContainer, {
                     // Point to the scratch-blocks media assets
                     media: "./node_modules/scratch-blocks/media/",
                     toolbox: toolboxXml,
@@ -581,164 +583,159 @@
 
 <!-- Blockly Workspace -->
 <div class="flex-1 relative">
-    <div id="blocklyDiv" class="absolute inset-0"></div>
+    <div
+        bind:this={blocklyContainer}
+        class="absolute inset-0 scratch-blocks-container"
+    ></div>
 </div>
 
 <style>
-    /* Clean modern dark theme for scratch-blocks */
-
-    /* Main workspace and background */
-    :global(.blocklyMainBackground) {
+    /* Scoped styles for the Scratch blocks container */
+    .scratch-blocks-container :global(.blocklyMainBackground) {
         fill: #0f172a !important;
     }
 
-    /* Grid pattern */
-    :global(#blocklyGridPattern8195634415750042 line) {
+    .scratch-blocks-container
+        :global(#blocklyGridPattern8195634415750042 line) {
         stroke: #334155 !important;
         stroke-width: 1 !important;
         opacity: 0.3 !important;
     }
 
-    /* Toolbox and flyout styling */
-    :global(.blocklyToolboxDiv) {
+    .scratch-blocks-container :global(.blocklyToolboxDiv) {
         background-color: #1e293b !important;
         border-right: 1px solid #334155 !important;
         box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3) !important;
     }
 
-    :global(.scratchCategoryMenu) {
+    .scratch-blocks-container :global(.scratchCategoryMenu) {
         background-color: #1e293b !important;
     }
 
-    :global(.scratchCategoryMenuItem) {
+    .scratch-blocks-container :global(.scratchCategoryMenuItem) {
         border-radius: 8px !important;
         transition: background-color 0.2s ease !important;
     }
 
-    :global(.scratchCategoryMenuItem:hover) {
+    .scratch-blocks-container :global(.scratchCategoryMenuItem:hover) {
         background-color: #334155 !important;
     }
 
-    :global(.scratchCategoryMenuItem.categorySelected) {
+    .scratch-blocks-container
+        :global(.scratchCategoryMenuItem.categorySelected) {
         background-color: #1e40af !important;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
     }
 
-    :global(.scratchCategoryMenuItemLabel) {
+    .scratch-blocks-container :global(.scratchCategoryMenuItemLabel) {
         color: #e2e8f0 !important;
         font-weight: 500 !important;
         font-size: 14px !important;
     }
 
-    :global(.scratchCategoryItemBubble) {
+    .scratch-blocks-container :global(.scratchCategoryItemBubble) {
         border-radius: 50% !important;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3) !important;
     }
 
-    /* Flyout panel */
-    :global(.blocklyFlyout) {
+    .scratch-blocks-container :global(.blocklyFlyout) {
         fill: #1e293b !important;
         filter: drop-shadow(2px 0 8px rgba(0, 0, 0, 0.3)) !important;
     }
 
-    :global(.blocklyFlyoutBackground) {
+    .scratch-blocks-container :global(.blocklyFlyoutBackground) {
         fill: #1e293b !important;
         stroke: #334155 !important;
         stroke-width: 1 !important;
     }
 
-    :global(.blocklyFlyoutLabel) {
+    .scratch-blocks-container :global(.blocklyFlyoutLabel) {
         font-weight: 600 !important;
         font-size: 16px !important;
     }
 
-    :global(.blocklyFlyoutLabelBackground) {
+    .scratch-blocks-container :global(.blocklyFlyoutLabelBackground) {
         fill: #334155 !important;
         stroke: #475569 !important;
         stroke-width: 1 !important;
     }
 
-    :global(.blocklyFlyoutLabelText) {
+    .scratch-blocks-container :global(.blocklyFlyoutLabelText) {
         fill: #e2e8f0 !important;
         font-weight: 600 !important;
     }
 
-    /* Block text and interactions */
-    :global(.blocklyText) {
+    .scratch-blocks-container :global(.blocklyText) {
         font-family: "Inter", "Segoe UI", sans-serif !important;
         font-weight: 500 !important;
         font-size: 13px !important;
         color: white !important;
     }
 
-    :global(.blocklyNonEditableText > text) {
+    .scratch-blocks-container :global(.blocklyNonEditableText > text) {
         fill: #ffffff !important;
     }
 
-    :global(.blocklyEditableText > text) {
-        fill: #ffffff !important;
-        font-weight: 500 !important;
-    }
-
-    :global(.blocklyDropdownText) {
+    .scratch-blocks-container :global(.blocklyEditableText > text) {
         fill: #ffffff !important;
         font-weight: 500 !important;
     }
 
-    :global(.blocklyBlockBackground[fill="#50ad50"]) {
+    .scratch-blocks-container :global(.blocklyDropdownText) {
+        fill: #ffffff !important;
+        font-weight: 500 !important;
+    }
+
+    .scratch-blocks-container :global(.blocklyBlockBackground[fill="#50ad50"]) {
         fill: #334155 !important;
         stroke: #334155 !important;
         stroke-width: 1 !important;
     }
 
-    /* Block styling enhancements - removed transform hover effects */
-    :global(.blocklyDraggable) {
+    .scratch-blocks-container :global(.blocklyDraggable) {
         filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3)) !important;
         transition: filter 0.2s ease !important;
     }
 
-    :global(.blocklyDraggable:hover) {
+    .scratch-blocks-container :global(.blocklyDraggable:hover) {
         filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4)) !important;
     }
 
-    :global(.blocklySelected > .blocklyPath) {
+    .scratch-blocks-container :global(.blocklySelected > .blocklyPath) {
         filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.7)) !important;
     }
 
-    /* Scrollbars */
-    :global(.blocklyScrollbarBackground) {
+    .scratch-blocks-container :global(.blocklyScrollbarBackground) {
         fill: #334155 !important;
         stroke: #475569 !important;
         stroke-width: 1 !important;
     }
 
-    :global(.blocklyScrollbarHandle) {
+    .scratch-blocks-container :global(.blocklyScrollbarHandle) {
         fill: #64748b !important;
         border-radius: 4px !important;
         transition: fill 0.2s ease !important;
     }
 
-    :global(.blocklyScrollbarHandle:hover) {
+    .scratch-blocks-container :global(.blocklyScrollbarHandle:hover) {
         fill: #94a3b8 !important;
     }
 
-    /* Zoom controls */
-    :global(.blocklyZoom) {
+    .scratch-blocks-container :global(.blocklyZoom) {
         filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3)) !important;
     }
 
-    :global(.blocklyZoom image) {
+    .scratch-blocks-container :global(.blocklyZoom image) {
         transition: opacity 0.2s ease !important;
         filter: invert(1) !important;
         opacity: 0.8 !important;
     }
 
-    :global(.blocklyZoom image:hover) {
+    .scratch-blocks-container :global(.blocklyZoom image:hover) {
         opacity: 1 !important;
     }
 
-    /* Dropdown menus */
-    :global(.blocklyDropDownDiv) {
+    .scratch-blocks-container :global(.blocklyDropDownDiv) {
         background-color: #334155 !important;
         border: 1px solid #475569 !important;
         border-radius: 8px !important;
@@ -746,7 +743,7 @@
         color: #e2e8f0 !important;
     }
 
-    :global(.blocklyDropDownDiv .blocklyMenuItem) {
+    .scratch-blocks-container :global(.blocklyDropDownDiv .blocklyMenuItem) {
         color: #e2e8f0 !important;
         padding: 8px 12px !important;
         border-radius: 4px !important;
@@ -754,18 +751,19 @@
         transition: background-color 0.2s ease !important;
     }
 
-    :global(.blocklyDropDownDiv .blocklyMenuItem:hover) {
+    .scratch-blocks-container
+        :global(.blocklyDropDownDiv .blocklyMenuItem:hover) {
         background-color: #475569 !important;
         color: #f8fafc !important;
     }
 
-    :global(.blocklyDropDownDiv .blocklyMenuItem:focus) {
+    .scratch-blocks-container
+        :global(.blocklyDropDownDiv .blocklyMenuItem:focus) {
         background-color: #1e40af !important;
         outline: none !important;
     }
 
-    /* Input widgets */
-    :global(.blocklyWidgetDiv) {
+    .scratch-blocks-container :global(.blocklyWidgetDiv) {
         background-color: #334155 !important;
         border: 1px solid #475569 !important;
         border-radius: 6px !important;
@@ -773,7 +771,7 @@
         color: #e2e8f0 !important;
     }
 
-    :global(.blocklyHtmlInput) {
+    .scratch-blocks-container :global(.blocklyHtmlInput) {
         background-color: #475569 !important;
         color: #e2e8f0 !important;
         border: 1px solid #64748b !important;
@@ -784,63 +782,61 @@
         transition: border-color 0.2s ease !important;
     }
 
-    :global(.blocklyHtmlInput:focus) {
+    .scratch-blocks-container :global(.blocklyHtmlInput:focus) {
         border-color: #3b82f6 !important;
         outline: none !important;
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
     }
 
-    /* Insertion markers */
-    :global(.blocklyInsertionMarker > .blocklyPath) {
+    .scratch-blocks-container :global(.blocklyInsertionMarker > .blocklyPath) {
         fill: #3b82f6 !important;
         fill-opacity: 0.4 !important;
         stroke: #3b82f6 !important;
         stroke-width: 2 !important;
     }
 
-    /* Custom animations for smooth interactions */
-    :global(.blocklyDragging) {
+    .scratch-blocks-container :global(.blocklyDragging) {
         filter: drop-shadow(0 8px 25px rgba(0, 0, 0, 0.5)) !important;
     }
 
     /* Improve block category colors for dark mode */
-    :global(.blocklyPath[fill="#4C97FF"]) {
+    .scratch-blocks-container :global(.blocklyPath[fill="#4C97FF"]) {
         fill: #3b82f6 !important;
     }
 
-    :global(.blocklyPath[stroke="#3373CC"]) {
+    .scratch-blocks-container :global(.blocklyPath[stroke="#3373CC"]) {
         stroke: #1d4ed8 !important;
     }
 
-    :global(.blocklyPath[fill="#FFD500"]) {
+    .scratch-blocks-container :global(.blocklyPath[fill="#FFD500"]) {
         fill: #f59e0b !important;
     }
 
-    :global(.blocklyPath[stroke="#CCAA00"]) {
+    .scratch-blocks-container :global(.blocklyPath[stroke="#CCAA00"]) {
         stroke: #d97706 !important;
     }
 
-    :global(.blocklyPath[fill="#9966FF"]) {
+    .scratch-blocks-container :global(.blocklyPath[fill="#9966FF"]) {
         fill: #8b5cf6 !important;
     }
 
-    :global(.blocklyPath[stroke="#774DCB"]) {
+    .scratch-blocks-container :global(.blocklyPath[stroke="#774DCB"]) {
         stroke: #7c3aed !important;
     }
 
-    :global(.blocklyPath[fill="#FF6680"]) {
+    .scratch-blocks-container :global(.blocklyPath[fill="#FF6680"]) {
         fill: #ef4444 !important;
     }
 
-    :global(.blocklyPath[stroke="#cc5266"]) {
+    .scratch-blocks-container :global(.blocklyPath[stroke="#cc5266"]) {
         stroke: #dc2626 !important;
     }
 
-    :global(.blocklyPath[fill="#59C059"]) {
+    .scratch-blocks-container :global(.blocklyPath[fill="#59C059"]) {
         fill: #22c55e !important;
     }
 
-    :global(.blocklyPath[stroke="#479a47"]) {
+    .scratch-blocks-container :global(.blocklyPath[stroke="#479a47"]) {
         stroke: #16a34a !important;
     }
 </style>

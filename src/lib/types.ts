@@ -12,20 +12,13 @@ class BScene {
     }
 
     addObject(object: BObject) {
-        this.objects.push(object);
-        this.children.push(object);
+        this.objects = [...this.objects, object];
+        this.children = [...this.children, object];
     }
 
     removeObject(object: BObject) {
-        const index = this.objects.indexOf(object);
-        if (index > -1) {
-            this.objects.splice(index, 1);
-        }
-
-        const childIndex = this.children.indexOf(object);
-        if (childIndex > -1) {
-            this.children.splice(childIndex, 1);
-        }
+        this.objects = this.objects.filter(obj => obj !== object);
+        this.children = this.children.filter(child => child !== object);
     }
 }
 

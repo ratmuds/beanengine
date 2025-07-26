@@ -44,8 +44,7 @@
         lightType?: "directional" | "point" | "spot";
     }
 
-    export let selectedObject: ObjectProperties | null = null;
-    export let currentClasses: string[] = [];
+    let { selectedObject, currentClasses } = $props();
 
     const dispatch = createEventDispatcher<{
         propertyChange: { property: string; value: any };
@@ -53,12 +52,12 @@
         removeClass: { className: string };
     }>();
 
-    let expandedSections = {
+    let expandedSections = $state({
         object: true,
         transform: true,
         part: true,
         light: true,
-    };
+    });
 
     function toggleSection(section: keyof typeof expandedSections) {
         expandedSections[section] = !expandedSections[section];

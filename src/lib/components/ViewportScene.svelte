@@ -1,32 +1,22 @@
 <script lang="ts">
     import { T } from "@threlte/core";
-    import {
-        Grid,
-        OrbitControls,
-        TransformControls,
-        interactivity,
-        Outlines,
-    } from "@threlte/extras";
-    import type * as Types from "$lib/types";
+    import { Grid, OrbitControls, TransformControls, interactivity, Outlines } from "@threlte/extras";
 
     let {
-        scene,
+        sceneStore,
         activeTool = "select",
         transformMode = "translate",
         transformSpace = "local",
     } = $props();
+
     let selectedObjectId = $state(null);
     let isDragging = $state(false);
+    let sceneObjects = $derived(sceneStore.getScene().objects);
 
     interactivity();
-
-    let cameraPosition = { x: 10, y: 10, z: 10 };
 </script>
 
-<T.PerspectiveCamera
-    makeDefault
-    position={[cameraPosition.x, cameraPosition.y, cameraPosition.z]}
->
+<T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
     <OrbitControls />
 </T.PerspectiveCamera>
 
@@ -35,11 +25,16 @@
 <T.AmbientLight intensity={0.3} />
 
 <!-- Scene Rendering -->
-{#each scene.objects as object (object.id)}
+{#each sceneObjects as object (object.id)}
     <T.Group
         bind:ref={object.groupRef}
         position={[object.position.x, object.position.y, object.position.z]}
-        rotation={[object.rotation.x, object.rotation.y, object.rotation.z]}
+        quaternion={[
+            object.rotation.x,
+            object.rotation.y,
+            object.rotation.z,
+            object.rotation.w,
+        ]}
         scale={[object.scale.x, object.scale.y, object.scale.z]}
     >
         <T.Mesh

@@ -1,36 +1,42 @@
 <script lang="ts">
-    import { createEventDispatcher } from 'svelte';
+    import { createEventDispatcher } from "svelte";
     import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
     import { Plus, X, Lightbulb } from "lucide-svelte";
 
-    export let currentClasses: string[] = [];
-    export let suggestions: string[] = ["Script", "Model", "Sound", "Decal", "ParticleEmitter", "Light", "Camera"];
-    
+    let { currentClasses, suggestions = [] } = $props();
+
     const dispatch = createEventDispatcher<{
         addClass: { className: string };
         removeClass: { className: string };
     }>();
 
-    let inputValue = '';
-    let showDropdown = false;
-    let filteredSuggestions: string[] = [];
-    let selectedIndex = -1;
+    let inputValue = $state("");
+    let showDropdown = $state(false);
+    let filteredSuggestions: string[] = $state([]);
+    let selectedIndex = $state(-1);
     let inputElement: HTMLInputElement;
 
-    $: {
+    $effect(() => {
         if (inputValue.trim()) {
             const query = inputValue.toLowerCase();
             filteredSuggestions = suggestions
-                .filter(s => !currentClasses.includes(s))
-                .filter(s => s.toLowerCase().includes(query))
+                .filter((s) => !currentClasses.includes(s))
+                .filter((s) => s.toLowerCase().includes(query))
                 .slice(0, 5);
-            
+
             // Add "Create new" option if exact match doesn't exist
-            if (inputValue.trim() && !suggestions.includes(inputValue.trim()) && !currentClasses.includes(inputValue.trim())) {
-                filteredSuggestions = [...filteredSuggestions, `Create "${inputValue.trim()}"`];
+            if (
+                inputValue.trim() &&
+                !suggestions.includes(inputValue.trim()) &&
+                !currentClasses.includes(inputValue.trim())
+            ) {
+                filteredSuggestions = [
+                    ...filteredSuggestions,
+                    `Create "${inputValue.trim()}"`,
+                ];
             }
-            
+
             showDropdown = filteredSuggestions.length > 0;
             selectedIndex = -1;
         } else {
@@ -38,21 +44,27 @@
             filteredSuggestions = [];
             selectedIndex = -1;
         }
-    }
+    });
 
     function handleKeydown(event: KeyboardEvent) {
         if (!showDropdown) return;
 
         switch (event.key) {
-            case 'ArrowDown':
+            case "ArrowDown":
                 event.preventDefault();
-                selectedIndex = selectedIndex < filteredSuggestions.length - 1 ? selectedIndex + 1 : 0;
+                selectedIndex =
+                    selectedIndex < filteredSuggestions.length - 1
+                        ? selectedIndex + 1
+                        : 0;
                 break;
-            case 'ArrowUp':
+            case "ArrowUp":
                 event.preventDefault();
-                selectedIndex = selectedIndex > 0 ? selectedIndex - 1 : filteredSuggestions.length - 1;
+                selectedIndex =
+                    selectedIndex > 0
+                        ? selectedIndex - 1
+                        : filteredSuggestions.length - 1;
                 break;
-            case 'Enter':
+            case "Enter":
                 event.preventDefault();
                 if (selectedIndex >= 0) {
                     selectSuggestion(filteredSuggestions[selectedIndex]);
@@ -60,7 +72,7 @@
                     addClass(inputValue.trim());
                 }
                 break;
-            case 'Escape':
+            case "Escape":
                 event.preventDefault();
                 showDropdown = false;
                 selectedIndex = -1;
@@ -70,23 +82,23 @@
     }
 
     function selectSuggestion(suggestion: string) {
-        const className = suggestion.startsWith('Create "') 
-            ? suggestion.slice(8, -1) 
+        const className = suggestion.startsWith('Create "')
+            ? suggestion.slice(8, -1)
             : suggestion;
         addClass(className);
     }
 
     function addClass(className: string) {
         if (className && !currentClasses.includes(className)) {
-            dispatch('addClass', { className });
+            dispatch("addClass", { className });
         }
-        inputValue = '';
+        inputValue = "";
         showDropdown = false;
         selectedIndex = -1;
     }
 
     function removeClass(className: string) {
-        dispatch('removeClass', { className });
+        dispatch("removeClass", { className });
     }
 
     function handleFocus() {
@@ -129,11 +141,16 @@
 
         <!-- Dropdown -->
         {#if showDropdown}
-            <div class="absolute top-full left-0 right-0 mt-1 bg-gray-800/95 backdrop-blur-sm border border-gray-700/50 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto">
+            <div
+                class="absolute top-full left-0 right-0 mt-1 bg-gray-800/95 backdrop-blur-sm border border-gray-700/50 rounded-md shadow-lg z-50 max-h-48 overflow-y-auto"
+            >
                 {#each filteredSuggestions as suggestion, index}
                     {@const isCreateNew = suggestion.startsWith('Create "')}
                     <button
-                        class="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2 {selectedIndex === index ? 'bg-blue-600/20 text-blue-300' : 'text-gray-300 hover:bg-gray-700/60'}"
+                        class="w-full px-3 py-2 text-left text-sm transition-colors flex items-center gap-2 {selectedIndex ===
+                        index
+                            ? 'bg-blue-600/20 text-blue-300'
+                            : 'text-gray-300 hover:bg-gray-700/60'}"
                         on:click={() => selectSuggestion(suggestion)}
                     >
                         {#if isCreateNew}
@@ -152,10 +169,14 @@
     <!-- Current applied classes -->
     {#if currentClasses.length > 0}
         <div>
-            <h5 class="text-gray-400 text-xs font-medium mb-2">Applied Classes</h5>
+            <h5 class="text-gray-400 text-xs font-medium mb-2">
+                Applied Classes
+            </h5>
             <div class="flex flex-wrap gap-1">
                 {#each currentClasses as className}
-                    <div class="flex items-center gap-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-600/30">
+                    <div
+                        class="flex items-center gap-1 bg-blue-600/20 text-blue-300 text-xs px-2 py-1 rounded border border-blue-600/30"
+                    >
                         <span>{className}</span>
                         <button
                             class="hover:text-red-400 transition-colors"
@@ -171,12 +192,16 @@
 
     <!-- Quick suggestions -->
     <div>
-        <h5 class="text-gray-400 text-xs font-medium mb-2 flex items-center gap-1">
+        <h5
+            class="text-gray-400 text-xs font-medium mb-2 flex items-center gap-1"
+        >
             <Lightbulb class="w-3 h-3" />
             Suggestions
         </h5>
         <div class="flex flex-wrap gap-1">
-            {#each suggestions.filter(s => !currentClasses.includes(s)).slice(0, 4) as suggestion}
+            {#each suggestions
+                .filter((s) => !currentClasses.includes(s))
+                .slice(0, 4) as suggestion}
                 <Button
                     variant="outline"
                     size="sm"
