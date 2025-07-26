@@ -123,7 +123,11 @@
 
             <section
                 class="code-blocks-area"
-                use:dndzone={{ items: codeBlocks, flipDurationMs }}
+                use:dndzone={{ 
+                    items: codeBlocks, 
+                    flipDurationMs,
+                    dropTargetStyle: { "outline": "2px solid #3b82f6", "outline-offset": "2px" }
+                }}
                 on:consider={handleDndConsider}
                 on:finalize={handleDndFinalize}
             >
