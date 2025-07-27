@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { flip } from "svelte/animate";
     import { dndzone } from "svelte-dnd-action";
     import Self from "./CodeBlock.svelte";
     import Input from "$lib/components/ui/input/input.svelte";
@@ -54,17 +53,18 @@
 </script>
 
 <div
-    class="bg-gray-800 m-2 p-2 cursor-grab border-l-4 border-l-{config
+    class="bg-muted m-2 p-2 cursor-grab border-l-4 border-l-{config
         ? config.color
-        : 'gray-500'} hover:bg-gray-750 transition-colors spacemono"
+        : 'gray-500'} hover:bg-muted transition-colors spacemono"
+    style="width: 400px;"
 >
     {#if config}
         <div class="flex items-center gap-2">
-            <p class="text-sm text-gray-300">{config.label}</p>
+            <p class="text-sm text-foreground">{config.label}</p>
             <Tooltip.Provider>
                 <Tooltip.Root>
                     <Tooltip.Trigger>
-                        <Info class="w-4 h-4 text-gray-500" />
+                        <Info class="w-4 h-4 text-muted-foreground" />
                     </Tooltip.Trigger>
                     <Tooltip.Content>
                         <p>{config.info}</p>
@@ -73,9 +73,9 @@
             </Tooltip.Provider>
         </div>
 
-        <div class="flex items-center mt-3 gap-2">
+        <div class="flex items-center mt-3 gap-1">
             {#each config.fields as field}
-                {#if field.label}<p>{field.label}</p>{/if}
+                {#if field.label}<p class="mx-1">{field.label}</p>{/if}
                 <Input
                     type={field.type}
                     class="rounded-full h-8 flex-1"
@@ -95,19 +95,23 @@
                 />
             {/each}
 
-            {#if config.end}<p>{config.end}</p>{/if}
+            {#if config.end}<p class="ml-1">{config.end}</p>{/if}
         </div>
 
         {#if item.type === "if" && onIfDndConsider && onIfDndFinalize}
             <div
-                use:dndzone={{ 
-                    items: item.children, 
+                use:dndzone={{
+                    items: item.children,
                     flipDurationMs: 300,
-                    dropTargetStyle: { "outline": "2px solid #3b82f6", "outline-offset": "2px" }
+                    dropTargetStyle: {
+                        outline: "2px solid #3b82f6",
+                        "outline-offset": "2px",
+                    },
                 }}
                 onconsider={(e) => onIfDndConsider(e, item.id)}
                 onfinalize={(e) => onIfDndFinalize(e, item.id)}
-                class="min-h-16 w-full bg-gray-950 rounded-l-lg m-2 p-2 z-10"
+                class="min-h-16 bg-[#1e1e1e] rounded-l-lg m-2 p-2 z-10"
+                style="width: 100%;"
             >
                 {#each item.children as child (child.id)}
                     <Self
@@ -119,7 +123,7 @@
                 {/each}
                 {#if item.children.length === 0}
                     <div
-                        class="text-gray-500 text-sm text-center py-2 h-16 border-dotted border-gray-600 hover:border-blue-500 duration-300 border-2 rounded flex items-center justify-center"
+                        class="text-muted-foreground text-sm text-center py-2 h-16 border-dotted border-border hover:border-blue-500 duration-300 border-2 rounded flex items-center justify-center"
                     >
                         Drop blocks here
                     </div>
@@ -128,11 +132,11 @@
         {/if}
     {:else}
         <div
-            class="spacemono bg-gray-700 m-1 p-2 rounded-l text-sm text-gray-300 cursor-grab"
+            class="spacemono bg-muted m-1 p-2 rounded-l text-sm text-foreground cursor-grab"
         >
             {item.type} block
             <p class="text-red-500">No info available for this block.</p>
-            <p class="text-gray-500">
+            <p class="text-muted-foreground">
                 There could be an issue with the block configuration, or this
                 page had a fatal error.
             </p>
