@@ -145,19 +145,22 @@
 <svelte:document on:click={handleDocumentClick} />
 
 <div
-    class="h-full bg-gray-900/60 backdrop-blur-sm border-r border-gray-700/30 flex flex-col"
+    class="h-full bg-card/60 backdrop-blur-sm border-r border-border/30 flex flex-col relative overflow-hidden"
 >
+    <!-- Subtle gradient accent -->
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/3 pointer-events-none"></div>
+    
     <!-- Header -->
-    <div class="p-4 border-b border-gray-700/30">
+    <div class="p-4 border-b border-border/30 relative z-10">
         <div class="flex items-center justify-between mb-3">
-            <h2 class="text-gray-200 font-semibold">Object Explorer</h2>
+            <h2 class="text-foreground font-semibold">Object Explorer</h2>
 
             <Popover.Root>
                 <Popover.Trigger
                     size="sm"
                     class="{buttonVariants({
                         variant: 'ghost',
-                    })} h-7 w-7 p-0 text-gray-400 hover:text-green-400 hover:bg-green-500/20"
+                    })} h-7 w-7 p-0 text-muted-foreground hover:text-green-400 hover:bg-green-500/20"
                     on:click={() => dispatch("addObject", {})}
                 >
                     <Plus class="w-4 h-4" />
@@ -203,25 +206,25 @@
         <!-- Search -->
         <div class="mt-3 relative">
             <Search
-                class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500"
+                class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
             />
             <Input
                 bind:value={searchQuery}
                 type="text"
                 placeholder="Search objects..."
-                class="pl-8 bg-gray-800/50 border-gray-700/30 text-gray-200 text-sm h-8 focus:border-blue-500 focus:outline-none"
+                class="pl-8 bg-muted/50 border-border/30 text-foreground text-sm h-8 focus:border-blue-500 focus:outline-none"
             />
         </div>
     </div>
 
     <!-- Object Tree -->
-    <div class="flex-1 overflow-y-auto p-2">
+    <div class="flex-1 overflow-y-auto p-2 relative z-10">
         <div class="space-y-0.5">
             {#each filteredObjects as obj (obj.id)}
                 {@const Icon = getObjectIcon(obj.type)}
                 {@const hasChildren = obj.children && obj.children.length > 0}
                 <div
-                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-gray-300 hover:bg-gray-800/60 cursor-pointer transition-colors {selectedObjectId ===
+                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-colors {selectedObjectId ===
                     obj.id
                         ? 'bg-blue-600/20 text-blue-300'
                         : ''}"

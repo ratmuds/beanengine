@@ -465,29 +465,29 @@
     }
 </script>
 
-<div class="h-screen w-full bg-gray-950 flex flex-col overflow-hidden relative">
+<div class="h-screen w-full bg-background flex flex-col overflow-hidden relative">
     <!-- Blurred blob overlay -->
     <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <!-- Main bottom-right blob cluster -->
         <div
-            class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"
+            class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl"
         ></div>
         <div
-            class="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-400/10 rounded-full blur-2xl"
+            class="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-400/8 rounded-full blur-2xl"
         ></div>
 
         <!-- Subtle top-left ambient -->
         <div
-            class="absolute -top-24 -left-24 w-72 h-72 bg-blue-600/35 rounded-full blur-3xl"
+            class="absolute -top-24 -left-24 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl"
         ></div>
         <div
-            class="absolute top-32 -left-16 w-40 h-40 bg-indigo-500/25 rounded-full blur-2xl"
+            class="absolute top-32 -left-16 w-40 h-40 bg-indigo-500/15 rounded-full blur-2xl"
         ></div>
     </div>
 
     <!-- Top Navigation Bar -->
     <div
-        class="h-12 bg-gray-900/80 backdrop-blur-sm border-b border-gray-700/50 flex items-center px-4 relative z-10"
+        class="h-12 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-4 relative z-10"
     >
         <div class="flex items-center gap-4 flex-1">
             <!-- Project Name -->
@@ -495,7 +495,7 @@
                 <div
                     class="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded"
                 ></div>
-                <span class="text-gray-200 font-medium text-sm"
+                <span class="text-foreground font-medium text-sm"
                     >Test Project</span
                 >
             </Button>
@@ -524,7 +524,7 @@
                 <Button
                     variant={activeTool === "select" ? "secondary" : "ghost"}
                     size="sm"
-                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
                     onclick={() => (activeTool = "select")}
                 >
                     <MousePointer2 class="w-4 h-4" />
@@ -532,7 +532,7 @@
                 <Button
                     variant={activeTool === "move" ? "secondary" : "ghost"}
                     size="sm"
-                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
                     onclick={() => {
                         activeTool = "move";
                         transformMode = "translate";
@@ -543,7 +543,7 @@
                 <Button
                     variant={activeTool === "rotate" ? "secondary" : "ghost"}
                     size="sm"
-                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
                     onclick={() => {
                         activeTool = "rotate";
                         transformMode = "rotate";
@@ -554,7 +554,7 @@
                 <Button
                     variant={activeTool === "scale" ? "secondary" : "ghost"}
                     size="sm"
-                    class="w-8 h-8 px-2 text-slate-300 hover:bg-slate-600"
+                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
                     onclick={() => {
                         activeTool = "scale";
                         transformMode = "scale";
@@ -569,12 +569,12 @@
                 <Button
                     variant="outline"
                     size="sm"
-                    class="h-8 px-2 text-slate-300 hover:bg-slate-600 flex flex-col items-center py-1 gap-0"
+                    class="h-8 px-2 text-muted-foreground hover:bg-muted flex flex-col items-center py-1 gap-0"
                     onclick={() =>
                         (transformSpace =
                             transformSpace === "world" ? "local" : "world")}
                 >
-                    <span class="text-[9px] text-gray-500 leading-none"
+                    <span class="text-[9px] text-muted-foreground leading-none"
                         >Space</span
                     >
                     <div class="flex items-center gap-1">
@@ -596,7 +596,7 @@
             <Button
                 variant="ghost"
                 size="sm"
-                class="h-8 px-2 text-slate-300 hover:bg-slate-600"
+                class="h-8 px-2 text-muted-foreground hover:bg-muted"
             >
                 <Settings class="w-4 h-4" />
             </Button>
@@ -626,21 +626,21 @@
 
             <!-- Center Panel - Tabbed Interface -->
             <ResizablePane defaultSize={60} minSize={40}>
-                <div class="h-full bg-gray-900/40 backdrop-blur-sm">
+                <div class="h-full bg-card/40 backdrop-blur-sm">
                     <Tabs.Root
                         bind:value={activeTab}
                         class="h-full flex flex-col"
                     >
                         <!-- Tab Header with Close Buttons and More Menu -->
                         <div
-                            class="h-8 bg-gray-800/60 backdrop-blur-sm border-b border-gray-700/30 flex items-center px-1"
+                            class="h-8 bg-muted/60 backdrop-blur-sm border-b border-border/30 flex items-center px-1"
                         >
                             <Tabs.List class="h-6 bg-transparent p-0 flex-1">
                                 {#each openTabs as tab}
                                     <div class="flex items-center relative">
                                         <Tabs.Trigger
                                             value={tab.id}
-                                            class="h-6 px-2 text-xs rounded-none border-r border-gray-700/30 data-[state=active]:bg-gray-700/60 data-[state=active]:text-gray-200 text-gray-400 hover:text-gray-200"
+                                            class="h-6 px-2 text-xs rounded-none border-r border-border/30 data-[state=active]:bg-muted/60 data-[state=active]:text-foreground text-muted-foreground hover:text-foreground"
                                         >
                                             <svelte:component
                                                 this={tab.icon}
@@ -667,17 +667,17 @@
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        class="h-6 w-6 p-0 text-gray-400 hover:text-gray-200"
+                                        class="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
                                     >
                                         <Plus class="w-3 h-3" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
-                                    class="w-40 bg-gray-800/90 backdrop-blur-sm border-gray-700"
+                                    class="w-40 bg-card/90 backdrop-blur-sm border-border"
                                 >
                                     {#each availableTabs as tab}
                                         <DropdownMenuCheckboxItem
-                                            class="text-gray-300 hover:bg-gray-700/60"
+                                            class="text-foreground hover:bg-muted/60"
                                             checked={tab.visible}
                                             onclick={() => {
                                                 if (tab.visible) {
@@ -733,18 +733,18 @@
 
                             <Tabs.Content value="script" class="h-full m-0 p-0">
                                 <div
-                                    class="h-full bg-gray-900/20 flex flex-col"
+                                    class="h-full bg-background/20 flex flex-col"
                                 >
                                     <!-- Script Editor Header -->
                                     <div
-                                        class="h-10 bg-gray-800/40 border-b border-gray-700/30 flex items-center px-4"
+                                        class="h-10 bg-muted/40 border-b border-border/30 flex items-center px-4"
                                     >
                                         <div class="flex items-center gap-2">
                                             <Code2
                                                 class="w-4 h-4 text-blue-400"
                                             />
                                             <span
-                                                class="text-gray-300 text-sm font-medium"
+                                                class="text-foreground text-sm font-medium"
                                                 >Script Editor</span
                                             >
                                         </div>
@@ -753,7 +753,7 @@
                                         >
                                             <select
                                                 bind:value={selectedScript}
-                                                class="bg-gray-700/50 text-gray-300 text-sm px-3 py-1 rounded border border-gray-600/30 focus:border-blue-500 focus:outline-none"
+                                                class="bg-muted/50 text-foreground text-sm px-3 py-1 rounded border border-border/30 focus:border-blue-500 focus:outline-none"
                                             >
                                                 <option value="PlayerController"
                                                     >PlayerController</option
@@ -792,16 +792,16 @@
                                 class="h-full m-0 p-0"
                             >
                                 <div
-                                    class="h-full bg-gray-900/20 flex items-center justify-center"
+                                    class="h-full bg-background/20 flex items-center justify-center"
                                 >
                                     <div class="text-center">
                                         <Palette
-                                            class="w-12 h-12 mx-auto mb-3 text-gray-600"
+                                            class="w-12 h-12 mx-auto mb-3 text-muted-foreground"
                                         />
-                                        <p class="text-gray-500 text-sm">
+                                        <p class="text-foreground text-sm">
                                             Materials Editor
                                         </p>
-                                        <p class="text-gray-600 text-xs">
+                                        <p class="text-muted-foreground text-xs">
                                             Create and edit materials here
                                         </p>
                                     </div>
