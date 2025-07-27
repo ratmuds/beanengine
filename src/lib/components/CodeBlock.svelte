@@ -2,6 +2,7 @@
     import { dndzone } from "svelte-dnd-action";
     import Self from "./CodeBlock.svelte";
     import Input from "$lib/components/ui/input/input.svelte";
+    import VariableChip from "./VariableChip.svelte";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
     import { Type, Hash, GitBranch, Info } from "lucide-svelte";
 
@@ -79,8 +80,9 @@
             {#each config.fields as field}
                 {#if field.label}<p class="mx-1">{field.label}</p>{/if}
                 <div class="flex-1 relative">
+                    <!-- DND zone always present -->
                     <div
-                        class="relative min-h-8"
+                        class="min-h-8"
                         use:dndzone={{
                             items:
                                 item.fields.find((f) => f.bind === field.bind)
@@ -94,6 +96,7 @@
                                 "border-radius": "32px",
                             },
                             dropFromOthersDisabled: false,
+                            morphDisabled: true,
                         }}
                         onconsider={(e) => {
                             console.log(
@@ -149,29 +152,28 @@
                         }}
                     >
                         {#if item.fields.find((f) => f.bind === field.bind)?.inputs.length > 0}
-                            <!-- Show variable chip -->
-                            {#each item.fields.find((f) => f.bind === field.bind)?.inputs as variable (variable.id)}
-                                {@const _ = console.log(
-                                    `RENDER - Showing variable chip for ${field.bind}:`,
-                                    variable
-                                )}
-                                <div
-                                    class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium inline-block max-w-32 truncate"
-                                    title={variable.name}
-                                >
-                                    {variable.name}
-                                </div>
-                            {/each}
-                        {:else}
-                            <!-- Show input when no variable -->
-                            <Input
-                                type={field.type}
-                                class="rounded-full h-8 w-full"
-                                placeholder={field.placeholder}
-                                value={item[field.bind]}
-                            />
+                            <!-- Show variable chips -->
+                            <div class="flex gap-1 h-8">
+                                {#each item.fields.find((f) => f.bind === field.bind)?.inputs as variable (variable.id)}
+                                    {@const _ = console.log(
+                                        `RENDER - Showing variable chip for ${field.bind}:`,
+                                        variable
+                                    )}
+                                    <VariableChip {variable} />
+                                {/each}
+                            </div>
                         {/if}
                     </div>
+
+                    <!-- Input positioned above DND zone when no variables -->
+                    {#if item.fields.find((f) => f.bind === field.bind)?.inputs.length === 0}
+                        <Input
+                            type={field.type}
+                            class="absolute top-0 left-0 rounded-full h-8 w-full z-10"
+                            placeholder={field.placeholder}
+                            value={item[field.bind]}
+                        />
+                    {/if}
                 </div>
                 <svelte:component
                     this={field.icon}
