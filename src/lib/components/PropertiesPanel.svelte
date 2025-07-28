@@ -30,6 +30,7 @@
 
     $effect(() => {
         console.log("Selected Object:", selectedObject);
+        console.log("AAAAAAAAAAAAAAAAAAAAA", $sceneStore);
     });
 </script>
 

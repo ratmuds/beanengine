@@ -42,7 +42,7 @@ class SceneManager {
             this.scene.objects = [
                 ...this.scene.objects.slice(0, index),
                 object,
-                ...this.scene.objects.slice(index + 1)
+                ...this.scene.objects.slice(index + 1),
             ];
         } else {
             console.warn("Object not found:", object.id);
@@ -96,6 +96,12 @@ function createSceneStore() {
                 console.log("Updating object:", object);
                 currentManager.updateObject(object);
                 // Return the same manager - update() call triggers reactivity
+                return currentManager;
+            });
+        },
+
+        triggerReactivity: () => {
+            update((currentManager) => {
                 return currentManager;
             });
         },

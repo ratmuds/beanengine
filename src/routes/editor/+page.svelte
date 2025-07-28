@@ -146,46 +146,6 @@
         },
     ]);
 
-    // Mock objects for properties panel demonstration
-    const mockObjects = $state([
-        {
-            name: "Player",
-            id: "player1",
-            type: "Part" as const,
-            position: { x: 0, y: 5, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            material: "Metal",
-            castShadows: true,
-            receiveShadows: true,
-            visible: true,
-        },
-        {
-            name: "Main Camera",
-            id: "camera1",
-            type: "Node3D" as const,
-            position: { x: -10, y: 10, z: 10 },
-            rotation: { x: -25, y: 45, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-        },
-        {
-            name: "Directional Light",
-            id: "light1",
-            type: "Light" as const,
-            position: { x: 0, y: 20, z: 0 },
-            rotation: { x: -45, y: 30, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            color: "#fff5b3",
-            intensity: 2.5,
-            lightType: "directional" as const,
-        },
-        {
-            name: "Environment",
-            id: "env1",
-            type: "Object" as const,
-        },
-    ]);
-
     let selectedObject = $state(-1);
 
     // Tab management state
@@ -260,13 +220,6 @@
     let activeTab = $state("viewport");
     let selectedScript = $state("PlayerController");
 
-    // Class management
-    let currentClasses = $state([
-        "Transform",
-        "MeshRenderer",
-        "PlayerController",
-    ]);
-
     function closeTab(tabId: string) {
         if (tabId === activeTab && openTabs.length > 1) {
             const currentIndex = openTabs.findIndex((tab) => tab.id === tabId);
@@ -324,8 +277,6 @@
         const latestPart = scene.objects[scene.objects.length - 1];
 
         sceneObjects = [...sceneObjects, latestPart];
-
-        mockObjects.push(latestPart);
     }
 
     function handleDeleteObject(event: CustomEvent<{ id: string }>) {
@@ -570,8 +521,8 @@
                 class="transition-all duration-700 ease-out"
             >
                 <ObjectExplorer
-                    {sceneObjects}
-                    on:selectObject={handleSelectObject}
+                    {sceneStore}
+                    bind:selectedObject
                     on:toggleExpanded={handleToggleExpanded}
                     on:addObject={handleAddObject}
                     on:deleteObject={handleDeleteObject}
@@ -681,6 +632,7 @@
                                             <Canvas>
                                                 <Scene
                                                     {sceneStore}
+                                                    bind:selectedObject
                                                     {activeTool}
                                                     {transformMode}
                                                     {transformSpace}

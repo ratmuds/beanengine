@@ -10,12 +10,12 @@
 
     let {
         sceneStore,
+        selectedObject = $bindable(-1),
         activeTool = "select",
         transformMode = "translate",
         transformSpace = "local",
     } = $props();
 
-    let selectedObjectId = $state(null);
     let isDragging = $state(false);
     let sceneObjects = $derived($sceneStore.getScene().objects);
 
@@ -60,20 +60,20 @@
             receiveShadow
             onclick={() => {
                 if (!isDragging) {
-                    selectedObjectId = object.id;
+                    selectedObject = object.id;
                 }
             }}
         >
             <T.BoxGeometry args={[1, 1, 1]} />
             <T.MeshStandardMaterial color={object.color || "#ffffff"} />
 
-            {#if selectedObjectId === object.id}
+            {#if selectedObject === object.id}
                 <Outlines color="#00aaff" />
             {/if}
         </T.Mesh>
     </T.Group>
 
-    {#if activeTool !== "select" && selectedObjectId === object.id}
+    {#if activeTool !== "select" && selectedObject === object.id}
         <TransformControls
             object={object.groupRef}
             mode={transformMode}
@@ -81,25 +81,30 @@
             translationSnap={0.5}
             rotationSnap={Math.PI / 12}
             scaleSnap={0.1}
-            ondragstart={() => {
-                isDragging = true;
+            onmouseDown={() => {
+                console.log("Dragging started");
+                //isDragging = true;
             }}
-            ondragend={() => {
+            onmouseUp={() => {
+                console.log("Dragging ended");
                 setTimeout(() => {
-                    isDragging = false;
+                    //isDragging = false;
                 }, 10);
             }}
-            onobjectchange={(e) => {
-                const transform = e.target.object;
-                object.position.x = transform.position.x;
-                object.position.y = transform.position.y;
-                object.position.z = transform.position.z;
-                object.rotation.x = transform.rotation.x;
-                object.rotation.y = transform.rotation.y;
-                object.rotation.z = transform.rotation.z;
-                object.scale.x = transform.scale.x;
-                object.scale.y = transform.scale.y;
-                object.scale.z = transform.scale.z;
+            onobjectChange={() => {
+                console.log("Object changed");
+                const transform = object.groupRef;
+                if (transform) {
+                    object.position.x = transform.position.x;
+                    object.position.y = transform.position.y;
+                    object.position.z = transform.position.z;
+                    object.rotation.x = transform.rotation.x;
+                    object.rotation.y = transform.rotation.y;
+                    object.rotation.z = transform.rotation.z;
+                    object.scale.x = transform.scale.x;
+                    object.scale.y = transform.scale.y;
+                    object.scale.z = transform.scale.z;
+                }
             }}
         />
     {/if}

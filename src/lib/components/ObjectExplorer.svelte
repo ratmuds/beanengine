@@ -27,7 +27,7 @@
     } from "lucide-svelte";
     import Separator from "./ui/separator/separator.svelte";
 
-    export let sceneObjects: Array<{
+    /*export let sceneObjects: Array<{
         id: string;
         name: string;
         type: string;
@@ -36,7 +36,9 @@
         visible?: boolean;
         locked?: boolean;
         children?: string[];
-    }> = [];
+    }> = [];*/
+
+    let { sceneStore, selectedObject = $bindable(-1) } = $props();
 
     const dispatch = createEventDispatcher<{
         selectObject: { id: string };
@@ -50,15 +52,21 @@
         gotoObject: { id: string };
     }>();
 
-    let searchQuery = "";
-    let contextMenu: { x: number; y: number; objectId: string } | null = null;
-    let selectedObjectId: string | null = null;
+    let searchQuery = $state("");
+    let contextMenu: { x: number; y: number; objectId: string } | null =
+        $state(null);
 
-    $: filteredObjects = searchQuery.trim()
-        ? sceneObjects.filter((obj) =>
-              obj.name.toLowerCase().includes(searchQuery.toLowerCase())
-          )
-        : sceneObjects;
+    let filteredObjects = $state([]);
+
+    $effect(() => {
+        filteredObjects = searchQuery.trim()
+            ? $sceneStore
+                  .getScene()
+                  .objects.filter((obj) =>
+                      obj.name.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+            : $sceneStore.getScene().objects;
+    });
 
     function getObjectIcon(type: string) {
         switch (type) {
@@ -87,7 +95,7 @@
     }
 
     function handleObjectClick(objectId: string) {
-        selectedObjectId = objectId;
+        selectedObject = objectId;
         dispatch("selectObject", { id: objectId });
     }
 
@@ -148,8 +156,10 @@
     class="h-full bg-card/60 backdrop-blur-sm border-r border-border/30 flex flex-col relative overflow-hidden"
 >
     <!-- Subtle gradient accent -->
-    <div class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/3 pointer-events-none"></div>
-    
+    <div
+        class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/3 pointer-events-none"
+    ></div>
+
     <!-- Header -->
     <div class="p-4 border-b border-border/30 relative z-10">
         <div class="flex items-center justify-between mb-3">
@@ -224,7 +234,7 @@
                 {@const Icon = getObjectIcon(obj.type)}
                 {@const hasChildren = obj.children && obj.children.length > 0}
                 <div
-                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-colors {selectedObjectId ===
+                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-colors {selectedObject ===
                     obj.id
                         ? 'bg-blue-600/20 text-blue-300'
                         : ''}"
