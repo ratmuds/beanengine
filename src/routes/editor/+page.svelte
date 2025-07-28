@@ -186,7 +186,7 @@
         },
     ]);
 
-    let selectedObject = $state(mockObjects[0]);
+    let selectedObject = $state(-1);
 
     // Tab management state
     interface TabInfo {
@@ -287,43 +287,13 @@
         }
     }
 
-    function getObjectIcon(type: string) {
-        switch (type) {
-            case "camera":
-                return Camera;
-            case "light":
-                return Lightbulb;
-            case "folder":
-                return Folder;
-            case "mesh":
-                return Box;
-            default:
-                return Box;
-        }
-    }
-
-    function handleAddClass(event: CustomEvent<{ className: string }>) {
-        const { className } = event.detail;
-        if (!currentClasses.includes(className)) {
-            currentClasses = [...currentClasses, className];
-        }
-    }
-
-    function handleRemoveClass(event: CustomEvent<{ className: string }>) {
-        const { className } = event.detail;
-        currentClasses = currentClasses.filter((c) => c !== className);
-    }
-
     // Object Explorer handlers
     function handleSelectObject(event: CustomEvent<{ id: string }>) {
         const { id } = event.detail;
         console.log("Selected object:", id);
 
         // Find mock object by ID
-        const foundObject = mockObjects.find((obj) => obj.id === id);
-        if (foundObject) {
-            selectedObject = foundObject;
-        }
+        selectedObject = id;
     }
 
     function handleToggleExpanded(event: CustomEvent<{ id: string }>) {
@@ -353,35 +323,9 @@
         const scene = $sceneStore.getScene();
         const latestPart = scene.objects[scene.objects.length - 1];
 
-        // Add to scene objects for display in explorer
-        const newSceneObject = {
-            id: partId,
-            name: latestPart.name,
-            type: "mesh",
-            expanded: false,
-            depth: 0,
-            visible: true,
-            locked: false,
-            children: [],
-        };
+        sceneObjects = [...sceneObjects, latestPart];
 
-        sceneObjects = [...sceneObjects, newSceneObject];
-
-        // Add to mock objects for properties panel
-        const newMockObject = {
-            name: latestPart.name,
-            id: partId,
-            type: "Part" as const,
-            position: { x: 0, y: 0, z: 0 },
-            rotation: { x: 0, y: 0, z: 0 },
-            scale: { x: 1, y: 1, z: 1 },
-            material: "Plastic",
-            castShadows: true,
-            receiveShadows: true,
-            visible: true,
-        };
-
-        mockObjects.push(newMockObject);
+        mockObjects.push(latestPart);
     }
 
     function handleDeleteObject(event: CustomEvent<{ id: string }>) {
@@ -415,13 +359,10 @@
     }
 
     // Properties panel handlers
-    function handlePropertyChange(
-        event: CustomEvent<{ property: string; value: any }>
-    ) {
-        const { property, value } = event.detail;
-        if (selectedObject) {
-            selectedObject = { ...selectedObject, [property]: value };
-        }
+    function handlePropertyChange(part: Types.BPart) {
+        // Update the object in the store
+        sceneStore.updateObject(part);
+        console.log("Property changed:", part);
     }
 
     // Add initial test objects on mount
@@ -443,11 +384,15 @@
     let isViewportLoading = $state(true);
     let loadingText = $state("Starting...");
 
+    // Panel collapse state
+    let leftPanelSize = $state(0);
+    let rightPanelSize = $state(0);
+    let centerPanelSize = $state(100);
+
     // Transform tool state
     let activeTool = $state("select");
     let transformMode = $state("translate");
     let transformSpace = $state("local");
-    let selectedObjectId = $state(null);
 
     // Simulate loading process
     async function initializeViewport() {
@@ -462,10 +407,18 @@
         }
 
         isViewportLoading = false;
+
+        // Expand panels after viewport loads with smooth transition
+        await new Promise((resolve) => setTimeout(resolve, 200)); // Small delay for smooth transition
+        leftPanelSize = 20;
+        rightPanelSize = 20;
+        centerPanelSize = 60;
     }
 </script>
 
-<div class="h-screen w-full bg-background flex flex-col overflow-hidden relative">
+<div
+    class="h-screen w-full bg-background flex flex-col overflow-hidden relative"
+>
     <!-- Blurred blob overlay -->
     <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         <!-- Main bottom-right blob cluster -->
@@ -607,7 +560,15 @@
     <div class="flex-1 overflow-hidden relative z-10">
         <ResizablePaneGroup direction="horizontal" class="h-full">
             <!-- Left Panel - Object Explorer -->
-            <ResizablePane defaultSize={20} minSize={15} maxSize={35}>
+            <ResizablePane
+                defaultSize={leftPanelSize}
+                size={leftPanelSize}
+                minSize={0}
+                maxSize={35}
+                collapsible={true}
+                collapsedSize={0}
+                class="transition-all duration-700 ease-out"
+            >
                 <ObjectExplorer
                     {sceneObjects}
                     on:selectObject={handleSelectObject}
@@ -625,7 +586,12 @@
             <ResizableHandle />
 
             <!-- Center Panel - Tabbed Interface -->
-            <ResizablePane defaultSize={60} minSize={40}>
+            <ResizablePane
+                defaultSize={centerPanelSize}
+                size={centerPanelSize}
+                minSize={40}
+                class="transition-all duration-700 ease-out"
+            >
                 <div class="h-full bg-card/40 backdrop-blur-sm">
                     <Tabs.Root
                         bind:value={activeTab}
@@ -714,7 +680,7 @@
                                         >
                                             <Canvas>
                                                 <Scene
-                                                    sceneStore={$sceneStore}
+                                                    {sceneStore}
                                                     {activeTool}
                                                     {transformMode}
                                                     {transformSpace}
@@ -801,7 +767,9 @@
                                         <p class="text-foreground text-sm">
                                             Materials Editor
                                         </p>
-                                        <p class="text-muted-foreground text-xs">
+                                        <p
+                                            class="text-muted-foreground text-xs"
+                                        >
                                             Create and edit materials here
                                         </p>
                                     </div>
@@ -911,13 +879,19 @@
             <ResizableHandle />
 
             <!-- Right Panel - Properties -->
-            <ResizablePane defaultSize={20} minSize={15} maxSize={35}>
+            <ResizablePane
+                defaultSize={rightPanelSize}
+                size={rightPanelSize}
+                minSize={0}
+                maxSize={35}
+                collapsible={true}
+                collapsedSize={0}
+                class="transition-all duration-700 ease-out"
+            >
                 <PropertiesPanel
+                    {sceneStore}
                     {selectedObject}
-                    {currentClasses}
-                    on:propertyChange={handlePropertyChange}
-                    on:addClass={handleAddClass}
-                    on:removeClass={handleRemoveClass}
+                    onPropertyChange={handlePropertyChange}
                 />
             </ResizablePane>
         </ResizablePaneGroup>

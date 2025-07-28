@@ -33,6 +33,22 @@ class SceneManager {
         this.scene.removeObject(object);
     }
 
+    updateObject(object: Types.BObject) {
+        const index = this.scene.objects.findIndex(
+            (obj) => obj.id === object.id
+        );
+        if (index !== -1) {
+            // Create a new array to trigger reactivity
+            this.scene.objects = [
+                ...this.scene.objects.slice(0, index),
+                object,
+                ...this.scene.objects.slice(index + 1)
+            ];
+        } else {
+            console.warn("Object not found:", object.id);
+        }
+    }
+
     getScene(): Types.BScene {
         return this.scene;
     }
@@ -70,6 +86,15 @@ function createSceneStore() {
         removeObject: (object: Types.BObject) => {
             update((currentManager) => {
                 currentManager.removeObject(object);
+                // Return the same manager - update() call triggers reactivity
+                return currentManager;
+            });
+        },
+
+        updateObject: (object: Types.BObject) => {
+            update((currentManager) => {
+                console.log("Updating object:", object);
+                currentManager.updateObject(object);
                 // Return the same manager - update() call triggers reactivity
                 return currentManager;
             });

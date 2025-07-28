@@ -68,8 +68,10 @@
     }
 </script>
 
-<div class="space-y-1">
-    <!-- Remove label since it's handled by parent -->
+<div>
+    {#if label}
+        <p class="text-xs text-muted-foreground">{label}</p>
+    {/if}
 
     <div
         class="bg-gray-800/30 border border-gray-700/30 rounded text-xs overflow-hidden"
@@ -147,46 +149,5 @@
                 </Button>
             </div>
         </div>
-
-        <!-- Expanded individual inputs -->
-        {#if expanded}
-            <div class="border-t border-gray-700/30 p-2 space-y-1.5">
-                <div class="grid grid-cols-3 gap-1.5">
-                    <div>
-                        <label class="text-gray-400 text-xs block mb-0.5">X</label>
-                        <Input
-                            type="number"
-                            value={value.x}
-                            {step}
-                            {disabled}
-                            class="bg-gray-700/50 border-gray-600/30 text-gray-200 text-xs h-6 px-2 focus:border-red-400"
-                            on:input={(e) => handleInputChange("x", e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label class="text-gray-400 text-xs block mb-0.5">Y</label>
-                        <Input
-                            type="number"
-                            value={value.y}
-                            {step}
-                            {disabled}
-                            class="bg-gray-700/50 border-gray-600/30 text-gray-200 text-xs h-6 px-2 focus:border-green-400"
-                            on:input={(e) => handleInputChange("y", e.target.value)}
-                        />
-                    </div>
-                    <div>
-                        <label class="text-gray-400 text-xs block mb-0.5">Z</label>
-                        <Input
-                            type="number"
-                            value={value.z}
-                            {step}
-                            {disabled}
-                            class="bg-gray-700/50 border-gray-600/30 text-gray-200 text-xs h-6 px-2 focus:border-blue-400"
-                            on:input={(e) => handleInputChange("z", e.target.value)}
-                        />
-                    </div>
-                </div>
-            </div>
-        {/if}
     </div>
 </div>

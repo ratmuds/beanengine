@@ -9,7 +9,7 @@
 
 {#if isLoading}
     <div
-        class="absolute inset-0 bg-gray-900/90 backdrop-blur-sm flex flex-col items-center justify-center z-50"
+        class="absolute inset-0 bg-background/90 backdrop-blur-sm flex flex-col items-center justify-center z-50"
         transition:fade={{ duration: 500 }}
     >
         <!-- Bean Engine Logo -->

@@ -17,8 +17,8 @@ class BScene {
     }
 
     removeObject(object: BObject) {
-        this.objects = this.objects.filter(obj => obj !== object);
-        this.children = this.children.filter(child => child !== object);
+        this.objects = this.objects.filter((obj) => obj !== object);
+        this.children = this.children.filter((child) => child !== object);
     }
 }
 
@@ -125,6 +125,9 @@ class BNode3D extends BObject {
     rotation: BQuaternion;
     scale: BVector3;
 
+    positionOffset: BVector3;
+    rotationOffset: BQuaternion;
+
     constructor(
         name: string | null,
         id: string | null,
@@ -180,13 +183,48 @@ class BNode3D extends BObject {
 
 // Represents a physical part in the scene
 class BPart extends BNode3D {
-    // Future properties: geometry, material, physicsBody
+    mesh: string; // Reference to a mesh resource or base mesh ('block', 'sphere', etc.)
+    color: string;
+    material: string;
+    transparency: number;
+    castShadows: boolean;
+    receiveShadows: boolean;
+    visible: boolean;
+
+    axisLockPosX: boolean;
+    axisLockPosY: boolean;
+    axisLockPosZ: boolean;
+    axisLockRotX: boolean;
+    axisLockRotY: boolean;
+    axisLockRotZ: boolean;
+
+    canTouch: boolean;
+    canCollide: boolean;
+    canQuery: boolean;
+
     constructor(
         name: string | null,
         id: string | null,
         parent: BObject | null
     ) {
         super(name, id, parent);
+
+        this.mesh = "block";
+        this.color = "#ffffff";
+        this.material = "plastic";
+        this.transparency = 0;
+        this.castShadows = true;
+        this.receiveShadows = true;
+        this.visible = true;
+        this.axisLockPosX = false;
+        this.axisLockPosY = false;
+        this.axisLockPosZ = false;
+        this.axisLockRotX = false;
+        this.axisLockRotY = false;
+        this.axisLockRotZ = false;
+        this.canTouch = true;
+        this.canCollide = true;
+        this.canQuery = true;
     }
 }
 

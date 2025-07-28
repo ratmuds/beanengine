@@ -141,18 +141,13 @@
                             const index = items.findIndex(
                                 (i) => i.id === updatedItem.id
                             );
-                            console.log(`PARENT - Updating item with id ${updatedItem.id}`);
-                            console.log(`PARENT - Found at index: ${index}`);
-                            console.log("PARENT - Updated item received:", updatedItem);
-                            console.log("PARENT - Items before update:", items);
-                            console.log("PARENT - Items IDs:", items.map(i => i.id));
-                            console.log("PARENT - Looking for ID:", updatedItem.id, typeof updatedItem.id);
                             if (index !== -1) {
                                 items[index] = { ...updatedItem };
                                 items = [...items];
-                                console.log("PARENT - Items after update:", items);
                             } else {
-                                console.warn(`PARENT - Item with id ${updatedItem.id} not found`);
+                                console.warn(
+                                    `PARENT - Item with id ${updatedItem.id} not found`
+                                );
                             }
                         }}
                     />

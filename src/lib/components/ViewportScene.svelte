@@ -1,6 +1,12 @@
 <script lang="ts">
     import { T } from "@threlte/core";
-    import { Grid, OrbitControls, TransformControls, interactivity, Outlines } from "@threlte/extras";
+    import {
+        Grid,
+        OrbitControls,
+        TransformControls,
+        interactivity,
+        Outlines,
+    } from "@threlte/extras";
 
     let {
         sceneStore,
@@ -11,7 +17,12 @@
 
     let selectedObjectId = $state(null);
     let isDragging = $state(false);
-    let sceneObjects = $derived(sceneStore.getScene().objects);
+    let sceneObjects = $derived($sceneStore.getScene().objects);
+
+    $effect(() => {
+        console.log(sceneObjects);
+        console.log($sceneStore);
+    });
 
     interactivity();
 </script>
@@ -25,17 +36,24 @@
 <T.AmbientLight intensity={0.3} />
 
 <!-- Scene Rendering -->
-{#each sceneObjects as object (object.id)}
+{#each $sceneStore.getScene().objects as object (object.id)}
+    {@const position = [
+        object.position.x,
+        object.position.y,
+        object.position.z,
+    ]}
+    {@const rotation = [
+        object.rotation.x,
+        object.rotation.y,
+        object.rotation.z,
+        object.rotation.w,
+    ]}
+    {@const scale = [object.scale.x, object.scale.y, object.scale.z]}
     <T.Group
         bind:ref={object.groupRef}
-        position={[object.position.x, object.position.y, object.position.z]}
-        quaternion={[
-            object.rotation.x,
-            object.rotation.y,
-            object.rotation.z,
-            object.rotation.w,
-        ]}
-        scale={[object.scale.x, object.scale.y, object.scale.z]}
+        {position}
+        quaternion={rotation}
+        {scale}
     >
         <T.Mesh
             castShadow
