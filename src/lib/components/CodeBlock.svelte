@@ -170,8 +170,8 @@
                         <Input
                             type={field.type}
                             class="absolute top-0 left-0 rounded-full h-8 w-full z-10"
+                            bind:value={item[field.bind]}
                             placeholder={field.placeholder}
-                            value={item[field.bind]}
                         />
                     {/if}
                 </div>

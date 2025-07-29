@@ -46,7 +46,7 @@
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/ViewportScene.svelte";
     import GameRuntime from "$lib/components/GameRuntime.svelte";
-    import ScratchBlocksEditor from "$lib/components/ScratchBlocksEditor.svelte";
+    import CustomCodeEditor from "$lib/components/CustomCodeEditor.svelte";
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
     import ViewportLoader from "$lib/components/ViewportLoader.svelte";
@@ -338,6 +338,9 @@
     let activeTool = $state("select");
     let transformMode = $state("translate");
     let transformSpace = $state("local");
+
+    // Visual scripting compiled code
+    let compiledCode = $state([]);
 
     // Simulate loading process
     async function initializeViewport() {
@@ -662,7 +665,7 @@
                                         >
                                             <Canvas>
                                                 {#if play}
-                                                    <GameRuntime {sceneStore} />
+                                                    <GameRuntime {sceneStore} {compiledCode} />
                                                 {:else}
                                                     <Scene
                                                         {sceneStore}
@@ -735,7 +738,15 @@
                                     </div>
 
                                     <!-- Blockly Workspace -->
-                                    <ScratchBlocksEditor />
+                                    <CustomCodeEditor bind:compiledCode />
+                                    
+                                    <!-- Debug: Show compiled code -->
+                                    {#if compiledCode.length > 0}
+                                        <div class="absolute bottom-4 right-4 bg-black/80 text-green-400 p-2 rounded text-xs max-w-64 max-h-32 overflow-auto">
+                                            <div class="font-bold mb-1">Compiled Code:</div>
+                                            <pre>{JSON.stringify(compiledCode, null, 1)}</pre>
+                                        </div>
+                                    {/if}
                                 </div>
                             </Tabs.Content>
 

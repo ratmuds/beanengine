@@ -4,7 +4,7 @@
     import { onMount } from "svelte";
     import * as THREE from "three";
 
-    let { sceneStore } = $props();
+    let { sceneStore, compiledCode = [] } = $props();
 
     // Test cube refs for 60fps animation
     const { scene } = useThrelte();
@@ -45,6 +45,48 @@
             mesh.quaternion.copy(obj.rotation);
 
             scene.add(mesh);
+        }
+    });
+
+    // Simple interpreter for compiled visual code
+    function executeBlock(block) {
+        console.log('Executing block:', block);
+        
+        switch (block.type) {
+            case 'say':
+                console.log(`SAY: "${block.params.text}" for ${block.params.duration}s`);
+                break;
+            case 'move':
+                console.log(`MOVE: ${block.params.direction} at speed ${block.params.speed}`);
+                break;
+            case 'wait':
+                console.log(`WAIT: ${block.params.duration}s`);
+                break;
+            case 'if':
+                console.log(`IF: ${block.params.condition}`);
+                if (block.children) {
+                    block.children.forEach(child => executeBlock(child));
+                }
+                break;
+            case 'repeat':
+                console.log(`REPEAT: ${block.params.times} times`);
+                if (block.children) {
+                    const times = parseInt(block.params.times) || 1;
+                    for (let i = 0; i < times; i++) {
+                        block.children.forEach(child => executeBlock(child));
+                    }
+                }
+                break;
+            default:
+                console.log(`Unknown block type: ${block.type}`);
+        }
+    }
+
+    // Execute compiled code when it changes
+    $effect(() => {
+        if (compiledCode && compiledCode.length > 0) {
+            console.log('Executing compiled code:', compiledCode);
+            compiledCode.forEach(block => executeBlock(block));
         }
     });
 
