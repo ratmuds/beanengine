@@ -32,6 +32,9 @@ importers:
       svelte-dnd-action:
         specifier: ^0.9.64
         version: 0.9.64(svelte@5.36.15)
+      three:
+        specifier: ^0.178.0
+        version: 0.178.0
     devDependencies:
       '@internationalized/date':
         specifier: ^3.8.2

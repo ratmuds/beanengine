@@ -81,6 +81,10 @@
                     type="text"
                     value={object.name}
                     class="bg-transparent border-0 text-foreground text-sm font-medium h-auto focus:ring-0 focus:border-0"
+                    onchange={(e) => {
+                        object.name = e.target.value;
+                        onPropertyChange(object);
+                    }}
                 />
                 <div
                     class="text-xs text-muted-foreground font-mono mt-0.5 ml-1 flex items-center gap-1"

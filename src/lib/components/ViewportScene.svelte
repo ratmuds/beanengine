@@ -16,15 +16,11 @@
         transformSpace = "local",
     } = $props();
 
-    let isDragging = $state(false);
-    let sceneObjects = $derived($sceneStore.getScene().objects);
-
-    $effect(() => {
-        console.log(sceneObjects);
-        console.log($sceneStore);
-    });
-
     interactivity();
+
+    // TODO: handle objects having children (local position)
+    // TODO: handle objects having children (local position)
+    // TODO: handle objects having children (local position)
 </script>
 
 <T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
@@ -59,9 +55,7 @@
             castShadow
             receiveShadow
             onclick={() => {
-                if (!isDragging) {
-                    selectedObject = object.id;
-                }
+                selectedObject = object.id;
             }}
         >
             <T.BoxGeometry args={[1, 1, 1]} />
@@ -81,18 +75,7 @@
             translationSnap={0.5}
             rotationSnap={Math.PI / 12}
             scaleSnap={0.1}
-            onmouseDown={() => {
-                console.log("Dragging started");
-                //isDragging = true;
-            }}
             onmouseUp={() => {
-                console.log("Dragging ended");
-                setTimeout(() => {
-                    //isDragging = false;
-                }, 10);
-            }}
-            onobjectChange={() => {
-                console.log("Object changed");
                 const transform = object.groupRef;
                 if (transform) {
                     object.position.x = transform.position.x;

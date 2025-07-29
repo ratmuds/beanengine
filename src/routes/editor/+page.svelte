@@ -19,6 +19,7 @@
 
     import {
         Play,
+        Pause,
         Move,
         RotateCw,
         Scaling,
@@ -44,6 +45,7 @@
 
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/ViewportScene.svelte";
+    import GameRuntime from "$lib/components/GameRuntime.svelte";
     import ScratchBlocksEditor from "$lib/components/ScratchBlocksEditor.svelte";
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
@@ -241,14 +243,6 @@
     }
 
     // Object Explorer handlers
-    function handleSelectObject(event: CustomEvent<{ id: string }>) {
-        const { id } = event.detail;
-        console.log("Selected object:", id);
-
-        // Find mock object by ID
-        selectedObject = id;
-    }
-
     function handleToggleExpanded(event: CustomEvent<{ id: string }>) {
         const { id } = event.detail;
         sceneObjects = sceneObjects.map((obj) =>
@@ -365,6 +359,27 @@
         rightPanelSize = 20;
         centerPanelSize = 60;
     }
+
+    // play mode mock code
+
+    let play = $state(false);
+
+    function togglePlay() {
+        play = !play;
+        console.log("Play mode:", play);
+
+        if (play) {
+            leftPanelSize = 0;
+            rightPanelSize = 0;
+            centerPanelSize = 100;
+        } else {
+            leftPanelSize = 20;
+            rightPanelSize = 20;
+            centerPanelSize = 60;
+
+            // TODO: make this remember previous size
+        }
+    }
 </script>
 
 <div
@@ -391,7 +406,9 @@
 
     <!-- Top Navigation Bar -->
     <div
-        class="h-12 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-4 relative z-10"
+        class="h-12 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-4 relative z-10 {play
+            ? 'bg-gradient-to-r from-green-800/50 via-green-800/10 to-transparent'
+            : ''}"
     >
         <div class="flex items-center gap-4 flex-1">
             <!-- Project Name -->
@@ -415,13 +432,25 @@
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-1 ml-8">
-                <Button
-                    size="sm"
-                    class="h-8 px-3 bg-green-800 text-green-400 hover:bg-green-500/20"
-                >
-                    <Play class="w-4 h-4 mr-1" />
-                    Play
-                </Button>
+                {#if !play}
+                    <Button
+                        size="sm"
+                        class="h-8 px-3 bg-green-800 text-green-400 hover:bg-green-500/20"
+                        onclick={togglePlay}
+                    >
+                        <Play class="w-4 h-4 mr-1" />
+                        Play
+                    </Button>
+                {:else}
+                    <Button
+                        size="sm"
+                        class="h-8 px-3 bg-red-800 text-red-400 hover:bg-red-500/20"
+                        onclick={togglePlay}
+                    >
+                        <Pause class="w-4 h-4 mr-1" />
+                        Stop
+                    </Button>
+                {/if}
 
                 <Separator orientation="vertical" class="h-6 mx-2" />
 
@@ -622,7 +651,9 @@
                                 class="h-full m-0 p-0"
                             >
                                 <div
-                                    class="h-full bg-transparent relative overflow-hidden"
+                                    class="h-full bg-transparent relative overflow-hidden {play
+                                        ? 'border-green-500 border-2'
+                                        : ''}"
                                 >
                                     {#if !isViewportLoading}
                                         <div
@@ -630,13 +661,17 @@
                                             transition:fade={{ duration: 500 }}
                                         >
                                             <Canvas>
-                                                <Scene
-                                                    {sceneStore}
-                                                    bind:selectedObject
-                                                    {activeTool}
-                                                    {transformMode}
-                                                    {transformSpace}
-                                                />
+                                                {#if play}
+                                                    <GameRuntime {sceneStore} />
+                                                {:else}
+                                                    <Scene
+                                                        {sceneStore}
+                                                        bind:selectedObject
+                                                        {activeTool}
+                                                        {transformMode}
+                                                        {transformSpace}
+                                                    />
+                                                {/if}
                                             </Canvas>
                                         </div>
                                     {/if}

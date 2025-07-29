@@ -102,6 +102,7 @@ function createSceneStore() {
 
         triggerReactivity: () => {
             update((currentManager) => {
+                console.log("Triggering reactivity");
                 return currentManager;
             });
         },

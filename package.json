@@ -44,6 +44,7 @@
 		"lucide-svelte": "^0.525.0",
 		"mode-watcher": "^1.1.0",
 		"postprocessing": "^6.37.6",
-		"svelte-dnd-action": "^0.9.64"
+		"svelte-dnd-action": "^0.9.64",
+		"three": "^0.178.0"
 	}
 }
