@@ -6,6 +6,7 @@
     import CodeBlock from "$lib/components/CodeBlock.svelte";
     import { GripVertical, Edit3, Trash2 } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
+    import { generateAvailableChips } from "$lib/chipConfig.js";
 
     let {
         items = $bindable([]),
@@ -19,6 +20,8 @@
 
     // Available code block templates - generated from config
     let availableBlocks = $state(generateAvailableBlocks());
+    // Available chip templates - generated from config
+    let availableChips = $state(generateAvailableChips());
 
     const flipDurationMs = 300;
     let codeListTitle = $state("Code List");
@@ -79,6 +82,30 @@
         return params;
     }
 
+    // Helper function to count nested chips in items
+    function countNestedChips(items) {
+        console.log(items);
+
+        let count = 0;
+        items.forEach((item) => {
+            if (item.fields) {
+                item.fields.forEach((field) => {
+                    if (field.inputs && field.inputs.length > 0) {
+                        count += field.inputs.length;
+                        // Recursively count chips in nested chips
+                        count += countNestedChips(
+                            field.inputs.filter((input) => input.fields)
+                        );
+                    }
+                });
+            }
+            if (item.children) {
+                count += countNestedChips(item.children);
+            }
+        });
+        return count;
+    }
+
     // Function to recursively compile blocks to executable structure
     function compileBlocks(blocks = undefined) {
         if (!blocks) {
@@ -118,11 +145,29 @@
     });
 
     function handleDndConsider(e) {
+        const beforeCount = countNestedChips(items);
+        console.log(`🔄 DND CONSIDER - Before: ${beforeCount} chips`);
         items = e.detail.items;
+        const afterCount = countNestedChips(items);
+        console.log(`🔄 DND CONSIDER - After: ${afterCount} chips`);
+        if (beforeCount !== afterCount) {
+            console.warn(
+                `❌ CHIP LOSS in handleDndConsider: ${beforeCount} -> ${afterCount}`
+            );
+        }
     }
 
     function handleDndFinalize(e) {
+        const beforeCount = countNestedChips(items);
+        console.log(`✅ DND FINALIZE - Before: ${beforeCount} chips`);
         items = e.detail.items;
+        const afterCount = countNestedChips(items);
+        console.log(`✅ DND FINALIZE - After: ${afterCount} chips`);
+        if (beforeCount !== afterCount) {
+            console.warn(
+                `❌ CHIP LOSS in handleDndFinalize: ${beforeCount} -> ${afterCount}`
+            );
+        }
         // Check if item was dropped outside of valid zones
         if (e.detail.info && e.detail.info.trigger === "droppedOutside") {
             // Remove the item from the list
@@ -145,7 +190,6 @@
             items = [...items];
         }
     }
-
 
     function handleBlockPaletteDnd(e) {
         // Don't modify the palette - it's infinite
@@ -347,7 +391,7 @@
                     </div>
                 </div>
 
-                <!-- Variables Panel -->
+                <!-- Chips Panel -->
                 <div
                     class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg h-32"
                 >
@@ -355,23 +399,23 @@
                         class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
                     >
                         <span class="text-[#ccc] text-xs font-medium"
-                            >Variables</span
+                            >Chips</span
                         >
                     </div>
                     <div class="p-2 space-y-1 h-20 overflow-y-auto">
-                        {#each variables as variable (variable.id)}
+                        {#each availableChips as chip (chip.id)}
                             <div
                                 class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium cursor-grab hover:from-orange-600 hover:to-orange-700 transition-all shadow-sm inline-block mr-1"
                                 draggable="true"
                                 ondragstart={(e) => {
                                     e.dataTransfer.setData(
                                         "application/json",
-                                        JSON.stringify(variable)
+                                        JSON.stringify(chip)
                                     );
                                     e.dataTransfer.effectAllowed = "copy";
                                 }}
                             >
-                                {variable.name}
+                                {chip.type}
                             </div>
                         {/each}
                     </div>
@@ -412,7 +456,9 @@
 
                 <!-- Active Triggers Drop Zone -->
                 <div class="p-3">
-                    <div class="text-[#ccc] text-sm font-medium mb-2">Active Triggers</div>
+                    <div class="text-[#ccc] text-sm font-medium mb-2">
+                        Active Triggers
+                    </div>
                     <div
                         class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30"
                         use:dndzone={{
@@ -436,15 +482,24 @@
                                 try {
                                     const trigger = JSON.parse(data);
                                     // Check if it's a trigger (not a code block)
-                                    if (trigger.type && trigger.type.startsWith("on")) {
+                                    if (
+                                        trigger.type &&
+                                        trigger.type.startsWith("on")
+                                    ) {
                                         const newTrigger = {
                                             ...trigger,
                                             id: Date.now() + Math.random(),
                                         };
-                                        activeTriggers = [...activeTriggers, newTrigger];
+                                        activeTriggers = [
+                                            ...activeTriggers,
+                                            newTrigger,
+                                        ];
                                     }
                                 } catch (err) {
-                                    console.error("Failed to parse dropped data:", err);
+                                    console.error(
+                                        "Failed to parse dropped data:",
+                                        err
+                                    );
                                 }
                             }
                         }}
@@ -457,7 +512,11 @@
                         {:else}
                             <div class="flex flex-wrap gap-1">
                                 {#each activeTriggers as trigger (trigger.id)}
-                                    <div animate:flip={{ duration: flipDurationMs }}>
+                                    <div
+                                        animate:flip={{
+                                            duration: flipDurationMs,
+                                        }}
+                                    >
                                         <div
                                             class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-2 py-1 rounded text-xs font-medium shadow-sm"
                                         >
@@ -516,12 +575,26 @@
                                 onIfDndConsider={handleIfDndConsider}
                                 onIfDndFinalize={handleIfDndFinalize}
                                 onUpdate={(updatedItem) => {
+                                    const beforeCount = countNestedChips(items);
+                                    console.log(
+                                        `🔄 BLOCK UPDATE - Before: ${beforeCount} chips`
+                                    );
                                     const mainIndex = items.findIndex(
                                         (i) => i.id === updatedItem.id
                                     );
                                     if (mainIndex !== -1) {
-                                        items[mainIndex] = { ...updatedItem };
+                                        items[mainIndex] = updatedItem;
                                         items = [...items];
+                                        const afterCount =
+                                            countNestedChips(items);
+                                        console.log(
+                                            `🔄 BLOCK UPDATE - After: ${afterCount} chips`
+                                        );
+                                        if (beforeCount !== afterCount) {
+                                            console.warn(
+                                                `❌ CHIP LOSS in onUpdate: ${beforeCount} -> ${afterCount}`
+                                            );
+                                        }
                                     }
                                 }}
                             />

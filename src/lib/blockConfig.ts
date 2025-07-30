@@ -174,7 +174,7 @@ export function generateAvailableBlocks() {
         ),
         ...(blockConfig[type].fields.some(f => f.bind === "children") || type === "if" || type === "repeat" ? { children: [] } : {}),
         fields: blockConfig[type].fields.map(field => ({
-            bind: field.bind,
+            ...field,
             inputs: [],
         })),
     }));

@@ -19,7 +19,7 @@
 <div
     class="bg-muted m-2 p-2 cursor-grab border-l-4 border-l-{config
         ? config.color
-        : 'gray-500'} hover:bg-muted transition-colors spacemono min-w-96 w-fit"
+        : 'gray-500'} hover:bg-muted transition-colors spacemono w-fit"
 >
     {#if config}
         <div class="flex items-center gap-2">
@@ -36,7 +36,7 @@
             </Tooltip.Provider>
         </div>
 
-        <div class="flex items-center mt-3 gap-1">
+        <div class="flex items-start mt-3 gap-1 w-fit min-w-0">
             {#each config.fields as field}
                 {#if field.label}<p class="mx-1">{field.label}</p>{/if}
                 <FieldInput {field} {item} {onUpdate} />
