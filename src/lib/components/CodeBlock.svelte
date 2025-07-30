@@ -1,10 +1,10 @@
 <script lang="ts">
     import { dndzone } from "svelte-dnd-action";
     import Self from "./CodeBlock.svelte";
-    import Input from "$lib/components/ui/input/input.svelte";
-    import VariableChip from "./VariableChip.svelte";
+    import FieldInput from "./FieldInput.svelte";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Type, Hash, GitBranch, Info } from "lucide-svelte";
+    import { Info } from "lucide-svelte";
+    import { blockConfig } from "$lib/blockConfig.js";
 
     let {
         item,
@@ -13,47 +13,7 @@
         onUpdate = null,
     } = $props();
 
-    const blockConfig = {
-        say: {
-            color: "purple-500",
-            label: "Say",
-            fields: [
-                {
-                    type: "text",
-                    bind: "text",
-                    placeholder: "message",
-                    icon: Type,
-                },
-                {
-                    type: "number",
-                    bind: "duration",
-                    label: "for",
-                    placeholder: "seconds",
-                    icon: Hash,
-                },
-            ],
-            info: "Shows a message over the object for a duration",
-        },
-        if: {
-            color: "blue-500",
-            label: "If",
-            fields: [
-                {
-                    type: "text",
-                    bind: "condition",
-                    placeholder: "condition",
-                    icon: GitBranch,
-                },
-            ],
-            info: "Runs code if condition is true",
-            end: "then",
-        },
-    };
-
     let config = $derived(blockConfig[item.type]);
-
-    // Create local state for each field's dnd zone to avoid reactivity conflicts
-    let fieldStates = $state({});
 </script>
 
 <div
@@ -79,102 +39,7 @@
         <div class="flex items-center mt-3 gap-1">
             {#each config.fields as field}
                 {#if field.label}<p class="mx-1">{field.label}</p>{/if}
-                <div class="flex-1 relative">
-                    <!-- DND zone always present -->
-                    <div
-                        class="min-h-8"
-                        use:dndzone={{
-                            items:
-                                item.fields.find((f) => f.bind === field.bind)
-                                    ?.inputs || [],
-                            flipDurationMs: 0,
-                            type: "variable",
-                            dropTargetStyle: {
-                                outline: "2px solid #3b82f6",
-                                "outline-offset": "2px",
-                                "background-color": "rgba(59, 130, 246, 0.08)",
-                                "border-radius": "32px",
-                            },
-                            dropFromOthersDisabled: false,
-                            morphDisabled: true,
-                        }}
-                        onconsider={(e) => {
-                            console.log(
-                                `CONSIDER - Field ${field.bind}:`,
-                                JSON.stringify(e.detail.items)
-                            );
-                            console.log(
-                                `CONSIDER - Current item.fields:`,
-                                JSON.stringify(item.fields)
-                            );
-
-                            if (onUpdate) {
-                                const updatedItem = {
-                                    ...item,
-                                    fields: item.fields.map((f) => ({
-                                        ...f,
-                                        inputs:
-                                            f.bind === field.bind
-                                                ? [...e.detail.items]
-                                                : [...f.inputs],
-                                    })),
-                                };
-                                onUpdate(updatedItem);
-                            }
-                        }}
-                        onfinalize={(e) => {
-                            console.log(
-                                `FINALIZE - Field ${field.bind}:`,
-                                e.detail.items
-                            );
-                            console.log(
-                                `FINALIZE - Current item.fields before update:`,
-                                item.fields
-                            );
-                            if (onUpdate) {
-                                // Create updated item without modifying original
-                                const updatedItem = {
-                                    ...item,
-                                    fields: item.fields.map((f) => ({
-                                        ...f,
-                                        inputs:
-                                            f.bind === field.bind
-                                                ? [...e.detail.items]
-                                                : [...f.inputs],
-                                    })),
-                                };
-                                console.log(
-                                    `FINALIZE - About to call onUpdate with:`,
-                                    updatedItem
-                                );
-                                onUpdate(updatedItem);
-                            }
-                        }}
-                    >
-                        {#if item.fields.find((f) => f.bind === field.bind)?.inputs.length > 0}
-                            <!-- Show variable chips -->
-                            <div class="flex gap-1 h-8">
-                                {#each item.fields.find((f) => f.bind === field.bind)?.inputs as variable (variable.id)}
-                                    {@const _ = console.log(
-                                        `RENDER - Showing variable chip for ${field.bind}:`,
-                                        variable
-                                    )}
-                                    <VariableChip {variable} />
-                                {/each}
-                            </div>
-                        {/if}
-                    </div>
-
-                    <!-- Input positioned above DND zone when no variables -->
-                    {#if item.fields.find((f) => f.bind === field.bind)?.inputs.length === 0}
-                        <Input
-                            type={field.type}
-                            class="absolute top-0 left-0 rounded-full h-8 w-full z-10"
-                            bind:value={item[field.bind]}
-                            placeholder={field.placeholder}
-                        />
-                    {/if}
-                </div>
+                <FieldInput {field} {item} {onUpdate} />
                 <svelte:component
                     this={field.icon}
                     class="w-8 h-8 p-2 rounded-full outline"

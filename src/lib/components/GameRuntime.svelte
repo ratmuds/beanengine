@@ -1,15 +1,26 @@
 <script lang="ts">
     import { T, useTask, useThrelte } from "@threlte/core";
     import { Grid, OrbitControls } from "@threlte/extras";
-    import { onMount } from "svelte";
+    import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
 
     let { sceneStore, compiledCode = [] } = $props();
 
     // Test cube refs for 60fps animation
-    const { scene } = useThrelte();
+    const { renderer } = useThrelte();
+    let gameScene: THREE.Scene;
+    let gameCamera: THREE.PerspectiveCamera;
     let testCubeRef: THREE.Mesh;
     let testMaterialRef: THREE.MeshStandardMaterial;
+
+    // --- Game Loop and Execution ---
+    let isRunning = $state(false);
+    const TICK_DELAY_MS = 50; // Delay between block executions
+
+    // Helper to pause execution
+    function sleep(ms: number) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
 
     // 60fps animation using useTask
     /*useTask((delta) => {
@@ -28,6 +39,13 @@
     });*/
 
     onMount(() => {
+        // Create a separate scene for game runtime
+        gameScene = new THREE.Scene();
+        
+        // Create a separate camera for game runtime
+        gameCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        gameCamera.position.set(10, 10, 5);
+        
         // Initialize scene objects
         let sceneObjects = $sceneStore.getScene().objects;
 
@@ -44,37 +62,74 @@
             mesh.position.copy(obj.position);
             mesh.quaternion.copy(obj.rotation);
 
-            scene.add(mesh);
+            mesh.name = obj.id;
+            testCubeRef = mesh; // Bind to testCubeRef for animation
+
+            gameScene.add(mesh);
+        }
+
+        // Add lighting to the game scene
+        const directionalLight = new THREE.DirectionalLight(0xffffff, Math.PI);
+        directionalLight.position.set(3, 10, 7);
+        directionalLight.castShadow = true;
+        gameScene.add(directionalLight);
+
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        gameScene.add(ambientLight);
+
+        // Start custom render loop
+        startRenderLoop();
+    });
+
+    // Custom render loop for the game scene
+    let animationId: number;
+    
+    function startRenderLoop() {
+        function render() {
+            if (gameScene && renderer && gameCamera) {
+                renderer.render(gameScene, gameCamera);
+            }
+            animationId = requestAnimationFrame(render);
+        }
+        render();
+    }
+
+    onDestroy(() => {
+        if (animationId) {
+            cancelAnimationFrame(animationId);
         }
     });
 
     // Simple interpreter for compiled visual code
-    function executeBlock(block) {
-        console.log('Executing block:', block);
-        
+    async function executeBlock(block) {
         switch (block.type) {
-            case 'say':
-                console.log(`SAY: "${block.params.text}" for ${block.params.duration}s`);
-                break;
-            case 'move':
-                console.log(`MOVE: ${block.params.direction} at speed ${block.params.speed}`);
-                break;
-            case 'wait':
-                console.log(`WAIT: ${block.params.duration}s`);
-                break;
-            case 'if':
-                console.log(`IF: ${block.params.condition}`);
-                if (block.children) {
-                    block.children.forEach(child => executeBlock(child));
+            case "say":
+                console.log(
+                    `SAY: "${block.params.text}" for ${block.params.duration}s`
+                );
+                // In a real implementation, you'd show a speech bubble here.
+                // We'll simulate the duration with a wait.
+                if (block.params.duration) {
+                    await sleep(parseFloat(block.params.duration) * 1000);
                 }
                 break;
-            case 'repeat':
-                console.log(`REPEAT: ${block.params.times} times`);
-                if (block.children) {
-                    const times = parseInt(block.params.times) || 1;
-                    for (let i = 0; i < times; i++) {
-                        block.children.forEach(child => executeBlock(child));
-                    }
+            case "moveto":
+                console.log(`MOVE TO: ${block.params.position}`);
+
+                // Parse position
+                const position = block.params.position.split(",").map(Number);
+                console.log(`Parsed position: ${position}`);
+
+                if (testCubeRef && position.length === 3) {
+                    testCubeRef.position.set(...position);
+                }
+
+                break;
+            case "wait":
+                const duration = parseFloat(block.params.duration) * 1000;
+                console.log(`WAIT: ${duration}ms`);
+                if (!isNaN(duration)) {
+                    await sleep(duration);
                 }
                 break;
             default:
@@ -82,11 +137,48 @@
         }
     }
 
+    // Asynchronous execution loop
+    async function runCompiledCode(blocks) {
+        isRunning = true;
+        console.log("Starting execution:", blocks);
+
+        for (const block of blocks) {
+            if (!isRunning) {
+                console.log("Execution stopped prematurely.");
+                return; // Exit the function early
+            }
+
+            await executeBlock(block);
+            await sleep(TICK_DELAY_MS); // Wait for next tick
+        }
+
+        if (isRunning) {
+            console.log("Execution finished.");
+        }
+        isRunning = false;
+    }
+
     // Execute compiled code when it changes
     $effect(() => {
-        if (compiledCode && compiledCode.length > 0) {
-            console.log('Executing compiled code:', compiledCode);
-            compiledCode.forEach(block => executeBlock(block));
+        // This effect runs when `compiledCode` changes.
+        // It sets up a non-reactive loop to run the code.
+
+        // Stop any previous execution when new code arrives.
+        isRunning = false;
+
+        const code = compiledCode;
+        if (code && code.length > 0) {
+            // Use a timeout to schedule the run after the current reactive cycle.
+            // This prevents the effect from re-triggering itself when `isRunning` changes.
+            const timerId = setTimeout(() => {
+                runCompiledCode(code);
+            }, 50); // A small delay to ensure the old loop has time to see `isRunning = false`
+
+            // The effect's cleanup function runs when `compiledCode` changes again, or when the component unmounts.
+            return () => {
+                clearTimeout(timerId);
+                isRunning = false; // This ensures execution stops.
+            };
         }
     });
 
@@ -95,18 +187,5 @@
     // TODO: handle objects having children (local position)
 </script>
 
-<T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
-    <OrbitControls />
-</T.PerspectiveCamera>
-
-<T.DirectionalLight position={[3, 10, 7]} intensity={Math.PI} castShadow />
-
-<T.AmbientLight intensity={0.3} />
-
-<!-- Test Cube - 60fps animation via useTask -->
-<!--<T.Mesh bind:ref={testCubeRef} position={[5, 2, 0]}>
-    <T.BoxGeometry args={[1, 1, 1]} />
-    <T.MeshStandardMaterial bind:ref={testMaterialRef} />
-</T.Mesh>-->
-
-<Grid cellColor="#303030" sectionColor="#00ff00" />
+<!-- GameRuntime uses a separate Three.js scene with custom render loop -->
+<!-- No Threlte components needed here as we render directly -->
