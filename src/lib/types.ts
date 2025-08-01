@@ -137,6 +137,8 @@ class BNode3D extends BObject {
         this.position = new BVector3();
         this.rotation = new BQuaternion();
         this.scale = new BVector3(1, 1, 1);
+        this.positionOffset = new BVector3();
+        this.rotationOffset = new BQuaternion();
     }
 
     // Get world position (absolute position in scene)
