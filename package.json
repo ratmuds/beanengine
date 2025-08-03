@@ -1,8 +1,14 @@
 {
-	"name": "manymail",
+	"name": "beanengine",
 	"private": true,
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"type": "module",
+	"description": "A game development platform that bridges the gap between Scratch and professional game engines",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/ratmuds/beanengine"
+	},
+	"keywords": ["game-engine", "visual-programming", "3d-graphics", "education", "svelte"],
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
