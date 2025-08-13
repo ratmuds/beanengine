@@ -125,12 +125,13 @@ src/
 
 ## Core Architecture Analysis
 
-### Type System (`src/lib/types.ts`) ⭐⭐⭐⭐
+### Type System (`src/lib/types.ts`) ⭐⭐⭐⭐⭐
 **Strengths:**
 - Well-structured class hierarchy (BScene, BObject, BNode3D, BPart, etc.)
-- Proper inheritance model
-- 3D transform system (BVector3, position, rotation, scale)
+- Proper inheritance model with professional game engine patterns
+- Comprehensive 3D transform system (BVector3, BQuaternion)
 - Object hierarchy support with parent-child relationships
+- World-space coordinate calculations
 
 **Design Patterns:**
 ```typescript
@@ -148,26 +149,79 @@ class BObject {
 
 class BNode3D extends BObject {
     position: BVector3;
-    rotation: BVector3;
+    rotation: BQuaternion;  // Proper quaternion rotation
     scale: BVector3;
+    positionOffset: BVector3;
+    rotationOffset: BQuaternion;
 }
 ```
 
-**Observations:**
-- Clean separation of concerns
-- Follows game engine patterns (Unity-like)
-- Good foundation for 3D scene management
+**Advanced 3D Features:**
+```typescript
+// World position calculation with parent transforms
+getWorldPosition(): BVector3 {
+    if (!this.parent || !(this.parent instanceof BNode3D)) {
+        return new BVector3(this.position.x, this.position.y, this.position.z);
+    }
+    const parentWorldPos = this.parent.getWorldPosition();
+    return new BVector3(
+        parentWorldPos.x + this.position.x,
+        parentWorldPos.y + this.position.y,
+        parentWorldPos.z + this.position.z
+    );
+}
+```
 
-### State Management (`src/lib/sceneStore.ts`) ⭐⭐⭐
+**BPart Class Features:**
+- Comprehensive material properties (color, transparency, shadows)
+- Axis locking for constrained movement
+- Visibility and interaction controls
+- Physics-ready properties
+
+**Observations:**
+- Professional game engine architecture
+- Follows Unity/Unreal patterns closely  
+- Excellent foundation for complex 3D scenes
+- Type safety throughout the hierarchy
+
+### State Management (`src/lib/sceneStore.ts`) ⭐⭐⭐⭐
 **Strengths:**
 - Uses Svelte stores for reactivity
 - SceneManager class provides clean API
 - Proper object lifecycle management
+- Custom store implementation with reactive methods
+
+**Store Architecture:**
+```typescript
+function createSceneStore() {
+    const manager = new SceneManager();
+    const { subscribe, update } = writable(manager);
+    
+    return {
+        subscribe,
+        createPartInFrontOfCamera: () => update(currentManager => {
+            currentManager.createPartInFrontOfCamera();
+            return currentManager; // Triggers reactivity
+        }),
+        addObject: (object) => update(currentManager => {
+            currentManager.addObject(object);
+            return currentManager;
+        }),
+        // ... other reactive methods
+    };
+}
+```
+
+**Advanced Features:**
+- Reactive object updates
+- Scene hierarchy management
+- Object creation utilities
+- Manual reactivity triggers for complex updates
 
 **Areas for Improvement:**
-- Could benefit from more sophisticated state management for complex scenes
-- Limited undo/redo functionality
 - Scene serialization not immediately apparent
+- Limited undo/redo functionality
+- Could benefit from state persistence
 
 ---
 
@@ -352,6 +406,66 @@ class BNode3D extends BObject {
 
 ---
 
+## Additional Routes Analysis
+
+### `/code` Route ⭐⭐⭐⭐
+**Size:** 16KB, 539 lines
+**Purpose:** Visual code representation experiment
+
+**Key Features:**
+- Interactive code blocks with drag-and-drop
+- Visual representation of programming constructs (functions, variables, conditions, loops)
+- Canvas-based interface with insertion points
+- Animated transitions and visual feedback
+
+**Implementation Highlights:**
+```javascript
+let codeBlocks = [
+    { type: "function", name: "calculateTotal", args: ["price", "tax"] },
+    { type: "variable", name: "userEmail", value: "user@example.com" },
+    { type: "condition", name: "if user.isActive", nested: [...] },
+    { type: "loop", name: "for item in cart", nested: [...] }
+];
+```
+
+**Assessment:** Well-executed prototype showing alternative visual programming approach
+
+### `/code2` Route ⭐⭐⭐
+**Size:** 5.3KB, 159 lines  
+**Purpose:** Simplified block-based editor
+
+**Features:**
+- Basic drag-and-drop block system
+- Variable panel with type-aware chips
+- Nested block support (if statements)
+- Clean dark theme interface
+
+**Observations:** More focused implementation, closer to final vision
+
+### `/test` Route ⭐⭐⭐⭐
+**Size:** 22KB, 689 lines
+**Purpose:** Blockly/Scratch-blocks integration testing
+
+**Comprehensive Toolbox Categories:**
+- **Motion**: Move, turn, goto blocks
+- **Events**: Flag clicked, key pressed, sensor detection
+- **Looks**: Say, think, appearance blocks  
+- **Game Objects**: Object manipulation blocks
+- **Control**: Wait, repeat, forever loops
+- **Sensing**: Touch detection, key sensing
+- **Operators**: Math, logic, string operations
+- **Variables**: Get, set, change, show/hide
+
+**Advanced Features:**
+- Custom game-specific blocks (`game_getObjectByName`, `game_setProperty`)
+- Proper Scratch-blocks integration with XML toolbox
+- Code generation capabilities
+- Event handling system
+
+**Assessment:** Most complete implementation of visual programming system
+
+---
+
 ## Detailed Component Analysis
 
 ### ScratchBlocksEditor.svelte ⭐⭐⭐
@@ -414,6 +528,80 @@ function createBlock(id, text, color, tooltip, args = [], blockType = "statement
 - Sensing: Object detection and input checking
 - Operators: Mathematical and logical operations
 - Variables: Data storage and manipulation
+
+### CustomCodeEditor.svelte ⭐⭐⭐
+**Size:** 25KB, 625 lines
+**Purpose:** Advanced visual programming interface
+
+**Key Features:**
+- Camera system with pan and zoom for large workspaces
+- Drag-and-drop block composition
+- Variable chip system with type awareness
+- Code compilation and generation
+- Nested block support with proper scoping
+
+**Code Generation System:**
+```typescript
+function extractParams(item) {
+    const params = {};
+    if (item.fields) {
+        item.fields.forEach((field) => {
+            let fieldValue = item[field.bind] || "";
+            // Handle variable inputs and combine with field values
+            if (field.inputs && field.inputs.length > 0) {
+                const inputValues = field.inputs.map((input) => {
+                    if (input.type === "variable") {
+                        return `$${input.name}`; // Prefix variables with $
+                    }
+                    return input.value || input.name;
+                });
+                fieldValue = inputValues.join(" ");
+            }
+            params[field.bind] = fieldValue;
+        });
+    }
+    return params;
+}
+```
+
+**Advanced Features:**
+- Real-time code compilation
+- Variable scoping and type checking
+- Visual feedback for code structure
+- Export to executable format
+
+### Chip System (`chipConfig.ts`) ⭐⭐⭐⭐
+**Purpose:** Variable and data representation system
+
+**Key Features:**
+```typescript
+export interface ChipConfig {
+    color: string;
+    label: string;
+    fields: ChipField[];
+    info: string;
+    evaluate?: (chipInstance: any, context?: any) => any;
+}
+```
+
+**Variable Chip Implementation:**
+- Dynamic evaluation system
+- Nested chip support
+- Context-aware variable resolution
+- Type-safe variable references
+
+**Evaluation System:**
+```typescript
+evaluate: (chipInstance, context) => {
+    let chipName = chipInstance.name;
+    if (typeof chipName === "object") {
+        // Recursive evaluation for nested chips
+        const nestedChipConfig = chipConfig[chipName.type];
+        chipName = nestedChipConfig.evaluate(chipName, context);
+    }
+    return context?.variables?.[chipName].name || chipName;
+}
+```
 
 ---
 
