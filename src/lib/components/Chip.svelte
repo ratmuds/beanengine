@@ -1,7 +1,7 @@
 <script lang="ts">
     import FieldInput from "./FieldInput.svelte";
 
-    let { chip } = $props();
+    let { chip, onUpdate = null } = $props();
 </script>
 
 <div
@@ -35,6 +35,9 @@
                 item={chip}
                 onUpdate={(updatedChip) => {
                     chip = updatedChip;
+                    if (onUpdate) {
+                        onUpdate(updatedChip);
+                    }
                 }}
             />
         </div>

@@ -3,6 +3,18 @@
     import Chip from "./Chip.svelte";
 
     let { field, item, onUpdate = null } = $props();
+
+    let fieldValue = $derived(item[field.bind]);
+
+    function updateFieldValue(newValue) {
+        if (onUpdate) {
+            const updatedItem = {
+                ...item,
+                [field.bind]: newValue,
+            };
+            onUpdate(updatedItem);
+        }
+    }
 </script>
 
 <div
@@ -107,7 +119,8 @@
         <Input
             type={field.type}
             class="rounded-full h-8 min-w-8"
-            bind:value={item[field.bind]}
+            value={fieldValue}
+            oninput={(e) => updateFieldValue(e.target.value)}
             placeholder={field.placeholder}
         />
     {/if}

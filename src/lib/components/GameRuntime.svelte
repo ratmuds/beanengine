@@ -3,6 +3,7 @@
     import { Grid, OrbitControls } from "@threlte/extras";
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
+    import { chipConfig } from "$lib/chipConfig.js";
 
     let { sceneStore, compiledCode = [] } = $props();
 
@@ -100,33 +101,55 @@
         }
     });
 
+    // Evaluates a parameter, which can be a literal value or a chip object.
+    async function evaluateChip(param, context) {
+        // If the parameter is not an object or doesn't have a type, it's a literal value.
+        if (typeof param !== 'object' || !param || !param.type) {
+            return param;
+        }
+
+        // It's a chip, so find its configuration.
+        const config = chipConfig[param.type];
+        if (!config || !config.evaluate) {
+            console.warn(`No evaluate function found for chip type: ${param.type}`);
+            return undefined; // Or some other default/error value
+        }
+
+        // The context for the chip's evaluate function needs access to the evaluator itself
+        // to allow for recursive evaluation.
+        const evaluationContext = {
+            ...context,
+            evaluateChip: (p) => evaluateChip(p, context) // Pass the main context down
+        };
+
+        return config.evaluate(param, evaluationContext);
+    }
+
     // Simple interpreter for compiled visual code
-    async function executeBlock(block) {
+    async function executeBlock(block, context) {
+        // Resolve all parameters before executing the block
+        const params = {};
+        for (const key in block.params) {
+            params[key] = await evaluateChip(block.params[key], context);
+        }
+
         switch (block.type) {
             case "say":
                 console.log(
-                    `SAY: "${block.params.text}" for ${block.params.duration}s`
+                    `SAY: "${params.text}" for ${params.duration}s`
                 );
-                // In a real implementation, you'd show a speech bubble here.
-                // We'll simulate the duration with a wait.
-                if (block.params.duration) {
-                    await sleep(parseFloat(block.params.duration) * 1000);
+                if (params.duration) {
+                    await sleep(parseFloat(params.duration) * 1000);
                 }
                 break;
             case "moveto":
-                console.log(`MOVE TO: ${block.params.position}`);
-
-                // Parse position
-                const position = block.params.position.split(",").map(Number);
-                console.log(`Parsed position: ${position}`);
-
-                if (testCubeRef && position.length === 3) {
-                    testCubeRef.position.set(...position);
+                console.log(`MOVE TO:`, params.position);
+                if (testCubeRef && params.position && typeof params.position === 'object') {
+                    testCubeRef.position.set(params.position.x, params.position.y, params.position.z);
                 }
-
                 break;
             case "wait":
-                const duration = parseFloat(block.params.duration) * 1000;
+                const duration = parseFloat(params.duration) * 1000;
                 console.log(`WAIT: ${duration}ms`);
                 if (!isNaN(duration)) {
                     await sleep(duration);
@@ -142,13 +165,20 @@
         isRunning = true;
         console.log("Starting execution:", blocks);
 
+        const context = {
+            variables: variables.reduce((acc, v) => {
+                acc[v.name] = v;
+                return acc;
+            }, {})
+        };
+
         for (const block of blocks) {
             if (!isRunning) {
                 console.log("Execution stopped prematurely.");
                 return; // Exit the function early
             }
 
-            await executeBlock(block);
+            await executeBlock(block, context);
             await sleep(TICK_DELAY_MS); // Wait for next tick
         }
 

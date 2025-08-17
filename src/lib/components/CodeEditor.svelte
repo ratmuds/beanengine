@@ -7,6 +7,7 @@
     import { GripVertical, Edit3, Trash2 } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips } from "$lib/chipConfig.js";
+    import { compileScript } from "$lib/compiler.js";
 
     let {
         items = $bindable([]),
@@ -41,42 +42,15 @@
         const params = {};
         if (item.fields) {
             item.fields.forEach((field) => {
-                // Get the basic field value from the item property
-                let fieldValue = item[field.bind] || "";
-                console.log(
-                    "skib",
-                    item,
-                    field.bind,
-                    fieldValue,
-                    item[field.bind]
-                );
-
-                // If there are variable inputs, extract their values and combine with field value
-                // TODO: there are a ton of things wrong here - have to do full rewrite
+                // If a chip is connected to the input, use the chip object directly.
                 if (field.inputs && field.inputs.length > 0) {
-                    const inputValues = field.inputs.map((input) => {
-                        if (input.type === "variable") {
-                            return `$${input.name}`; // Prefix variables with $
-                        } else if (input.value !== undefined) {
-                            return input.value;
-                        } else {
-                            return input.name || input.id;
-                        }
-                    });
-
-                    // Combine field value with input values
-                    if (fieldValue && fieldValue !== "") {
-                        // If both field value and variables exist, combine them
-                        fieldValue = `${fieldValue} ${inputValues.join(" ")}`;
-                    } else {
-                        // If only variables exist, use just the variables
-                        fieldValue = inputValues.join(" ");
-                    }
+                    // Using the first chip if multiple are connected.
+                    // The runtime will be responsible for evaluating this chip object.
+                    params[field.bind] = field.inputs[0];
+                } else {
+                    // Otherwise, use the literal value from the block's property.
+                    params[field.bind] = item[field.bind];
                 }
-                // If no variable inputs, use the regular field value (text input)
-                // fieldValue already contains item[field.bind] from above
-
-                params[field.bind] = fieldValue;
             });
         }
         return params;
@@ -140,7 +114,7 @@
     $effect(() => {
         // Remove all logging to stop infinite loop
         if (items && Array.isArray(items)) {
-            compiledCode = compileBlocks();
+            compiledCode = compileScript(items);
         }
     });
 
@@ -179,7 +153,6 @@
         const item = items.find((i) => i.id === itemId);
         if (item) {
             item.children = e.detail.items;
-            items = [...items];
         }
     }
 
@@ -187,7 +160,6 @@
         const item = items.find((i) => i.id === itemId);
         if (item) {
             item.children = e.detail.items;
-            items = [...items];
         }
     }
 
@@ -319,7 +291,7 @@
                     onclick={() => {
                         console.log("Manual compile triggered");
                         console.log("Items:", $state.snapshot(items));
-                        const result = compileBlocks();
+                        const result = compileScript(items);
                         console.log("Manual compile result:", result);
                         console.log(
                             "Compiled code prop:",
@@ -584,7 +556,6 @@
                                     );
                                     if (mainIndex !== -1) {
                                         items[mainIndex] = updatedItem;
-                                        items = [...items];
                                         const afterCount =
                                             countNestedChips(items);
                                         console.log(

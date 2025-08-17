@@ -46,7 +46,7 @@
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/ViewportScene.svelte";
     import GameRuntime from "$lib/components/GameRuntime.svelte";
-    import CustomCodeEditor from "$lib/components/CustomCodeEditor.svelte";
+    import CustomCodeEditor from "$lib/components/CodeEditor.svelte";
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
     import ViewportLoader from "$lib/components/ViewportLoader.svelte";
@@ -470,7 +470,9 @@
                 <!-- Transform Tools -->
                 <div class="flex items-center bg-muted/40 rounded-lg p-1 gap-1">
                     <Button
-                        variant={activeTool === "select" ? "secondary" : "ghost"}
+                        variant={activeTool === "select"
+                            ? "secondary"
+                            : "ghost"}
                         size="sm"
                         class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
                         onclick={() => (activeTool = "select")}
@@ -489,7 +491,9 @@
                         <Move class="w-4 h-4" />
                     </Button>
                     <Button
-                        variant={activeTool === "rotate" ? "secondary" : "ghost"}
+                        variant={activeTool === "rotate"
+                            ? "secondary"
+                            : "ghost"}
                         size="sm"
                         class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
                         onclick={() => {
@@ -674,7 +678,10 @@
                                         >
                                             <Canvas>
                                                 {#if play}
-                                                    <GameRuntime {sceneStore} {compiledCode} />
+                                                    <GameRuntime
+                                                        {sceneStore}
+                                                        {compiledCode}
+                                                    />
                                                 {:else}
                                                     <Scene
                                                         {sceneStore}
@@ -748,12 +755,20 @@
 
                                     <!-- Blockly Workspace -->
                                     <CustomCodeEditor bind:compiledCode />
-                                    
+
                                     <!-- Debug: Show compiled code -->
                                     {#if compiledCode.length > 0}
-                                        <div class="absolute bottom-4 right-4 bg-black/80 text-green-400 p-2 rounded text-xs max-w-64 max-h-32 overflow-auto">
-                                            <div class="font-bold mb-1">Compiled Code:</div>
-                                            <pre>{JSON.stringify(compiledCode, null, 1)}</pre>
+                                        <div
+                                            class="absolute bottom-4 right-4 bg-black/80 text-green-400 p-2 rounded text-xs max-w-64 max-h-32 overflow-auto"
+                                        >
+                                            <div class="font-bold mb-1">
+                                                Compiled Code:
+                                            </div>
+                                            <pre>{JSON.stringify(
+                                                    compiledCode,
+                                                    null,
+                                                    1
+                                                )}</pre>
                                         </div>
                                     {/if}
                                 </div>
