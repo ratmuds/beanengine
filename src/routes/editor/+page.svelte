@@ -409,118 +409,127 @@
 
     <!-- Top Navigation Bar -->
     <div
-        class="h-12 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-4 relative z-10 {play
+        class="h-14 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-6 relative z-10 {play
             ? 'bg-gradient-to-r from-green-800/50 via-green-800/10 to-transparent'
             : ''}"
     >
-        <div class="flex items-center gap-4 flex-1">
+        <div class="flex items-center gap-6 flex-1">
             <!-- Project Name -->
-            <Button class="flex items-center gap-2" variant="ghost">
+            <Button class="flex items-center gap-3 px-3 py-2" variant="ghost">
                 <div
-                    class="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded"
+                    class="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md"
                 ></div>
-                <span class="text-foreground font-medium text-sm"
+                <span class="text-foreground font-semibold text-sm"
                     >Test Project</span
                 >
             </Button>
 
             <!-- Top Bar Tabs -->
             <Tabs.Root value="home">
-                <Tabs.List>
-                    <Tabs.Trigger value="home"><House /></Tabs.Trigger>
-                    <Tabs.Trigger value="object"><Box /></Tabs.Trigger>
-                    <Tabs.Trigger value="ui"><LayoutDashboard /></Tabs.Trigger>
+                <Tabs.List class="bg-muted/50">
+                    <Tabs.Trigger value="home" class="px-4 py-2">
+                        <House class="w-4 h-4 mr-2" />
+                        Home
+                    </Tabs.Trigger>
+                    <Tabs.Trigger value="object" class="px-4 py-2">
+                        <Box class="w-4 h-4 mr-2" />
+                        Objects
+                    </Tabs.Trigger>
+                    <Tabs.Trigger value="ui" class="px-4 py-2">
+                        <LayoutDashboard class="w-4 h-4 mr-2" />
+                        UI
+                    </Tabs.Trigger>
                 </Tabs.List>
             </Tabs.Root>
 
             <!-- Action Buttons -->
-            <div class="flex items-center gap-1 ml-8">
+            <div class="flex items-center gap-3 ml-6">
+                <!-- Play/Stop Button -->
                 {#if !play}
                     <Button
                         size="sm"
-                        class="h-8 px-3 bg-green-800 text-green-400 hover:bg-green-500/20"
+                        class="h-9 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-medium shadow-sm transition-all duration-200"
                         onclick={togglePlay}
                     >
-                        <Play class="w-4 h-4 mr-1" />
+                        <Play class="w-4 h-4 mr-2 fill-current" />
                         Play
                     </Button>
                 {:else}
                     <Button
                         size="sm"
-                        class="h-8 px-3 bg-red-800 text-red-400 hover:bg-red-500/20"
+                        class="h-9 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-medium shadow-sm transition-all duration-200"
                         onclick={togglePlay}
                     >
-                        <Pause class="w-4 h-4 mr-1" />
+                        <Pause class="w-4 h-4 mr-2 fill-current" />
                         Stop
                     </Button>
                 {/if}
 
-                <Separator orientation="vertical" class="h-6 mx-2" />
+                <Separator orientation="vertical" class="h-8 mx-2" />
 
-                <Button
-                    variant={activeTool === "select" ? "secondary" : "ghost"}
-                    size="sm"
-                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onclick={() => (activeTool = "select")}
-                >
-                    <MousePointer2 class="w-4 h-4" />
-                </Button>
-                <Button
-                    variant={activeTool === "move" ? "secondary" : "ghost"}
-                    size="sm"
-                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onclick={() => {
-                        activeTool = "move";
-                        transformMode = "translate";
-                    }}
-                >
-                    <Move class="w-4 h-4" />
-                </Button>
-                <Button
-                    variant={activeTool === "rotate" ? "secondary" : "ghost"}
-                    size="sm"
-                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onclick={() => {
-                        activeTool = "rotate";
-                        transformMode = "rotate";
-                    }}
-                >
-                    <RotateCw class="w-4 h-4" />
-                </Button>
-                <Button
-                    variant={activeTool === "scale" ? "secondary" : "ghost"}
-                    size="sm"
-                    class="w-8 h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onclick={() => {
-                        activeTool = "scale";
-                        transformMode = "scale";
-                    }}
-                >
-                    <Scaling class="w-4 h-4" />
-                </Button>
+                <!-- Transform Tools -->
+                <div class="flex items-center bg-muted/40 rounded-lg p-1 gap-1">
+                    <Button
+                        variant={activeTool === "select" ? "secondary" : "ghost"}
+                        size="sm"
+                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        onclick={() => (activeTool = "select")}
+                    >
+                        <MousePointer2 class="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant={activeTool === "move" ? "secondary" : "ghost"}
+                        size="sm"
+                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        onclick={() => {
+                            activeTool = "move";
+                            transformMode = "translate";
+                        }}
+                    >
+                        <Move class="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant={activeTool === "rotate" ? "secondary" : "ghost"}
+                        size="sm"
+                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        onclick={() => {
+                            activeTool = "rotate";
+                            transformMode = "rotate";
+                        }}
+                    >
+                        <RotateCw class="w-4 h-4" />
+                    </Button>
+                    <Button
+                        variant={activeTool === "scale" ? "secondary" : "ghost"}
+                        size="sm"
+                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        onclick={() => {
+                            activeTool = "scale";
+                            transformMode = "scale";
+                        }}
+                    >
+                        <Scaling class="w-4 h-4" />
+                    </Button>
+                </div>
 
-                <Separator orientation="vertical" class="h-6 mx-1" />
+                <Separator orientation="vertical" class="h-8 mx-2" />
 
                 <!-- Transform Space Mode -->
                 <Button
                     variant="outline"
                     size="sm"
-                    class="h-8 px-2 text-muted-foreground hover:bg-muted flex flex-col items-center py-1 gap-0"
+                    class="h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground border-border/50 transition-all duration-200"
                     onclick={() =>
                         (transformSpace =
                             transformSpace === "world" ? "local" : "world")}
                 >
-                    <span class="text-[9px] text-muted-foreground leading-none"
-                        >Space</span
-                    >
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-2">
                         {#if transformSpace === "world"}
                             <Earth class="w-4 h-4" />
-                            <span class="text-xs">World</span>
-                        {/if}
-                        {#if transformSpace === "local"}
+                            <span class="text-xs font-medium">World</span>
+                        {:else}
                             <Box class="w-4 h-4" />
-                            <span class="text-xs">Local</span>
+                            <span class="text-xs font-medium">Local</span>
                         {/if}
                     </div>
                 </Button>
@@ -528,11 +537,11 @@
         </div>
 
         <!-- Right side buttons -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-3">
             <Button
                 variant="ghost"
                 size="sm"
-                class="h-8 px-2 text-muted-foreground hover:bg-muted"
+                class="h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
             >
                 <Settings class="w-4 h-4" />
             </Button>
