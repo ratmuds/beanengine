@@ -1,7 +1,6 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
     import { Button } from "$lib/components/ui/button";
-    import Input from "$lib/components/ui/input/input.svelte";
     import { Copy, Clipboard, ChevronDown, ChevronRight } from "lucide-svelte";
 
     interface Vector3 {
@@ -82,7 +81,7 @@
                 variant="ghost"
                 size="sm"
                 class="h-4 w-4 p-0 text-gray-500 hover:text-gray-300"
-                on:click={toggleExpanded}
+                onclick={toggleExpanded}
                 {disabled}
             >
                 {#if expanded}
@@ -98,7 +97,7 @@
                     value={value.x}
                     {step}
                     {disabled}
-                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-red-500/10 focus:outline-none"
+                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-gray-700/50 focus:ring-1 focus:ring-red-400/50 rounded focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                     on:input={(e) => handleInputChange("x", e.target.value)}
                 />
                 <input
@@ -106,7 +105,7 @@
                     value={value.y}
                     {step}
                     {disabled}
-                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-green-500/10 focus:outline-none"
+                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-gray-700/50 focus:ring-1 focus:ring-green-400/50 rounded focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                     on:input={(e) => handleInputChange("y", e.target.value)}
                 />
                 <input
@@ -114,7 +113,7 @@
                     value={value.z}
                     {step}
                     {disabled}
-                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-blue-500/10 focus:outline-none"
+                    class="text-center text-gray-300 bg-transparent border-0 px-1 py-0.5 w-full focus:bg-gray-700/50 focus:ring-1 focus:ring-blue-400/50 rounded focus:outline-none [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                     on:input={(e) => handleInputChange("z", e.target.value)}
                 />
             </div>
@@ -124,7 +123,7 @@
                     variant="ghost"
                     size="sm"
                     class="h-5 w-5 p-0 text-gray-500 hover:text-blue-400 relative"
-                    on:click={copyVector}
+                    onclick={copyVector}
                     {disabled}
                     title="Copy vector"
                 >
@@ -141,7 +140,7 @@
                     variant="ghost"
                     size="sm"
                     class="h-5 w-5 p-0 text-gray-500 hover:text-green-400"
-                    on:click={pasteVector}
+                    onclick={pasteVector}
                     {disabled}
                     title="Paste vector"
                 >
