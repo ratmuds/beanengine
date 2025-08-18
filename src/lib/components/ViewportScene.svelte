@@ -18,6 +18,9 @@
 
     interactivity();
 
+    // Store group references for each object
+    let groupRefs = $state({});
+
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
@@ -46,7 +49,7 @@
     ]}
     {@const scale = [object.scale.x, object.scale.y, object.scale.z]}
     <T.Group
-        bind:ref={object.groupRef}
+        bind:ref={groupRefs[object.id]}
         {position}
         quaternion={rotation}
         {scale}
@@ -69,14 +72,14 @@
 
     {#if activeTool !== "select" && selectedObject === object.id}
         <TransformControls
-            object={object.groupRef}
+            object={groupRefs[object.id]}
             mode={transformMode}
             space={transformSpace}
             translationSnap={0.5}
             rotationSnap={Math.PI / 12}
             scaleSnap={0.1}
             onmouseUp={() => {
-                const transform = object.groupRef;
+                const transform = groupRefs[object.id];
                 if (transform) {
                     object.position.x = transform.position.x;
                     object.position.y = transform.position.y;

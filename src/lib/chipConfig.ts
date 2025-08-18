@@ -1,4 +1,23 @@
 import * as Types from "$lib/types";
+import type { CompiledItem } from "./compiler.js";
+
+export interface RuntimeContext {
+    variables: Record<
+        string,
+        {
+            value: any;
+            type: "number" | "string" | "boolean" | "object";
+        }
+    >;
+
+    // Recursive evaluation function for nested chips
+    evaluateChip: (compiledChip: CompiledItem | any) => Promise<any>;
+
+    // Game context
+    gameObject?: any;
+    mesh?: any;
+    scene?: any;
+}
 
 export interface ChipField {
     type: string;
@@ -16,9 +35,13 @@ export interface ChipConfig {
     label: string;
     fields: ChipField[];
     info: string;
-    evaluate?: (chipInstance: any, context?: any) => Promise<any> | any; // chipInstance = the actual chip data, context = runtime
+    evaluate?: (
+        compiled: CompiledItem,
+        context: RuntimeContext
+    ) => Promise<any> | any;
 }
 
+// Chip configurations
 export const chipConfig: Record<string, ChipConfig> = {
     variable: {
         color: "orange-500",
@@ -33,23 +56,10 @@ export const chipConfig: Record<string, ChipConfig> = {
             },
         ],
         info: "References a variable value",
-        evaluate: (chipInstance, context) => {
-            let chipName = chipInstance.name; // Get the name from this specific chip instance
-
-            if (typeof chipName === "object") {
-                // If the name is an object (nested chip), we need to evaluate it
-                // We need to find the chip's config and call its evaluate function
-                const nestedChipConfig = chipConfig[chipName.type];
-                if (nestedChipConfig && nestedChipConfig.evaluate) {
-                    chipName = nestedChipConfig.evaluate(chipName, context);
-                } else {
-                    console.warn(
-                        `No evaluate function found for nested chip type: ${chipName.type}`
-                    );
-                }
-            }
-
-            return context?.variables?.[chipName].name || chipName; // Use the evaluated chipName
+        evaluate: (compiled, context) => {
+            // compiled.name should be a string in the new flattened structure
+            const variableName = compiled.name;
+            return context.variables[variableName]?.value ?? variableName;
         },
     },
 
@@ -80,26 +90,22 @@ export const chipConfig: Record<string, ChipConfig> = {
             },
         ],
         info: "Supplies a 3D vector with X, Y, and Z components",
-        evaluate: async (chipInstance, context) => {
-            // For each field (x, y, z), check if a chip is connected in the 'inputs' array.
-            // If so, evaluate that chip. Otherwise, use the literal value.
-            const getFieldValue = async (bindName) => {
-                const field = chipInstance.fields.find(f => f.bind === bindName);
-                if (field && field.inputs && field.inputs.length > 0) {
-                    return await context.evaluateChip(field.inputs[0]);
-                }
-                return chipInstance[bindName]; // Fallback to literal value
-            };
+        evaluate: async (compiled, context) => {
+            // Evaluate each field and return a vector value
+            const x = await context.evaluateChip(compiled.x);
+            const y = await context.evaluateChip(compiled.y);
+            const z = await context.evaluateChip(compiled.z);
 
-            const x = await getFieldValue('x');
-            const y = await getFieldValue('y');
-            const z = await getFieldValue('z');
-
-            return new Types.BVector3(parseFloat(x) || 0, parseFloat(y) || 0, parseFloat(z) || 0);
+            return new Types.BVector3(
+                parseFloat(x) || 0,
+                parseFloat(y) || 0,
+                parseFloat(z) || 0
+            );
         },
     },
 };
 
+// Generate a list of available chips for UI
 export function generateAvailableChips() {
     return Object.keys(chipConfig).map((type) => ({
         id: type,
@@ -110,7 +116,10 @@ export function generateAvailableChips() {
         info: chipConfig[type].info,
         // Initialize field values to defaults
         ...Object.fromEntries(
-            chipConfig[type].fields.map((field) => [field.bind, field.defaultValue ?? ""])
+            chipConfig[type].fields.map((field) => [
+                field.bind,
+                field.defaultValue ?? "",
+            ])
         ),
         fields: chipConfig[type].fields.map((field) => ({
             ...field,

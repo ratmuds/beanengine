@@ -3,25 +3,16 @@
     import { Grid, OrbitControls } from "@threlte/extras";
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
-    import { chipConfig } from "$lib/chipConfig.js";
+    import { CodeInterpreter } from "$lib/interpreter.js";
+    import { createRuntimeContext } from "$lib/compiler.js";
 
-    let { sceneStore, compiledCode = [] } = $props();
+    let { sceneStore, compiledCode = [], variables = [] } = $props();
 
-    // Test cube refs for 60fps animation
     const { renderer } = useThrelte();
     let gameScene: THREE.Scene;
     let gameCamera: THREE.PerspectiveCamera;
     let testCubeRef: THREE.Mesh;
-    let testMaterialRef: THREE.MeshStandardMaterial;
-
-    // --- Game Loop and Execution ---
-    let isRunning = $state(false);
-    const TICK_DELAY_MS = 50; // Delay between block executions
-
-    // Helper to pause execution
-    function sleep(ms: number) {
-        return new Promise((resolve) => setTimeout(resolve, ms));
-    }
+    let interpreter: CodeInterpreter;
 
     // 60fps animation using useTask
     /*useTask((delta) => {
@@ -42,11 +33,16 @@
     onMount(() => {
         // Create a separate scene for game runtime
         gameScene = new THREE.Scene();
-        
+
         // Create a separate camera for game runtime
-        gameCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        gameCamera = new THREE.PerspectiveCamera(
+            75,
+            window.innerWidth / window.innerHeight,
+            0.1,
+            1000
+        );
         gameCamera.position.set(10, 10, 5);
-        
+
         // Initialize scene objects
         let sceneObjects = $sceneStore.getScene().objects;
 
@@ -80,11 +76,20 @@
 
         // Start custom render loop
         startRenderLoop();
+
+        // Create interpreter after mesh is created
+        if (sceneObjects.length > 0) {
+            interpreter = new CodeInterpreter(
+                [],
+                sceneObjects[0],
+                sceneObjects[0]
+            );
+        }
     });
 
     // Custom render loop for the game scene
     let animationId: number;
-    
+
     function startRenderLoop() {
         function render() {
             if (gameScene && renderer && gameCamera) {
@@ -101,120 +106,26 @@
         }
     });
 
-    // Evaluates a parameter, which can be a literal value or a chip object.
-    async function evaluateChip(param, context) {
-        // If the parameter is not an object or doesn't have a type, it's a literal value.
-        if (typeof param !== 'object' || !param || !param.type) {
-            return param;
-        }
-
-        // It's a chip, so find its configuration.
-        const config = chipConfig[param.type];
-        if (!config || !config.evaluate) {
-            console.warn(`No evaluate function found for chip type: ${param.type}`);
-            return undefined; // Or some other default/error value
-        }
-
-        // The context for the chip's evaluate function needs access to the evaluator itself
-        // to allow for recursive evaluation.
-        const evaluationContext = {
-            ...context,
-            evaluateChip: (p) => evaluateChip(p, context) // Pass the main context down
-        };
-
-        return config.evaluate(param, evaluationContext);
-    }
-
-    // Simple interpreter for compiled visual code
-    async function executeBlock(block, context) {
-        // Resolve all parameters before executing the block
-        const params = {};
-        for (const key in block.params) {
-            params[key] = await evaluateChip(block.params[key], context);
-        }
-
-        switch (block.type) {
-            case "say":
-                console.log(
-                    `SAY: "${params.text}" for ${params.duration}s`
-                );
-                if (params.duration) {
-                    await sleep(parseFloat(params.duration) * 1000);
-                }
-                break;
-            case "moveto":
-                console.log(`MOVE TO:`, params.position);
-                if (testCubeRef && params.position && typeof params.position === 'object') {
-                    testCubeRef.position.set(params.position.x, params.position.y, params.position.z);
-                }
-                break;
-            case "wait":
-                const duration = parseFloat(params.duration) * 1000;
-                console.log(`WAIT: ${duration}ms`);
-                if (!isNaN(duration)) {
-                    await sleep(duration);
-                }
-                break;
-            default:
-                console.log(`Unknown block type: ${block.type}`);
-        }
-    }
-
-    // Asynchronous execution loop
-    async function runCompiledCode(blocks) {
-        isRunning = true;
-        console.log("Starting execution:", blocks);
-
-        const context = {
-            variables: variables.reduce((acc, v) => {
-                acc[v.name] = v;
-                return acc;
-            }, {})
-        };
-
-        for (const block of blocks) {
-            if (!isRunning) {
-                console.log("Execution stopped prematurely.");
-                return; // Exit the function early
-            }
-
-            await executeBlock(block, context);
-            await sleep(TICK_DELAY_MS); // Wait for next tick
-        }
-
-        if (isRunning) {
-            console.log("Execution finished.");
-        }
-        isRunning = false;
-    }
-
     // Execute compiled code when it changes
     $effect(() => {
-        // This effect runs when `compiledCode` changes.
-        // It sets up a non-reactive loop to run the code.
+        if (compiledCode && compiledCode.length > 0 && interpreter) {
+            interpreter.setCode(compiledCode);
 
-        // Stop any previous execution when new code arrives.
-        isRunning = false;
+            // Create variables map
+            const variablesMap = variables.reduce((acc, v) => {
+                acc[v.name] = { value: v.value, type: v.type };
+                return acc;
+            }, {});
 
-        const code = compiledCode;
-        if (code && code.length > 0) {
-            // Use a timeout to schedule the run after the current reactive cycle.
-            // This prevents the effect from re-triggering itself when `isRunning` changes.
-            const timerId = setTimeout(() => {
-                runCompiledCode(code);
-            }, 50); // A small delay to ensure the old loop has time to see `isRunning = false`
+            // Create full runtime context
+            const context = createRuntimeContext(variablesMap);
+            context.gameObject = $sceneStore.getScene().objects[0]; // First object
+            context.mesh = testCubeRef;
+            context.scene = gameScene;
 
-            // The effect's cleanup function runs when `compiledCode` changes again, or when the component unmounts.
-            return () => {
-                clearTimeout(timerId);
-                isRunning = false; // This ensures execution stops.
-            };
+            interpreter.run(context);
         }
     });
-
-    // TODO: handle objects having children (local position)
-    // TODO: handle objects having children (local position)
-    // TODO: handle objects having children (local position)
 </script>
 
 <!-- GameRuntime uses a separate Three.js scene with custom render loop -->

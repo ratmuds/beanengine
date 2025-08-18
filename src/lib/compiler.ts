@@ -1,7 +1,7 @@
 /**
  * Compilation utilities for converting UI chip data to runtime-friendly format
  */
-import { chipConfig } from "./chipConfig.js";
+import { chipConfig, type RuntimeContext } from "./chipConfig.js";
 
 export interface CompiledValue {
     type: "literal" | "variable";
@@ -9,7 +9,7 @@ export interface CompiledValue {
     variableName?: string;
 }
 
-export interface CompiledChip {
+export interface CompiledItem {
     type: string;
     [key: string]: any;
 }
@@ -17,11 +17,11 @@ export interface CompiledChip {
 /**
  * Compiles a chip instance to runtime format, stripping UI metadata and flattening structure
  */
-export function compileChip(chip: any): CompiledChip {
+export function compileItem(chip: any): CompiledItem {
     if (!chip) return null;
 
     // Start with base chip data
-    const compiled: CompiledChip = {
+    const compiled: CompiledItem = {
         type: chip.type,
     };
 
@@ -35,7 +35,7 @@ export function compileChip(chip: any): CompiledChip {
         // Recursively compile children
         if (chip.children && Array.isArray(chip.children)) {
             compiled.children = chip.children
-                .map((child) => compileChip(child))
+                .map((child) => compileItem(child))
                 .filter(Boolean);
         }
     } else if (chip.fields) {
@@ -79,7 +79,7 @@ function compileValue(value: any): any {
         };
     } else if (value.type) {
         // Nested chip - recursively compile
-        return compileChip(value);
+        return compileItem(value);
     }
 
     return value; // Unknown structure, pass through
@@ -88,8 +88,8 @@ function compileValue(value: any): any {
 /**
  * Compiles an array of script items (commands/chips) to runtime format
  */
-export function compileScript(scriptItems: any[]): CompiledChip[] {
-    return scriptItems.map((item) => compileChip(item)).filter(Boolean);
+export function compileScript(scriptItems: any[]): CompiledItem[] {
+    return scriptItems.map((item) => compileItem(item)).filter(Boolean);
 }
 
 /**
@@ -115,4 +115,65 @@ function getDefaultValueForField(field: any): any {
         default:
             return null;
     }
+}
+
+/**
+ * Creates the evaluateChip function for runtime context
+ */
+export function createEvaluateChip(): (
+    compiledChip: CompiledItem | any
+) => Promise<any> {
+    return async function evaluateChip(
+        compiledChip: CompiledItem | any
+    ): Promise<any> {
+        // Handle literal values (numbers, strings, etc.)
+        if (typeof compiledChip !== "object" || compiledChip === null) {
+            return compiledChip;
+        }
+
+        // Handle variable references
+        if (compiledChip.type === "variable") {
+            // This will be handled by the variable chip's evaluate function
+            const config = chipConfig["variable"];
+            if (config?.evaluate) {
+                return await config.evaluate(
+                    compiledChip,
+                    this as RuntimeContext
+                );
+            }
+            // Fallback: return the variable name if no context
+            return compiledChip.name;
+        }
+
+        // Handle other chip types
+        if (compiledChip.type && chipConfig[compiledChip.type]) {
+            const config = chipConfig[compiledChip.type];
+            if (config.evaluate) {
+                return await config.evaluate(
+                    compiledChip,
+                    this as RuntimeContext
+                );
+            }
+        }
+
+        // Default: return the value as-is
+        return compiledChip;
+    };
+}
+
+/**
+ * Creates a runtime context with variables and evaluation capability
+ */
+export function createRuntimeContext(
+    variables: Record<string, { value: any; type: string }>
+): RuntimeContext {
+    const context: RuntimeContext = {
+        variables,
+        evaluateChip: null as any, // Will be set below
+    };
+
+    // Bind the evaluateChip function to the context
+    context.evaluateChip = createEvaluateChip().bind(context);
+
+    return context;
 }
