@@ -160,43 +160,63 @@
         class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/3 pointer-events-none"
     ></div>
 
-    <!-- Header -->
-    <div class="p-4 border-b border-border/30 relative z-10">
-        <div class="flex items-center justify-between mb-3">
-            <h2 class="text-foreground font-semibold">Object Explorer</h2>
+    <!-- Header - Enhanced with better spacing and typography -->
+    <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-foreground font-semibold text-lg">
+                Object Explorer
+            </h2>
 
             <Popover.Root>
                 <Popover.Trigger
                     size="sm"
                     class="{buttonVariants({
-                        variant: 'ghost',
-                    })} h-7 w-7 p-0 text-muted-foreground hover:text-green-400 hover:bg-green-500/20"
+                        variant: 'outline',
+                    })} h-10 w-10 p-0 rounded-xl shadow-sm transition-all duration-200"
                     on:click={() => dispatch("addObject", {})}
+                    title="Add new object"
                 >
-                    <Plus class="w-4 h-4" />
+                    <Plus class="w-5 h-5" />
                 </Popover.Trigger>
-                <Popover.Content class="w-80">
-                    <h2 class="font-semibold mb-1">Add Object</h2>
+                <Popover.Content
+                    class="w-80 bg-card/95 backdrop-blur-md border-border/60 rounded-xl shadow-lg"
+                >
+                    <h2 class="font-semibold mb-3 text-base">Add Object</h2>
 
                     <Command.Root>
-                        <Command.Input placeholder="Search for objects..." />
+                        <Command.Input
+                            placeholder="Search for objects..."
+                            class="rounded-lg"
+                        />
                         <Command.List>
                             <Command.Empty>No results found.</Command.Empty>
                             <Command.Group heading="Common">
                                 <Command.Item
                                     value="part"
                                     onSelect={() => handleAddObjectType("Part")}
-                                    >Part</Command.Item
+                                    class="rounded-lg m-1">Part</Command.Item
                                 >
-                                <Command.Item>Script</Command.Item>
-                                <Command.Item>Light</Command.Item>
+                                <Command.Item class="rounded-lg m-1"
+                                    >Script</Command.Item
+                                >
+                                <Command.Item class="rounded-lg m-1"
+                                    >Light</Command.Item
+                                >
                             </Command.Group>
                             <Command.Separator />
                             <Command.Group heading="Other">
-                                <Command.Item>Folder</Command.Item>
-                                <Command.Item>Spawn</Command.Item>
-                                <Command.Item>Particles</Command.Item>
-                                <Command.Item>Constraint</Command.Item>
+                                <Command.Item class="rounded-lg m-1"
+                                    >Folder</Command.Item
+                                >
+                                <Command.Item class="rounded-lg m-1"
+                                    >Spawn</Command.Item
+                                >
+                                <Command.Item class="rounded-lg m-1"
+                                    >Particles</Command.Item
+                                >
+                                <Command.Item class="rounded-lg m-1"
+                                    >Constraint</Command.Item
+                                >
                             </Command.Group>
                         </Command.List>
                     </Command.Root>
@@ -213,32 +233,34 @@
             <FolderOpen class="w-4 h-4" />
         </ItemSwitcher>
 
-        <!-- Search -->
-        <div class="mt-3 relative">
-            <Search
-                class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground"
-            />
+        <!-- Search - Enhanced with pill shape and better styling -->
+        <div class="relative">
+            <div
+                class="absolute left-4 top-1/2 transform -translate-y-1/2 z-10"
+            >
+                <Search class="w-4 h-4 text-muted-foreground" />
+            </div>
             <Input
                 bind:value={searchQuery}
                 type="text"
                 placeholder="Search objects..."
-                class="pl-8 bg-muted/50 border-border/30 text-foreground text-sm h-8 focus:border-blue-500 focus:outline-none"
+                class="pl-12 pr-4 py-3 bg-muted/40 border-border/40 text-foreground text-sm rounded-xl h-11 focus:border-blue-400/60 focus:bg-muted/60 focus:outline-none transition-all duration-200 shadow-sm"
             />
         </div>
     </div>
 
-    <!-- Object Tree -->
-    <div class="flex-1 overflow-y-auto p-2 relative z-10">
-        <div class="space-y-0.5">
+    <!-- Object Tree - Enhanced with modern pill-shaped items -->
+    <div class="flex-1 overflow-y-auto p-3 relative z-10">
+        <div class="space-y-1">
             {#each filteredObjects as obj (obj.id)}
                 {@const Icon = getObjectIcon(obj.type)}
                 {@const hasChildren = obj.children && obj.children.length > 0}
                 <div
-                    class="group relative flex items-center gap-1 px-2 py-1.5 rounded text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-colors {selectedObject ===
+                    class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-all duration-200 {selectedObject ===
                     obj.id
-                        ? 'bg-blue-600/20 text-blue-300'
-                        : ''}"
-                    style="margin-left: {obj.depth * 16}px"
+                        ? 'bg-blue-500/15 text-blue-300 shadow-sm border border-blue-400/30'
+                        : 'hover:shadow-sm'} min-h-[44px]"
+                    style="margin-left: {obj.depth * 20}px"
                     on:click={() => handleObjectClick(obj.id)}
                     on:contextmenu={(e) => handleRightClick(e, obj.id)}
                     role="button"
@@ -249,12 +271,12 @@
                         <div class="absolute left-0 top-0 bottom-0 flex">
                             {#each Array(obj.depth) as _, i}
                                 <div
-                                    class="w-4 flex justify-center"
-                                    style="margin-left: {i * 16}px"
+                                    class="w-5 flex justify-center"
+                                    style="margin-left: {i * 20}px"
                                 >
                                     {#if i === obj.depth - 1}
                                         <div
-                                            class="w-px bg-gray-600/40 h-full"
+                                            class="w-px bg-border/40 h-full"
                                         ></div>
                                     {/if}
                                 </div>
@@ -264,47 +286,61 @@
 
                     <!-- Expand/Collapse button -->
                     <div
-                        class="w-4 h-4 flex items-center justify-center relative z-10"
+                        class="w-6 h-6 flex items-center justify-center relative z-10"
                     >
                         {#if hasChildren}
                             <button
-                                class="w-3 h-3 text-gray-500 hover:text-gray-300 transition-colors"
+                                class="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center"
                                 on:click|stopPropagation={() =>
                                     handleToggleExpanded(obj.id)}
+                                title={obj.expanded ? "Collapse" : "Expand"}
                             >
                                 {#if obj.expanded}
-                                    <ChevronDown class="w-3 h-3" />
+                                    <ChevronDown class="w-4 h-4" />
                                 {:else}
-                                    <ChevronRight class="w-3 h-3" />
+                                    <ChevronRight class="w-4 h-4" />
                                 {/if}
                             </button>
                         {/if}
                     </div>
 
-                    <!-- Icon -->
-                    <div class="w-4 h-4 flex items-center justify-center">
+                    <!-- Icon with color coding -->
+                    <div class="w-6 h-6 flex items-center justify-center">
                         {#if obj.type === "folder"}
                             {#if obj.expanded}
-                                <FolderOpen class="w-4 h-4 text-yellow-400" />
+                                <FolderOpen class="w-5 h-5 text-amber-400" />
                             {:else}
-                                <Folder class="w-4 h-4 text-yellow-400" />
+                                <Folder class="w-5 h-5 text-amber-400" />
                             {/if}
+                        {:else if obj.type === "camera"}
+                            <Icon class="w-5 h-5 text-purple-400" />
+                        {:else if obj.type === "light"}
+                            <Icon class="w-5 h-5 text-yellow-400" />
+                        {:else if obj.type === "script"}
+                            <Icon class="w-5 h-5 text-green-400" />
                         {:else}
-                            <Icon class="w-4 h-4 text-gray-400" />
+                            <Icon class="w-5 h-5 text-blue-400" />
                         {/if}
                     </div>
 
-                    <!-- Name -->
-                    <span class="flex-1 font-medium truncate">{obj.name}</span>
+                    <!-- Name with better typography -->
+                    <span class="flex-1 font-medium truncate text-base"
+                        >{obj.name}</span
+                    >
 
-                    <!-- Controls -->
+                    <!-- Controls with better styling -->
                     <div
-                        class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                        class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
                     >
                         <button
-                            class="w-5 h-5 p-0.5 text-gray-500 hover:text-gray-300 transition-colors"
+                            class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.visible ===
+                            false
+                                ? 'text-orange-400 hover:text-orange-300'
+                                : ''}"
                             on:click={(e) => handleToggleVisibility(e, obj.id)}
-                            title={obj.visible === false ? "Show" : "Hide"}
+                            title={obj.visible === false
+                                ? "Show object"
+                                : "Hide object"}
                         >
                             {#if obj.visible === false}
                                 <EyeOff class="w-4 h-4" />
@@ -313,9 +349,11 @@
                             {/if}
                         </button>
                         <button
-                            class="w-5 h-5 p-0.5 text-gray-500 hover:text-gray-300 transition-colors"
+                            class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.locked
+                                ? 'text-red-400 hover:text-red-300'
+                                : ''}"
                             on:click={(e) => handleToggleLock(e, obj.id)}
-                            title={obj.locked ? "Unlock" : "Lock"}
+                            title={obj.locked ? "Unlock object" : "Lock object"}
                         >
                             {#if obj.locked}
                                 <Lock class="w-4 h-4" />
@@ -330,37 +368,37 @@
     </div>
 </div>
 
-<!-- Context Menu -->
+<!-- Context Menu - Enhanced with modern styling -->
 {#if contextMenu}
     <div
-        class="fixed bg-gray-800/95 backdrop-blur-sm border border-gray-700/50 rounded-md shadow-lg py-1 z-50 min-w-40"
+        class="fixed bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-xl p-2 z-50 min-w-48"
         style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
     >
         <button
-            class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
+            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
             on:click={() => handleContextAction("copy")}
         >
-            <Copy class="w-4 h-4" />
+            <Copy class="w-4 h-4 text-blue-400" />
             Copy
         </button>
         <button
-            class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
+            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
             on:click={() => handleContextAction("duplicate")}
         >
-            <FileImage class="w-4 h-4" />
+            <FileImage class="w-4 h-4 text-green-400" />
             Duplicate
         </button>
-        <div class="h-px bg-gray-700/50 my-1"></div>
+        <div class="h-px bg-border/30 my-2 mx-2"></div>
         <button
-            class="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-gray-700/60 flex items-center gap-2 transition-colors"
+            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
             on:click={() => handleContextAction("goto")}
         >
-            <Navigation class="w-4 h-4" />
+            <Navigation class="w-4 h-4 text-purple-400" />
             Go to Object
         </button>
-        <div class="h-px bg-gray-700/50 my-1"></div>
+        <div class="h-px bg-border/30 my-2 mx-2"></div>
         <button
-            class="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/20 flex items-center gap-2 transition-colors"
+            class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
             on:click={() => handleContextAction("delete")}
         >
             <Trash2 class="w-4 h-4" />

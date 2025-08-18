@@ -388,54 +388,78 @@
 <div
     class="h-screen w-full bg-background flex flex-col overflow-hidden relative"
 >
-    <!-- Blurred blob overlay -->
+    <!-- M3 Expressive: Vibrant dynamic background blobs -->
     <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <!-- Main bottom-right blob cluster -->
+        <!-- Dynamic color-shifting blobs with M3 Expressive colors -->
         <div
-            class="absolute -bottom-32 -right-32 w-96 h-96 bg-blue-500/15 rounded-full blur-3xl"
+            class="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/15 to-pink-500/10 rounded-full blur-3xl animate-pulse"
+            style="animation-duration: 4s;"
         ></div>
         <div
-            class="absolute -bottom-16 -right-16 w-64 h-64 bg-blue-400/8 rounded-full blur-2xl"
+            class="absolute -bottom-16 -right-16 w-64 h-64 bg-gradient-to-tl from-cyan-400/12 via-blue-500/8 to-indigo-400/6 rounded-full blur-2xl animate-pulse"
+            style="animation-duration: 3.5s; animation-delay: 1s;"
         ></div>
 
-        <!-- Subtle top-left ambient -->
+        <!-- Playful top-left ambient with personality -->
         <div
-            class="absolute -top-24 -left-24 w-72 h-72 bg-blue-600/20 rounded-full blur-3xl"
+            class="absolute -top-24 -left-24 w-72 h-72 bg-gradient-to-br from-emerald-500/18 via-teal-400/12 to-cyan-500/8 rounded-full blur-3xl animate-pulse"
+            style="animation-duration: 5s; animation-delay: 2s;"
         ></div>
         <div
-            class="absolute top-32 -left-16 w-40 h-40 bg-indigo-500/15 rounded-full blur-2xl"
+            class="absolute top-32 -left-16 w-40 h-40 bg-gradient-to-r from-orange-400/15 via-amber-400/10 to-yellow-400/8 rounded-full blur-2xl animate-pulse"
+            style="animation-duration: 3s; animation-delay: 0.5s;"
+        ></div>
+
+        <!-- Additional M3 Expressive elements -->
+        <div
+            class="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-rose-400/10 to-pink-400/6 rounded-full blur-xl animate-pulse"
+            style="animation-duration: 4.5s; animation-delay: 1.5s;"
         ></div>
     </div>
 
-    <!-- Top Navigation Bar -->
+    <!-- Top Navigation Bar - Enhanced with better spacing and typography -->
     <div
-        class="h-14 bg-card/80 backdrop-blur-sm border-b border-border/50 flex items-center px-6 relative z-10 {play
-            ? 'bg-gradient-to-r from-green-800/50 via-green-800/10 to-transparent'
+        class="h-16 bg-card/80 backdrop-blur-sm border-b border-border/40 flex items-center px-8 relative z-10 shadow-sm {play
+            ? 'bg-gradient-to-r from-green-500/20 via-green-500/5 to-transparent border-green-400/30'
             : ''}"
     >
-        <div class="flex items-center gap-6 flex-1">
-            <!-- Project Name -->
-            <Button class="flex items-center gap-3 px-3 py-2" variant="ghost">
+        <div class="flex items-center gap-8 flex-1">
+            <!-- Project Name - Enhanced with better styling -->
+            <Button
+                class="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 rounded-xl transition-all duration-200"
+                variant="ghost"
+            >
                 <div
-                    class="w-7 h-7 bg-gradient-to-br from-blue-500 to-purple-600 rounded-md"
+                    class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-sm"
                 ></div>
-                <span class="text-foreground font-semibold text-sm"
+                <span class="text-foreground font-semibold text-base"
                     >Test Project</span
                 >
             </Button>
 
-            <!-- Top Bar Tabs -->
+            <!-- Top Bar Tabs - Enhanced with rounded corners and better spacing -->
             <Tabs.Root value="home">
-                <Tabs.List class="bg-muted/50">
-                    <Tabs.Trigger value="home" class="px-4 py-2">
+                <Tabs.List
+                    class="bg-muted/40 rounded-xl border border-border/40"
+                >
+                    <Tabs.Trigger
+                        value="home"
+                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
+                    >
                         <House class="w-4 h-4 mr-2" />
                         Home
                     </Tabs.Trigger>
-                    <Tabs.Trigger value="object" class="px-4 py-2">
+                    <Tabs.Trigger
+                        value="object"
+                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
+                    >
                         <Box class="w-4 h-4 mr-2" />
                         Objects
                     </Tabs.Trigger>
-                    <Tabs.Trigger value="ui" class="px-4 py-2">
+                    <Tabs.Trigger
+                        value="ui"
+                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
+                    >
                         <LayoutDashboard class="w-4 h-4 mr-2" />
                         UI
                     </Tabs.Trigger>
@@ -443,111 +467,167 @@
             </Tabs.Root>
 
             <!-- Action Buttons -->
-            <div class="flex items-center gap-3 ml-6">
-                <!-- Play/Stop Button -->
+            <div class="flex items-center gap-4 ml-8">
+                <!-- Play/Stop Button - Much larger and more prominent -->
                 {#if !play}
                     <Button
-                        size="sm"
-                        class="h-9 px-4 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white font-medium shadow-sm transition-all duration-200"
+                        size="lg"
+                        class="group h-12 px-10 bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 hover:from-emerald-400 hover:via-green-400 hover:to-teal-400 hover:scale-110 active:scale-95 text-white font-bold shadow-2xl hover:shadow-emerald-500/25 transition-all duration-500 ease-out rounded-full relative overflow-hidden"
                         onclick={togglePlay}
                     >
-                        <Play class="w-4 h-4 mr-2 fill-current" />
-                        Play
+                        <!-- Shimmer effect -->
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"
+                        ></div>
+
+                        <Play
+                            class="w-6 h-6 mr-4 fill-current group-hover:animate-pulse"
+                        />
+                        <span class="text-lg tracking-wide relative z-10"
+                            >Play</span
+                        >
+
+                        <!-- Particle effect -->
+                        <div
+                            class="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"
+                        ></div>
                     </Button>
                 {:else}
                     <Button
-                        size="sm"
-                        class="h-9 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-medium shadow-sm transition-all duration-200"
+                        size="lg"
+                        class="group h-14 px-10 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-400 hover:via-pink-400 hover:to-rose-400 hover:scale-110 active:scale-95 text-white font-bold shadow-2xl hover:shadow-red-500/25 transition-all duration-500 ease-out rounded-full relative overflow-hidden"
                         onclick={togglePlay}
                     >
-                        <Pause class="w-4 h-4 mr-2 fill-current" />
-                        Stop
+                        <!-- M3 Expressive: Shimmer effect -->
+                        <div
+                            class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"
+                        ></div>
+
+                        <Pause
+                            class="w-6 h-6 mr-4 fill-current group-hover:animate-pulse"
+                        />
+                        <span class="text-lg tracking-wide relative z-10"
+                            >Stop</span
+                        >
+
+                        <!-- M3 Expressive: Fun particle effect -->
+                        <div
+                            class="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"
+                        ></div>
                     </Button>
                 {/if}
 
-                <Separator orientation="vertical" class="h-8 mx-2" />
+                <Separator
+                    orientation="vertical"
+                    class="h-10 mx-3 opacity-30"
+                />
 
-                <!-- Transform Tools -->
-                <div class="flex items-center bg-muted/40 rounded-lg p-1 gap-1">
+                <!-- Transform Tools - Modern pill container -->
+                <div
+                    class="flex items-center bg-card/60 backdrop-blur-sm border border-border/40 rounded-2xl p-2 gap-1 shadow-sm"
+                >
                     <Button
                         variant={activeTool === "select"
                             ? "secondary"
                             : "ghost"}
                         size="sm"
-                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        'select'
+                            ? 'bg-primary/10 text-primary hover:text-primary'
+                            : 'hover:bg-muted/60'}"
                         onclick={() => (activeTool = "select")}
+                        title="Select Tool"
                     >
-                        <MousePointer2 class="w-4 h-4" />
+                        <MousePointer2 class="w-5 h-5" />
                     </Button>
                     <Button
                         variant={activeTool === "move" ? "secondary" : "ghost"}
                         size="sm"
-                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        'move'
+                            ? 'bg-blue-500/10 text-blue-500 hover:text-blue-500'
+                            : 'hover:bg-muted/60'}"
                         onclick={() => {
                             activeTool = "move";
                             transformMode = "translate";
                         }}
+                        title="Move Tool"
                     >
-                        <Move class="w-4 h-4" />
+                        <Move class="w-5 h-5" />
                     </Button>
                     <Button
                         variant={activeTool === "rotate"
                             ? "secondary"
                             : "ghost"}
                         size="sm"
-                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        'rotate'
+                            ? 'bg-green-500/10 text-green-500 hover:text-green-500'
+                            : 'hover:bg-muted/60'}"
                         onclick={() => {
                             activeTool = "rotate";
                             transformMode = "rotate";
                         }}
+                        title="Rotate Tool"
                     >
-                        <RotateCw class="w-4 h-4" />
+                        <RotateCw class="w-5 h-5" />
                     </Button>
                     <Button
                         variant={activeTool === "scale" ? "secondary" : "ghost"}
                         size="sm"
-                        class="w-9 h-8 px-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors data-[state=active]:bg-background data-[state=active]:text-foreground"
+                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        'scale'
+                            ? 'bg-purple-500/10 text-purple-500 hover:text-purple-500'
+                            : 'hover:bg-muted/60'}"
                         onclick={() => {
                             activeTool = "scale";
                             transformMode = "scale";
                         }}
+                        title="Scale Tool"
                     >
-                        <Scaling class="w-4 h-4" />
+                        <Scaling class="w-5 h-5" />
                     </Button>
                 </div>
 
-                <Separator orientation="vertical" class="h-8 mx-2" />
+                <Separator
+                    orientation="vertical"
+                    class="h-10 mx-3 opacity-30"
+                />
 
-                <!-- Transform Space Mode -->
+                <!-- Transform Space Mode - Enhanced pill button -->
                 <Button
                     variant="outline"
                     size="sm"
-                    class="h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground border-border/50 transition-all duration-200"
+                    class="h-10 px-4 bg-card/60 backdrop-blur-sm border border-border/40 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-border/60 transition-all duration-200 shadow-sm"
                     onclick={() =>
                         (transformSpace =
                             transformSpace === "world" ? "local" : "world")}
+                    title={transformSpace === "world"
+                        ? "Switch to Local Space"
+                        : "Switch to World Space"}
                 >
                     <div class="flex items-center gap-2">
                         {#if transformSpace === "world"}
-                            <Earth class="w-4 h-4" />
-                            <span class="text-xs font-medium">World</span>
+                            <Earth class="w-4 h-4 text-blue-500" />
+                            <span class="text-sm font-medium">World</span>
                         {:else}
-                            <Box class="w-4 h-4" />
-                            <span class="text-xs font-medium">Local</span>
+                            <Box class="w-4 h-4 text-orange-500" />
+                            <span class="text-sm font-medium">Local</span>
                         {/if}
                     </div>
                 </Button>
             </div>
         </div>
 
-        <!-- Right side buttons -->
+        <!-- Right side buttons - Enhanced with pill styling -->
         <div class="flex items-center gap-3">
             <Button
                 variant="ghost"
                 size="sm"
-                class="h-9 px-3 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                class="h-10 w-10 p-0 rounded-xl bg-card/40 hover:bg-card/60 text-muted-foreground hover:text-foreground transition-all duration-200 shadow-sm border border-border/40"
+                title="Settings"
             >
-                <Settings class="w-4 h-4" />
+                <Settings class="w-5 h-5" />
             </Button>
         </div>
     </div>
@@ -593,53 +673,57 @@
                         bind:value={activeTab}
                         class="h-full flex flex-col"
                     >
-                        <!-- Tab Header with Close Buttons and More Menu -->
+                        <!-- Tab Header - Enhanced with modern styling -->
                         <div
-                            class="h-8 bg-muted/60 backdrop-blur-sm border-b border-border/30 flex items-center px-1"
+                            class="h-12 bg-card/50 backdrop-blur-sm border-b border-border/30 flex items-center px-3"
                         >
-                            <Tabs.List class="h-6 bg-transparent p-0 flex-1">
+                            <Tabs.List
+                                class="h-8 bg-transparent p-0 flex-1 gap-1"
+                            >
                                 {#each openTabs as tab}
                                     <div class="flex items-center relative">
                                         <Tabs.Trigger
                                             value={tab.id}
-                                            class="h-6 px-2 text-xs rounded-none border-r border-border/30 data-[state=active]:bg-muted/60 data-[state=active]:text-foreground text-muted-foreground hover:text-foreground"
+                                            class="h-8 px-4 text-sm rounded-lg border-0 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 font-medium"
                                         >
                                             <svelte:component
                                                 this={tab.icon}
-                                                class="w-3 h-3 mr-1"
+                                                class="w-4 h-4 mr-2"
                                             />
                                             {tab.label}
                                         </Tabs.Trigger>
                                         {#if tab.closeable}
                                             <button
-                                                class="absolute -right-1 top-0 h-4 w-4 p-0 hover:bg-red-500/20 rounded-sm flex items-center justify-center z-10"
+                                                class="absolute -right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 p-0 hover:bg-red-500/20 rounded-md flex items-center justify-center z-10 transition-colors duration-200"
                                                 on:click|stopPropagation={() =>
                                                     closeTab(tab.id)}
+                                                title="Close tab"
                                             >
-                                                <X class="w-2.5 h-2.5" />
+                                                <X class="w-3 h-3" />
                                             </button>
                                         {/if}
                                     </div>
                                 {/each}
                             </Tabs.List>
 
-                            <!-- Three Dots Menu -->
+                            <!-- Add Tab Menu - Enhanced -->
                             <DropdownMenu>
                                 <DropdownMenuTrigger>
                                     <Button
                                         variant="ghost"
                                         size="sm"
-                                        class="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+                                        class="h-8 w-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200"
+                                        title="Add tab"
                                     >
-                                        <Plus class="w-3 h-3" />
+                                        <Plus class="w-4 h-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
-                                    class="w-40 bg-card/90 backdrop-blur-sm border-border"
+                                    class="w-48 bg-card/95 backdrop-blur-md border-border/60 rounded-xl shadow-lg"
                                 >
                                     {#each availableTabs as tab}
                                         <DropdownMenuCheckboxItem
-                                            class="text-foreground hover:bg-muted/60"
+                                            class="text-foreground hover:bg-muted/60 rounded-lg m-1 transition-colors duration-200"
                                             checked={tab.visible}
                                             onclick={() => {
                                                 if (tab.visible) {
@@ -651,7 +735,7 @@
                                         >
                                             <svelte:component
                                                 this={tab.icon}
-                                                class="w-4 h-4 mr-2"
+                                                class="w-4 h-4 mr-3"
                                             />
                                             {tab.label}
                                         </DropdownMenuCheckboxItem>
@@ -682,8 +766,16 @@
                                                         {sceneStore}
                                                         {compiledCode}
                                                         variables={[
-                                                            { name: "playerY", value: 42, type: "number" },
-                                                            { name: "score", value: 100, type: "number" }
+                                                            {
+                                                                name: "playerY",
+                                                                value: 42,
+                                                                type: "number",
+                                                            },
+                                                            {
+                                                                name: "score",
+                                                                value: 100,
+                                                                type: "number",
+                                                            },
                                                         ]}
                                                     />
                                                 {:else}
