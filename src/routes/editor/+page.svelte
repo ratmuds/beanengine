@@ -495,7 +495,7 @@
                 {:else}
                     <Button
                         size="lg"
-                        class="group h-14 px-10 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-400 hover:via-pink-400 hover:to-rose-400 hover:scale-110 active:scale-95 text-white font-bold shadow-2xl hover:shadow-red-500/25 transition-all duration-500 ease-out rounded-full relative overflow-hidden"
+                        class="group h-12 px-10 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-400 hover:via-pink-400 hover:to-rose-400 hover:scale-110 active:scale-95 text-white font-bold shadow-2xl hover:shadow-red-500/25 transition-all duration-500 ease-out rounded-full relative overflow-hidden"
                         onclick={togglePlay}
                     >
                         <!-- M3 Expressive: Shimmer effect -->
