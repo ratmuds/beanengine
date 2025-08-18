@@ -55,17 +55,64 @@
     let searchQuery = $state("");
     let contextMenu: { x: number; y: number; objectId: string } | null =
         $state(null);
+    let addDialogOpen = $state(false);
+    let addDialogParentId: string | number = $state(-1);
+    
+    // Track expanded state of objects
+    let expandedObjects = $state(new Set<string>());
 
     let filteredObjects = $state([]);
 
+    function flattenObjectsHierarchy(
+        objects: any[],
+        allObjects: any[],
+        depth = 0
+    ): any[] {
+        const flattened: any[] = [];
+
+        for (const obj of objects) {
+            // Find children of this object
+            const children = allObjects.filter(
+                (child) => child.parentId === obj.id
+            );
+            
+            // Check if this object is expanded
+            const isExpanded = expandedObjects.has(obj.id);
+
+            // Add the current object with its depth and expanded state
+            flattened.push({
+                ...obj,
+                depth,
+                hasChildren: children.length > 0,
+                expanded: isExpanded,
+                children: children.map((c) => c.id), // Update children array with actual child IDs
+            });
+
+            // If the object is expanded and has children, recursively add them
+            if (isExpanded && children.length > 0) {
+                flattened.push(
+                    ...flattenObjectsHierarchy(children, allObjects, depth + 1)
+                );
+            }
+        }
+
+        return flattened;
+    }
+
     $effect(() => {
+        const allObjects = $sceneStore.getScene().objects;
+        const rootObjects = allObjects.filter((obj) => !obj.parentId);
+
+        let hierarchicalObjects = flattenObjectsHierarchy(
+            rootObjects,
+            allObjects
+        );
+
         filteredObjects = searchQuery.trim()
-            ? $sceneStore
-                  .getScene()
-                  .objects.filter((obj) =>
-                      obj.name.toLowerCase().includes(searchQuery.toLowerCase())
-                  )
-            : $sceneStore.getScene().objects;
+            ? hierarchicalObjects.filter((obj) =>
+                  obj.name.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+            : hierarchicalObjects;
     });
 
     function getObjectIcon(type: string) {
@@ -100,6 +147,13 @@
     }
 
     function handleToggleExpanded(objectId: string) {
+        if (expandedObjects.has(objectId)) {
+            expandedObjects.delete(objectId);
+        } else {
+            expandedObjects.add(objectId);
+        }
+        // Trigger reactivity
+        expandedObjects = new Set(expandedObjects);
         dispatch("toggleExpanded", { id: objectId });
     }
 
@@ -146,11 +200,22 @@
 
     function handleAddObjectType(type: string) {
         console.log(`Adding object of type: ${type}`);
-        dispatch("addObject", { type });
+        dispatch("addObject", {
+            type,
+            parentId: addDialogParentId,
+        });
+        addDialogOpen = false;
+        addDialogParentId = -1;
+    }
+
+    // Public method to open add dialog from parent component
+    export function openAddDialog(parentId: string | number) {
+        addDialogParentId = parentId;
+        addDialogOpen = true;
     }
 </script>
 
-<svelte:document on:click={handleDocumentClick} />
+<svelte:document onclick={handleDocumentClick} />
 
 <div
     class="h-full bg-card/60 backdrop-blur-sm border-r border-border/30 flex flex-col relative overflow-hidden"
@@ -160,20 +225,20 @@
         class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/3 pointer-events-none"
     ></div>
 
-    <!-- Header - Enhanced with better spacing and typography -->
+    <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">
             <h2 class="text-foreground font-semibold text-lg">
                 Object Explorer
             </h2>
 
-            <Popover.Root>
+            <Popover.Root bind:open={addDialogOpen}>
                 <Popover.Trigger
                     size="sm"
                     class="{buttonVariants({
                         variant: 'outline',
                     })} h-10 w-10 p-0 rounded-xl shadow-sm transition-all duration-200"
-                    on:click={() => dispatch("addObject", {})}
+                    onclick={() => openAddDialog(null)}
                     title="Add new object"
                 >
                     <Plus class="w-5 h-5" />
@@ -233,7 +298,7 @@
             <FolderOpen class="w-4 h-4" />
         </ItemSwitcher>
 
-        <!-- Search - Enhanced with pill shape and better styling -->
+        <!-- Search -->
         <div class="relative">
             <div
                 class="absolute left-4 top-1/2 transform -translate-y-1/2 z-10"
@@ -249,20 +314,20 @@
         </div>
     </div>
 
-    <!-- Object Tree - Enhanced with modern pill-shaped items -->
+    <!-- Object Tree -->
     <div class="flex-1 overflow-y-auto p-3 relative z-10">
         <div class="space-y-1">
             {#each filteredObjects as obj (obj.id)}
                 {@const Icon = getObjectIcon(obj.type)}
-                {@const hasChildren = obj.children && obj.children.length > 0}
+                {@const hasChildren = obj.hasChildren}
                 <div
                     class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-all duration-200 {selectedObject ===
                     obj.id
                         ? 'bg-blue-500/15 text-blue-300 shadow-sm border border-blue-400/30'
                         : 'hover:shadow-sm'} min-h-[44px]"
                     style="margin-left: {obj.depth * 20}px"
-                    on:click={() => handleObjectClick(obj.id)}
-                    on:contextmenu={(e) => handleRightClick(e, obj.id)}
+                    onclick={() => handleObjectClick(obj.id)}
+                    oncontextmenu={(e) => handleRightClick(e, obj.id)}
                     role="button"
                     tabindex="0"
                 >
@@ -291,8 +356,10 @@
                         {#if hasChildren}
                             <button
                                 class="w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center"
-                                on:click|stopPropagation={() =>
-                                    handleToggleExpanded(obj.id)}
+                                onclick={(e) => {
+                                    e.stopPropagation();
+                                    handleToggleExpanded(obj.id);
+                                }}
                                 title={obj.expanded ? "Collapse" : "Expand"}
                             >
                                 {#if obj.expanded}
@@ -323,12 +390,12 @@
                         {/if}
                     </div>
 
-                    <!-- Name with better typography -->
+                    <!-- Name -->
                     <span class="flex-1 font-medium truncate text-base"
                         >{obj.name}</span
                     >
 
-                    <!-- Controls with better styling -->
+                    <!-- Controls -->
                     <div
                         class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
                     >
@@ -337,7 +404,7 @@
                             false
                                 ? 'text-orange-400 hover:text-orange-300'
                                 : ''}"
-                            on:click={(e) => handleToggleVisibility(e, obj.id)}
+                            onclick={(e) => handleToggleVisibility(e, obj.id)}
                             title={obj.visible === false
                                 ? "Show object"
                                 : "Hide object"}
@@ -352,7 +419,7 @@
                             class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.locked
                                 ? 'text-red-400 hover:text-red-300'
                                 : ''}"
-                            on:click={(e) => handleToggleLock(e, obj.id)}
+                            onclick={(e) => handleToggleLock(e, obj.id)}
                             title={obj.locked ? "Unlock object" : "Lock object"}
                         >
                             {#if obj.locked}
@@ -368,7 +435,7 @@
     </div>
 </div>
 
-<!-- Context Menu - Enhanced with modern styling -->
+<!-- Context Menu -->
 {#if contextMenu}
     <div
         class="fixed bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-xl p-2 z-50 min-w-48"
@@ -376,14 +443,14 @@
     >
         <button
             class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            on:click={() => handleContextAction("copy")}
+            onclick={() => handleContextAction("copy")}
         >
             <Copy class="w-4 h-4 text-blue-400" />
             Copy
         </button>
         <button
             class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            on:click={() => handleContextAction("duplicate")}
+            onclick={() => handleContextAction("duplicate")}
         >
             <FileImage class="w-4 h-4 text-green-400" />
             Duplicate
@@ -391,7 +458,7 @@
         <div class="h-px bg-border/30 my-2 mx-2"></div>
         <button
             class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            on:click={() => handleContextAction("goto")}
+            onclick={() => handleContextAction("goto")}
         >
             <Navigation class="w-4 h-4 text-purple-400" />
             Go to Object
@@ -399,7 +466,7 @@
         <div class="h-px bg-border/30 my-2 mx-2"></div>
         <button
             class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            on:click={() => handleContextAction("delete")}
+            onclick={() => handleContextAction("delete")}
         >
             <Trash2 class="w-4 h-4" />
             Delete

@@ -60,7 +60,6 @@
             console.error("Failed to paste vector:", err);
         }
     }
-
 </script>
 
 <div class="space-y-2">
@@ -75,7 +74,9 @@
         <div class="px-4 py-3">
             <div class="flex items-center gap-2">
                 <!-- X Input - Subtle color hints -->
-                <div class="group flex-1 bg-red-500/8 border border-red-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-red-400/40 hover:bg-red-500/12 hover:scale-105 focus-within:border-red-400/50 focus-within:bg-red-500/15 focus-within:scale-105">
+                <div
+                    class="group flex-1 bg-red-500/8 border border-red-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-red-400/40 hover:bg-red-500/12 hover:scale-105 focus-within:border-red-400/50 focus-within:bg-red-500/15 focus-within:scale-105"
+                >
                     <input
                         type="number"
                         value={value.x}
@@ -87,7 +88,9 @@
                 </div>
 
                 <!-- Y Input - Subtle color hints -->
-                <div class="group flex-1 bg-green-500/8 border border-green-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-green-400/40 hover:bg-green-500/12 hover:scale-105 focus-within:border-green-400/50 focus-within:bg-green-500/15 focus-within:scale-105">
+                <div
+                    class="group flex-1 bg-green-500/8 border border-green-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-green-400/40 hover:bg-green-500/12 hover:scale-105 focus-within:border-green-400/50 focus-within:bg-green-500/15 focus-within:scale-105"
+                >
                     <input
                         type="number"
                         value={value.y}
@@ -99,7 +102,9 @@
                 </div>
 
                 <!-- Z Input - Subtle color hints -->
-                <div class="group flex-1 bg-blue-500/8 border border-blue-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-blue-400/40 hover:bg-blue-500/12 hover:scale-105 focus-within:border-blue-400/50 focus-within:bg-blue-500/15 focus-within:scale-105">
+                <div
+                    class="group flex-1 bg-blue-500/8 border border-blue-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-blue-400/40 hover:bg-blue-500/12 hover:scale-105 focus-within:border-blue-400/50 focus-within:bg-blue-500/15 focus-within:scale-105"
+                >
                     <input
                         type="number"
                         value={value.z}
@@ -110,7 +115,7 @@
                     />
                 </div>
 
-                <!-- Action Buttons - Clean and subtle -->
+                <!-- Action Buttons -->
                 <div class="flex items-center gap-1 ml-2">
                     <Button
                         variant="ghost"
@@ -120,9 +125,13 @@
                         {disabled}
                         title="Copy vector"
                     >
-                        <!-- M3 Expressive: Ripple effect -->
-                        <div class="absolute inset-0 bg-foreground/10 rounded-full scale-0 group-active:scale-100 transition-transform duration-200 ease-out"></div>
-                        <Copy class="w-3.5 h-3.5 relative z-10 group-hover:animate-pulse" />
+                        <!-- Ripple effect -->
+                        <div
+                            class="absolute inset-0 bg-foreground/10 rounded-full scale-0 group-active:scale-100 transition-transform duration-200 ease-out"
+                        ></div>
+                        <Copy
+                            class="w-3.5 h-3.5 relative z-10 group-hover:animate-pulse"
+                        />
                         {#if showCopied}
                             <div
                                 class="absolute -top-10 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs px-3 py-1.5 rounded-full shadow-2xl shadow-green-500/30 whitespace-nowrap animate-bounce"
@@ -139,9 +148,13 @@
                         {disabled}
                         title="Paste vector"
                     >
-                        <!-- M3 Expressive: Ripple effect -->
-                        <div class="absolute inset-0 bg-foreground/10 rounded-full scale-0 group-active:scale-100 transition-transform duration-200 ease-out"></div>
-                        <Clipboard class="w-3.5 h-3.5 relative z-10 group-hover:animate-pulse" />
+                        <!-- Ripple effect -->
+                        <div
+                            class="absolute inset-0 bg-foreground/10 rounded-full scale-0 group-active:scale-100 transition-transform duration-200 ease-out"
+                        ></div>
+                        <Clipboard
+                            class="w-3.5 h-3.5 relative z-10 group-hover:animate-pulse"
+                        />
                     </Button>
                 </div>
             </div>

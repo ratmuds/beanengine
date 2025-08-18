@@ -9,8 +9,7 @@ class SceneManager {
         this.scene = scene || new Types.BScene();
     }
 
-    // This method now returns the new part for convenience
-    createPartInFrontOfCamera(): Types.BPart {
+    createPartInFrontOfCamera(parentId?: string): Types.BPart {
         const partCount = this.scene.objects.filter((obj) =>
             obj.name.startsWith("Part")
         ).length;
@@ -19,6 +18,11 @@ class SceneManager {
         const newPart = new Types.BPart(partName, null, null);
         newPart.position = new Types.BVector3(0, 0, 0);
         newPart.scale = new Types.BVector3(1, 1, 1);
+        
+        // Set parent if provided
+        if (parentId) {
+            newPart.parentId = parentId;
+        }
 
         this.scene.addObject(newPart);
 
@@ -67,9 +71,9 @@ function createSceneStore() {
         subscribe,
 
         // This method will now update the store, making it reactive
-        createPartInFrontOfCamera: () => {
+        createPartInFrontOfCamera: (parentId?: string) => {
             update((currentManager) => {
-                currentManager.createPartInFrontOfCamera();
+                currentManager.createPartInFrontOfCamera(parentId);
                 // Return the same manager - update() call triggers reactivity
                 return currentManager;
             });

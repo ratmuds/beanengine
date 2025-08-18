@@ -42,7 +42,7 @@
         class="absolute inset-0 bg-gradient-to-bl from-purple-500/5 via-transparent to-blue-500/3 pointer-events-none"
     ></div>
 
-    <!-- Header - Enhanced with better spacing and typography -->
+    <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">
             <h2 class="text-foreground font-semibold text-lg">Properties</h2>
@@ -56,7 +56,7 @@
             </Button>
         </div>
 
-        <!-- Search - Enhanced with pill shape and better styling -->
+        <!-- Search -->
         <div class="relative">
             <div
                 class="absolute left-4 top-1/2 transform -translate-y-1/2 z-10"
@@ -73,7 +73,7 @@
 
     <div class="flex-1 overflow-y-auto relative z-10 p-4 space-y-5">
         {#if object}
-            <!-- Object Name - Enhanced card design -->
+            <!-- Object Name -->
             <div
                 class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-4 shadow-sm"
             >

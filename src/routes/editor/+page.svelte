@@ -54,101 +54,46 @@
     import * as Types from "$lib/types";
     import { sceneStore } from "$lib/sceneStore";
 
-    // Mock data for object explorer
-    let sceneObjects = $state([
-        {
-            id: "camera1",
-            name: "Main Camera",
-            type: "camera",
-            expanded: false,
-            depth: 0,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "light1",
-            name: "Directional Light",
-            type: "light",
-            expanded: false,
-            depth: 0,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "player1",
-            name: "Player",
-            type: "object",
-            expanded: true,
-            depth: 0,
-            visible: true,
-            locked: false,
-            children: ["playermodel1", "playercontroller1"],
-        },
-        {
-            id: "playermodel1",
-            name: "PlayerModel",
-            type: "mesh",
-            expanded: false,
-            depth: 1,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "playercontroller1",
-            name: "PlayerController",
-            type: "script",
-            expanded: false,
-            depth: 1,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "env1",
-            name: "Environment",
-            type: "folder",
-            expanded: true,
-            depth: 0,
-            visible: true,
-            locked: false,
-            children: ["ground1", "buildings1", "trees1"],
-        },
-        {
-            id: "ground1",
-            name: "Ground",
-            type: "mesh",
-            expanded: false,
-            depth: 1,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "buildings1",
-            name: "Buildings",
-            type: "folder",
-            expanded: false,
-            depth: 1,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-        {
-            id: "trees1",
-            name: "Trees",
-            type: "folder",
-            expanded: false,
-            depth: 1,
-            visible: true,
-            locked: false,
-            children: [],
-        },
-    ]);
+    function handleAddObject(
+        event: CustomEvent<{ parentId?: string; type?: string }>
+    ) {
+        const { type, parentId } = event.detail;
+
+        if (type === "Part") {
+            createPartInFrontOfCamera(parentId);
+        } else {
+            console.log("Add object:", event.detail);
+        }
+    }
+
+    function createPartInFrontOfCamera(parentId?: string) {
+        const partId = `part_${Date.now()}`;
+        sceneStore.createPartInFrontOfCamera(parentId);
+
+        // Get the latest part that was just added
+        const scene = $sceneStore.getScene();
+        const latestPart = scene.objects[scene.objects.length - 1];
+    }
 
     let selectedObject = $state(-1);
+    let objectExplorerRef: any;
+
+    // Keyboard shortcuts
+    function handleKeydown(event: KeyboardEvent) {
+        if (event.shiftKey && event.key.toLowerCase() === "a") {
+            event.preventDefault();
+            // Trigger add object dialog in ObjectExplorer
+            if (objectExplorerRef) {
+                console.log(
+                    "opening add dialog. selectedObject:",
+                    selectedObject
+                );
+                objectExplorerRef.openAddDialog(
+                    selectedObject === -1 ? null : selectedObject
+                );
+            }
+        }
+    }
 
     // Tab management state
     interface TabInfo {
@@ -242,67 +187,6 @@
         }
     }
 
-    // Object Explorer handlers
-    function handleToggleExpanded(event: CustomEvent<{ id: string }>) {
-        const { id } = event.detail;
-        sceneObjects = sceneObjects.map((obj) =>
-            obj.id === id ? { ...obj, expanded: !obj.expanded } : obj
-        );
-    }
-
-    function handleAddObject(
-        event: CustomEvent<{ parentId?: string; type?: string }>
-    ) {
-        const { type } = event.detail;
-
-        if (type === "Part") {
-            createPartInFrontOfCamera();
-        } else {
-            console.log("Add object:", event.detail);
-        }
-    }
-
-    function createPartInFrontOfCamera() {
-        const partId = `part_${Date.now()}`;
-        sceneStore.createPartInFrontOfCamera();
-
-        // Get the latest part that was just added
-        const scene = $sceneStore.getScene();
-        const latestPart = scene.objects[scene.objects.length - 1];
-
-        sceneObjects = [...sceneObjects, latestPart];
-    }
-
-    function handleDeleteObject(event: CustomEvent<{ id: string }>) {
-        console.log("Delete object:", event.detail.id);
-    }
-
-    function handleDuplicateObject(event: CustomEvent<{ id: string }>) {
-        console.log("Duplicate object:", event.detail.id);
-    }
-
-    function handleCopyObject(event: CustomEvent<{ id: string }>) {
-        console.log("Copy object:", event.detail.id);
-    }
-
-    function handleToggleVisibility(event: CustomEvent<{ id: string }>) {
-        const { id } = event.detail;
-        sceneObjects = sceneObjects.map((obj) =>
-            obj.id === id ? { ...obj, visible: !obj.visible } : obj
-        );
-    }
-
-    function handleToggleLock(event: CustomEvent<{ id: string }>) {
-        const { id } = event.detail;
-        sceneObjects = sceneObjects.map((obj) =>
-            obj.id === id ? { ...obj, locked: !obj.locked } : obj
-        );
-    }
-
-    function handleGotoObject(event: CustomEvent<{ id: string }>) {
-        console.log("Go to object:", event.detail.id);
-    }
-
     // Properties panel handlers
     function handlePropertyChange(part: Types.BPart) {
         // Update the object in the store
@@ -385,12 +269,14 @@
     }
 </script>
 
+<svelte:window on:keydown={handleKeydown} />
+
 <div
     class="h-screen w-full bg-background flex flex-col overflow-hidden relative"
 >
-    <!-- M3 Expressive: Vibrant dynamic background blobs -->
+    <!-- Dynamic background blobs -->
     <div class="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        <!-- Dynamic color-shifting blobs with M3 Expressive colors -->
+        <!-- Dynamic color-shifting blobs -->
         <div
             class="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-br from-violet-500/20 via-fuchsia-500/15 to-pink-500/10 rounded-full blur-3xl animate-pulse"
             style="animation-duration: 4s;"
@@ -400,7 +286,7 @@
             style="animation-duration: 3.5s; animation-delay: 1s;"
         ></div>
 
-        <!-- Playful top-left ambient with personality -->
+        <!-- Top-left ambient -->
         <div
             class="absolute -top-24 -left-24 w-72 h-72 bg-gradient-to-br from-emerald-500/18 via-teal-400/12 to-cyan-500/8 rounded-full blur-3xl animate-pulse"
             style="animation-duration: 5s; animation-delay: 2s;"
@@ -410,21 +296,21 @@
             style="animation-duration: 3s; animation-delay: 0.5s;"
         ></div>
 
-        <!-- Additional M3 Expressive elements -->
+        <!-- Additional elements-->
         <div
             class="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-rose-400/10 to-pink-400/6 rounded-full blur-xl animate-pulse"
             style="animation-duration: 4.5s; animation-delay: 1.5s;"
         ></div>
     </div>
 
-    <!-- Top Navigation Bar - Enhanced with better spacing and typography -->
+    <!-- Top Navigation Bar -->
     <div
         class="h-16 bg-card/80 backdrop-blur-sm border-b border-border/40 flex items-center px-8 relative z-10 shadow-sm {play
             ? 'bg-gradient-to-r from-green-500/20 via-green-500/5 to-transparent border-green-400/30'
             : ''}"
     >
         <div class="flex items-center gap-8 flex-1">
-            <!-- Project Name - Enhanced with better styling -->
+            <!-- Project Name -->
             <Button
                 class="flex items-center gap-3 px-4 py-3 hover:bg-muted/40 rounded-xl transition-all duration-200"
                 variant="ghost"
@@ -437,7 +323,7 @@
                 >
             </Button>
 
-            <!-- Top Bar Tabs - Enhanced with rounded corners and better spacing -->
+            <!-- Top Bar Tabs -->
             <Tabs.Root value="home">
                 <Tabs.List
                     class="bg-muted/40 rounded-xl border border-border/40"
@@ -468,7 +354,7 @@
 
             <!-- Action Buttons -->
             <div class="flex items-center gap-4 ml-8">
-                <!-- Play/Stop Button - Much larger and more prominent -->
+                <!-- Play/Stop Button -->
                 {#if !play}
                     <Button
                         size="lg"
@@ -498,7 +384,7 @@
                         class="group h-12 px-10 bg-gradient-to-r from-red-500 via-pink-500 to-rose-500 hover:from-red-400 hover:via-pink-400 hover:to-rose-400 hover:scale-110 active:scale-95 text-white font-bold shadow-2xl hover:shadow-red-500/25 transition-all duration-500 ease-out rounded-full relative overflow-hidden"
                         onclick={togglePlay}
                     >
-                        <!-- M3 Expressive: Shimmer effect -->
+                        <!-- Shimmer effect -->
                         <div
                             class="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"
                         ></div>
@@ -510,7 +396,7 @@
                             >Stop</span
                         >
 
-                        <!-- M3 Expressive: Fun particle effect -->
+                        <!-- Particle effect -->
                         <div
                             class="absolute -top-1 -right-1 w-3 h-3 bg-orange-400 rounded-full opacity-0 group-hover:opacity-100 group-hover:animate-ping transition-all duration-300"
                         ></div>
@@ -522,7 +408,7 @@
                     class="h-10 mx-3 opacity-30"
                 />
 
-                <!-- Transform Tools - Modern pill container -->
+                <!-- Transform Tools -->
                 <div
                     class="flex items-center bg-card/60 backdrop-blur-sm border border-border/40 rounded-2xl p-2 gap-1 shadow-sm"
                 >
@@ -594,7 +480,7 @@
                     class="h-10 mx-3 opacity-30"
                 />
 
-                <!-- Transform Space Mode - Enhanced pill button -->
+                <!-- Transform Space Mode -->
                 <Button
                     variant="outline"
                     size="sm"
@@ -619,7 +505,7 @@
             </div>
         </div>
 
-        <!-- Right side buttons - Enhanced with pill styling -->
+        <!-- Right side buttons -->
         <div class="flex items-center gap-3">
             <Button
                 variant="ghost"
@@ -646,16 +532,10 @@
                 class="transition-all duration-700 ease-out"
             >
                 <ObjectExplorer
+                    bind:this={objectExplorerRef}
                     {sceneStore}
                     bind:selectedObject
-                    on:toggleExpanded={handleToggleExpanded}
                     on:addObject={handleAddObject}
-                    on:deleteObject={handleDeleteObject}
-                    on:duplicateObject={handleDuplicateObject}
-                    on:copyObject={handleCopyObject}
-                    on:toggleVisibility={handleToggleVisibility}
-                    on:toggleLock={handleToggleLock}
-                    on:gotoObject={handleGotoObject}
                 />
             </ResizablePane>
 
@@ -673,7 +553,7 @@
                         bind:value={activeTab}
                         class="h-full flex flex-col"
                     >
-                        <!-- Tab Header - Enhanced with modern styling -->
+                        <!-- Tab Header -->
                         <div
                             class="h-12 bg-card/50 backdrop-blur-sm border-b border-border/30 flex items-center px-3"
                         >
@@ -706,7 +586,7 @@
                                 {/each}
                             </Tabs.List>
 
-                            <!-- Add Tab Menu - Enhanced -->
+                            <!-- Add Tab Menu  -->
                             <DropdownMenu>
                                 <DropdownMenuTrigger>
                                     <Button
