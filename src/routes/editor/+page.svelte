@@ -55,24 +55,35 @@
     import { sceneStore } from "$lib/sceneStore";
 
     function handleAddObject(
-        event: CustomEvent<{ parentId?: string; type?: string }>
+        event: CustomEvent<{ parentId: string | number; type?: string }>
     ) {
         const { type, parentId } = event.detail;
 
         if (type === "Part") {
             createPartInFrontOfCamera(parentId);
+        } else if (type === "Script") {
+            createScript(parentId);
         } else {
             console.log("Add object:", event.detail);
         }
     }
 
-    function createPartInFrontOfCamera(parentId?: string) {
-        const partId = `part_${Date.now()}`;
-        sceneStore.createPartInFrontOfCamera(parentId);
+    function handleReparentObject(
+        event: CustomEvent<{ objectId: string; newParentId: string | number }>
+    ) {
+        const { objectId, newParentId } = event.detail;
+        sceneStore.reparentObject(objectId, newParentId);
+    }
 
-        // Get the latest part that was just added
-        const scene = $sceneStore.getScene();
-        const latestPart = scene.objects[scene.objects.length - 1];
+    function createPartInFrontOfCamera(
+        parentId: string | number,
+        position?: Types.BVector3
+    ) {
+        sceneStore.createPartInFrontOfCamera(parentId, position);
+    }
+
+    function createScript(parentId: string | number) {
+        sceneStore.createScript(parentId);
     }
 
     let selectedObject = $state(-1);
@@ -91,6 +102,31 @@
                 objectExplorerRef.openAddDialog(
                     selectedObject === -1 ? null : selectedObject
                 );
+            }
+        }
+
+        // Tool selection shortcuts (1-4)
+        if (!event.ctrlKey && !event.shiftKey && !event.altKey) {
+            switch (event.key) {
+                case "1":
+                    event.preventDefault();
+                    activeTool = "select";
+                    break;
+                case "2":
+                    event.preventDefault();
+                    activeTool = "move";
+                    transformMode = "translate";
+                    break;
+                case "3":
+                    event.preventDefault();
+                    activeTool = "rotate";
+                    transformMode = "rotate";
+                    break;
+                case "4":
+                    event.preventDefault();
+                    activeTool = "scale";
+                    transformMode = "scale";
+                    break;
             }
         }
     }
@@ -197,14 +233,9 @@
     // Add initial test objects on mount
     onMount(() => {
         const testPart = new Types.BPart("Test Object", null, null);
-        testPart.position = new Types.BVector3(0, 5, 0);
-        testPart.scale = new Types.BVector3(1, 1, 10);
+        testPart.position = new Types.BVector3(0, 0, 0);
+        testPart.scale = new Types.BVector3(10, 1, 10);
         sceneStore.addObject(testPart);
-
-        const testPart2 = new Types.BPart("Test Object 2", null, null);
-        testPart2.position = new Types.BVector3(2, 5, 0);
-        testPart2.scale = new Types.BVector3(1, 1, 10);
-        sceneStore.addObject(testPart2);
 
         initializeViewport();
     });
@@ -417,19 +448,21 @@
                             ? "secondary"
                             : "ghost"}
                         size="sm"
-                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        class="group h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 active:scale-95 {activeTool ===
                         'select'
                             ? 'bg-primary/10 text-primary hover:text-primary'
                             : 'hover:bg-muted/60'}"
                         onclick={() => (activeTool = "select")}
-                        title="Select Tool"
+                        title="Select Tool (1)"
                     >
-                        <MousePointer2 class="w-5 h-5" />
+                        <MousePointer2
+                            class="w-5 h-5 transition-transform duration-200 group-hover:scale-125"
+                        />
                     </Button>
                     <Button
                         variant={activeTool === "move" ? "secondary" : "ghost"}
                         size="sm"
-                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        class="group h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 active:scale-95 {activeTool ===
                         'move'
                             ? 'bg-blue-500/10 text-blue-500 hover:text-blue-500'
                             : 'hover:bg-muted/60'}"
@@ -437,16 +470,18 @@
                             activeTool = "move";
                             transformMode = "translate";
                         }}
-                        title="Move Tool"
+                        title="Move Tool (2)"
                     >
-                        <Move class="w-5 h-5" />
+                        <Move
+                            class="w-5 h-5 transition-transform duration-200 group-hover:scale-125 group-hover:translate-x-1"
+                        />
                     </Button>
                     <Button
                         variant={activeTool === "rotate"
                             ? "secondary"
                             : "ghost"}
                         size="sm"
-                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        class="group h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 active:scale-95 {activeTool ===
                         'rotate'
                             ? 'bg-green-500/10 text-green-500 hover:text-green-500'
                             : 'hover:bg-muted/60'}"
@@ -454,14 +489,16 @@
                             activeTool = "rotate";
                             transformMode = "rotate";
                         }}
-                        title="Rotate Tool"
+                        title="Rotate Tool (3)"
                     >
-                        <RotateCw class="w-5 h-5" />
+                        <RotateCw
+                            class="w-5 h-5 transition-transform duration-200 group-hover:scale-125 group-hover:rotate-[30deg]"
+                        />
                     </Button>
                     <Button
                         variant={activeTool === "scale" ? "secondary" : "ghost"}
                         size="sm"
-                        class="h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 {activeTool ===
+                        class="group h-10 w-10 px-0 rounded-xl text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 active:scale-95 {activeTool ===
                         'scale'
                             ? 'bg-purple-500/10 text-purple-500 hover:text-purple-500'
                             : 'hover:bg-muted/60'}"
@@ -469,9 +506,11 @@
                             activeTool = "scale";
                             transformMode = "scale";
                         }}
-                        title="Scale Tool"
+                        title="Scale Tool (4)"
                     >
-                        <Scaling class="w-5 h-5" />
+                        <Scaling
+                            class="w-5 h-5 transition-transform duration-200 group-hover:scale-150"
+                        />
                     </Button>
                 </div>
 
@@ -536,6 +575,7 @@
                     {sceneStore}
                     bind:selectedObject
                     on:addObject={handleAddObject}
+                    on:reparentObject={handleReparentObject}
                 />
             </ResizablePane>
 

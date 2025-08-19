@@ -7,6 +7,7 @@
         interactivity,
         Outlines,
     } from "@threlte/extras";
+    import * as Types from "$lib/types";
 
     let {
         sceneStore,
@@ -35,7 +36,9 @@
 <T.AmbientLight intensity={0.3} />
 
 <!-- Scene Rendering -->
-{#each $sceneStore.getScene().objects as object (object.id)}
+{#each $sceneStore
+    .getScene()
+    .objects.filter((obj) => obj instanceof Types.BNode3D) as object (object.id)}
     {@const position = [
         object.position.x,
         object.position.y,

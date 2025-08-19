@@ -19,6 +19,7 @@
         Settings,
         MoreHorizontal,
         Hash,
+        FileCode,
     } from "lucide-svelte";
     import * as Types from "$lib/types";
 
@@ -168,6 +169,49 @@
                                 class="text-sm font-mono text-foreground bg-muted/40 px-2 py-1 rounded-md"
                                 >Block</span
                             >
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Script Properties -->
+            {#if object instanceof Types.BScript}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-2 bg-green-500/10 rounded-lg">
+                            <FileCode class="w-5 h-5 text-green-400" />
+                        </div>
+                        <h3 class="font-semibold text-lg text-foreground">
+                            Script Properties
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div
+                            class="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg"
+                        >
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Code Blocks</span
+                            >
+                            <span
+                                class="text-sm font-mono text-foreground bg-muted/40 px-2 py-1 rounded-md"
+                                >{object.code.length}</span
+                            >
+                        </div>
+                        
+                        <div class="bg-muted/20 p-3 rounded-lg">
+                            <p class="text-xs text-muted-foreground mb-2">Script Editor</p>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                class="w-full justify-start"
+                                disabled
+                            >
+                                <FileCode class="w-4 h-4 mr-2" />
+                                Open Code Editor (Coming Soon)
+                            </Button>
                         </div>
                     </div>
                 </div>

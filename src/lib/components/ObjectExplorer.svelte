@@ -24,8 +24,10 @@
         Lock,
         Unlock,
         Navigation,
+        FileCode,
     } from "lucide-svelte";
     import Separator from "./ui/separator/separator.svelte";
+    import * as Types from "$lib/types";
 
     /*export let sceneObjects: Array<{
         id: string;
@@ -43,7 +45,8 @@
     const dispatch = createEventDispatcher<{
         selectObject: { id: string };
         toggleExpanded: { id: string };
-        addObject: { parentId?: string; type?: string };
+        addObject: { parentId: string | number; type?: string };
+        reparentObject: { objectId: string; newParentId: string | number };
         deleteObject: { id: string };
         duplicateObject: { id: string };
         copyObject: { id: string };
@@ -55,9 +58,11 @@
     let searchQuery = $state("");
     let contextMenu: { x: number; y: number; objectId: string } | null =
         $state(null);
+    let draggedObject: string | null = $state(null);
+    let dragOverObject: string | null = $state(null);
     let addDialogOpen = $state(false);
     let addDialogParentId: string | number = $state(-1);
-    
+
     // Track expanded state of objects
     let expandedObjects = $state(new Set<string>());
 
@@ -73,9 +78,9 @@
         for (const obj of objects) {
             // Find children of this object
             const children = allObjects.filter(
-                (child) => child.parentId === obj.id
+                (child) => child.parent === obj.id
             );
-            
+
             // Check if this object is expanded
             const isExpanded = expandedObjects.has(obj.id);
 
@@ -101,7 +106,7 @@
 
     $effect(() => {
         const allObjects = $sceneStore.getScene().objects;
-        const rootObjects = allObjects.filter((obj) => !obj.parentId);
+        const rootObjects = allObjects.filter((obj) => !obj.parent);
 
         let hierarchicalObjects = flattenObjectsHierarchy(
             rootObjects,
@@ -115,18 +120,16 @@
             : hierarchicalObjects;
     });
 
-    function getObjectIcon(type: string) {
-        switch (type) {
-            case "camera":
-                return Camera;
+    function getObjectIcon(obj: any) {
+        switch (obj.type) {
+            case "script":
+                return FileCode;
+            case "part":
+                return Box;
             case "light":
                 return Lightbulb;
-            case "folder":
-                return Folder;
-            case "mesh":
-                return Box;
-            case "script":
-                return FileImage;
+            case "constraint":
+                return Navigation;
             default:
                 return Box;
         }
@@ -193,6 +196,104 @@
         dispatch("toggleLock", { id: objectId });
     }
 
+    function handleDragStart(event: DragEvent, objectId: string) {
+        if (!event.dataTransfer) return;
+        draggedObject = objectId;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", objectId);
+
+        // Add visual feedback
+        if (event.target instanceof HTMLElement) {
+            event.target.style.opacity = "0.5";
+        }
+    }
+
+    function handleDragEnd(event: DragEvent) {
+        draggedObject = null;
+        dragOverObject = null;
+
+        // Reset visual feedback
+        if (event.target instanceof HTMLElement) {
+            event.target.style.opacity = "";
+        }
+    }
+
+    function handleDragOver(event: DragEvent, targetObjectId: string) {
+        event.preventDefault();
+        if (!draggedObject || draggedObject === targetObjectId) return;
+
+        // Check if we're not trying to drag parent into its own child
+        const draggedObj = filteredObjects.find(
+            (obj) => obj.id === draggedObject
+        );
+        const targetObj = filteredObjects.find(
+            (obj) => obj.id === targetObjectId
+        );
+
+        if (draggedObj && targetObj && isDescendant(targetObj, draggedObj)) {
+            event.dataTransfer!.dropEffect = "none";
+            return;
+        }
+
+        dragOverObject = targetObjectId;
+        event.dataTransfer!.dropEffect = "move";
+    }
+
+    function handleDragLeave(event: DragEvent, targetObjectId: string) {
+        // Only clear dragOverObject if we're actually leaving this element
+        // and not just moving to a child element
+        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const x = event.clientX;
+        const y = event.clientY;
+        
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+            if (dragOverObject === targetObjectId) {
+                dragOverObject = null;
+            }
+        }
+    }
+
+    function handleDrop(event: DragEvent, targetObjectId: string) {
+        event.preventDefault();
+
+        if (!draggedObject || draggedObject === targetObjectId) return;
+
+        // Check if we're not trying to drag parent into its own child
+        const draggedObj = filteredObjects.find(
+            (obj) => obj.id === draggedObject
+        );
+        const targetObj = filteredObjects.find(
+            (obj) => obj.id === targetObjectId
+        );
+
+        if (draggedObj && targetObj && isDescendant(targetObj, draggedObj)) {
+            return;
+        }
+
+        // Auto-expand the target parent
+        expandedObjects.add(targetObjectId);
+        expandedObjects = new Set(expandedObjects);
+
+        dispatch("reparentObject", {
+            objectId: draggedObject,
+            newParentId: targetObjectId,
+        });
+
+        draggedObject = null;
+        dragOverObject = null;
+    }
+
+    function isDescendant(potentialChild: any, potentialParent: any): boolean {
+        let current = potentialChild;
+        while (current && current.parent) {
+            if (current.parent === potentialParent.id) {
+                return true;
+            }
+            current = filteredObjects.find((obj) => obj.id === current.parent);
+        }
+        return false;
+    }
+
     // Close context menu when clicking elsewhere
     function handleDocumentClick() {
         closeContextMenu();
@@ -200,6 +301,13 @@
 
     function handleAddObjectType(type: string) {
         console.log(`Adding object of type: ${type}`);
+        
+        // Auto-expand the parent if it's not -1 (root)
+        if (addDialogParentId !== -1) {
+            expandedObjects.add(addDialogParentId);
+            expandedObjects = new Set(expandedObjects);
+        }
+        
         dispatch("addObject", {
             type,
             parentId: addDialogParentId,
@@ -234,11 +342,10 @@
 
             <Popover.Root bind:open={addDialogOpen}>
                 <Popover.Trigger
-                    size="sm"
                     class="{buttonVariants({
                         variant: 'outline',
                     })} h-10 w-10 p-0 rounded-xl shadow-sm transition-all duration-200"
-                    onclick={() => openAddDialog(null)}
+                    onclick={() => openAddDialog(-1)}
                     title="Add new object"
                 >
                     <Plus class="w-5 h-5" />
@@ -261,8 +368,11 @@
                                     onSelect={() => handleAddObjectType("Part")}
                                     class="rounded-lg m-1">Part</Command.Item
                                 >
-                                <Command.Item class="rounded-lg m-1"
-                                    >Script</Command.Item
+                                <Command.Item
+                                    value="script"
+                                    onSelect={() =>
+                                        handleAddObjectType("Script")}
+                                    class="rounded-lg m-1">Script</Command.Item
                                 >
                                 <Command.Item class="rounded-lg m-1"
                                     >Light</Command.Item
@@ -315,19 +425,47 @@
     </div>
 
     <!-- Object Tree -->
-    <div class="flex-1 overflow-y-auto p-3 relative z-10">
+    <div 
+        class="flex-1 overflow-y-auto p-3 relative z-10"
+        ondragover={(e) => {
+            e.preventDefault();
+            if (draggedObject) {
+                e.dataTransfer.dropEffect = "move";
+            }
+        }}
+        ondrop={(e) => {
+            e.preventDefault();
+            if (draggedObject) {
+                // Reparent to root (-1)
+                dispatch("reparentObject", {
+                    objectId: draggedObject,
+                    newParentId: -1,
+                });
+                draggedObject = null;
+                dragOverObject = null;
+            }
+        }}
+    >
         <div class="space-y-1">
             {#each filteredObjects as obj (obj.id)}
-                {@const Icon = getObjectIcon(obj.type)}
+                {@const Icon = getObjectIcon(obj)}
                 {@const hasChildren = obj.hasChildren}
                 <div
                     class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-all duration-200 {selectedObject ===
                     obj.id
                         ? 'bg-blue-500/15 text-blue-300 shadow-sm border border-blue-400/30'
-                        : 'hover:shadow-sm'} min-h-[44px]"
+                        : dragOverObject === obj.id
+                          ? 'bg-green-500/20 border border-green-400/50'
+                          : 'hover:shadow-sm'} min-h-[44px]"
                     style="margin-left: {obj.depth * 20}px"
                     onclick={() => handleObjectClick(obj.id)}
                     oncontextmenu={(e) => handleRightClick(e, obj.id)}
+                    draggable="true"
+                    ondragstart={(e) => handleDragStart(e, obj.id)}
+                    ondragend={handleDragEnd}
+                    ondragover={(e) => handleDragOver(e, obj.id)}
+                    ondragleave={(e) => handleDragLeave(e, obj.id)}
+                    ondrop={(e) => handleDrop(e, obj.id)}
                     role="button"
                     tabindex="0"
                 >
@@ -373,20 +511,16 @@
 
                     <!-- Icon with color coding -->
                     <div class="w-6 h-6 flex items-center justify-center">
-                        {#if obj.type === "folder"}
-                            {#if obj.expanded}
-                                <FolderOpen class="w-5 h-5 text-amber-400" />
-                            {:else}
-                                <Folder class="w-5 h-5 text-amber-400" />
-                            {/if}
-                        {:else if obj.type === "camera"}
-                            <Icon class="w-5 h-5 text-purple-400" />
+                        {#if obj.type === "script"}
+                            <Icon class="w-5 h-5 text-green-400" />
                         {:else if obj.type === "light"}
                             <Icon class="w-5 h-5 text-yellow-400" />
-                        {:else if obj.type === "script"}
-                            <Icon class="w-5 h-5 text-green-400" />
-                        {:else}
+                        {:else if obj.type === "part"}
                             <Icon class="w-5 h-5 text-blue-400" />
+                        {:else if obj.type === "constraint"}
+                            <Icon class="w-5 h-5 text-purple-400" />
+                        {:else}
+                            <Icon class="w-5 h-5 text-gray-400" />
                         {/if}
                     </div>
 

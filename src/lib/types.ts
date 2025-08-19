@@ -26,6 +26,7 @@ class BScene {
 class BObject {
     name: string;
     id: string;
+    type: string;
     parent: BObject | null;
     children: BObject[];
 
@@ -36,6 +37,7 @@ class BObject {
     ) {
         this.name = name ? name : "Object";
         this.id = id ? id : Math.random().toString(36).substring(2, 15);
+        this.type = "object";
         this.parent = parent;
         this.children = [];
     }
@@ -134,6 +136,7 @@ class BNode3D extends BObject {
         parent: BObject | null
     ) {
         super(name, id, parent);
+        this.type = "node3d";
         this.position = new BVector3();
         this.rotation = new BQuaternion();
         this.scale = new BVector3(1, 1, 1);
@@ -210,6 +213,7 @@ class BPart extends BNode3D {
         parent: BObject | null
     ) {
         super(name, id, parent);
+        this.type = "part";
 
         this.mesh = "block";
         this.color = "#ffffff";
@@ -241,6 +245,7 @@ class BLight extends BNode3D {
         parent: BObject | null
     ) {
         super(name, id, parent);
+        this.type = "light";
         this.color = "#ffffff";
         this.intensity = 1.0;
     }
@@ -259,8 +264,24 @@ class BConstraint extends BObject {
         partB: BPart
     ) {
         super(name, id, parent);
+        this.type = "constraint";
         this.partA = partA;
         this.partB = partB;
+    }
+}
+
+// Script (contains code omg no way)
+class BScript extends BObject {
+    code: any[];
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name ? name : "Script", id, parent);
+        this.type = "script";
+        this.code = [];
     }
 }
 
@@ -274,4 +295,5 @@ export {
     BPart,
     BLight,
     BConstraint,
+    BScript,
 };
