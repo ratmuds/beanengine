@@ -91,6 +91,18 @@
 
     // Keyboard shortcuts
     function handleKeydown(event: KeyboardEvent) {
+        // Don't handle shortcuts if user is typing in an input field
+        const target = event.target as HTMLElement;
+        if (target && (
+            target.tagName === 'INPUT' || 
+            target.tagName === 'TEXTAREA' || 
+            target.isContentEditable ||
+            target.closest('input') ||
+            target.closest('textarea')
+        )) {
+            return;
+        }
+
         if (event.shiftKey && event.key.toLowerCase() === "a") {
             event.preventDefault();
             // Trigger add object dialog in ObjectExplorer
