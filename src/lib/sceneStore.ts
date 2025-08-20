@@ -4,9 +4,11 @@ import * as Types from "$lib/types";
 
 class SceneManager {
     public scene: Types.BScene;
+    public variables: Array<{ name: string; value: any; type: string }>;
 
     constructor(scene?: Types.BScene) {
         this.scene = scene || new Types.BScene();
+        this.variables = [];
     }
 
     createPartInFrontOfCamera(
@@ -93,6 +95,27 @@ class SceneManager {
     getScene(): Types.BScene {
         return this.scene;
     }
+
+    setVariables(variables: Array<{ name: string; value: any; type: string }>) {
+        console.log('[SceneStore] Setting variables:', variables);
+        this.variables = variables;
+    }
+
+    updateVariable(name: string, value: any) {
+        const variable = this.variables.find(v => v.name === name);
+        if (variable) {
+            console.log(`[SceneStore] Updating variable '${name}':`, variable.value, '->', value);
+            variable.value = value;
+        } else {
+            console.log(`[SceneStore] Adding new variable '${name}':`, value);
+            this.variables.push({ name, value, type: typeof value });
+        }
+    }
+
+    getVariables(): Array<{ name: string; value: any; type: string }> {
+        console.log('[SceneStore] Getting variables:', this.variables);
+        return this.variables;
+    }
 }
 
 function createSceneStore() {
@@ -167,8 +190,26 @@ function createSceneStore() {
             });
         },
 
+        setVariables: (variables: Array<{ name: string; value: any; type: string }>) => {
+            update((currentManager) => {
+                currentManager.setVariables(variables);
+                return currentManager;
+            });
+        },
+
+        updateVariable: (name: string, value: any) => {
+            update((currentManager) => {
+                currentManager.updateVariable(name, value);
+                return currentManager;
+            });
+        },
+
         getScene: () => {
             return manager.getScene();
+        },
+
+        getVariables: () => {
+            return manager.getVariables();
         },
     };
 }

@@ -15,7 +15,6 @@ export interface RuntimeContext {
 
     // Game context
     gameObject?: any;
-    mesh?: any;
     scene?: any;
 }
 
@@ -126,4 +125,32 @@ export function generateAvailableChips() {
             inputs: [],
         })),
     }));
+}
+
+// Generate a specific chip with optional pre-filled values
+export function generateChip(chipType: string, prefilledValues: Record<string, any> = {}) {
+    const config = chipConfig[chipType];
+    if (!config) {
+        throw new Error(`Unknown chip type: ${chipType}`);
+    }
+
+    return {
+        id: `${chipType}-${Date.now()}-${Math.random()}`,
+        type: chipType,
+        // Copy all config properties
+        color: config.color,
+        label: config.label,
+        info: config.info,
+        // Initialize field values to defaults, then override with prefilled values
+        ...Object.fromEntries(
+            config.fields.map((field) => [
+                field.bind,
+                prefilledValues[field.bind] ?? field.defaultValue ?? "",
+            ])
+        ),
+        fields: config.fields.map((field) => ({
+            ...field,
+            inputs: [],
+        })),
+    };
 }

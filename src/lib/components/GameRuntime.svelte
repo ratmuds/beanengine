@@ -1,12 +1,12 @@
 <script lang="ts">
     import { T, useTask, useThrelte } from "@threlte/core";
-    import { Grid, OrbitControls } from "@threlte/extras";
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
     import { CodeInterpreter } from "$lib/interpreter.js";
     import { createRuntimeContext } from "$lib/compiler.js";
+    import * as Types from "$lib/types";
 
-    let { sceneStore, compiledCode = [], variables = [] } = $props();
+    let { sceneStore, compiledCode = [] } = $props();
 
     const { renderer } = useThrelte();
     let gameScene: THREE.Scene;
@@ -29,6 +29,32 @@
             testMaterialRef.color.setHSL(hue, 0.8, 0.6);
         }
     });*/
+
+    function startScript(script: Types.BScript) {
+        // Get parent, fallback to script itself if no parent
+        const targetObject = script.parent;
+
+        if (!targetObject) {
+            throw new Error("Script has no parent");
+        }
+
+        // Create interpreter
+        interpreter = new CodeInterpreter(script.code, targetObject);
+
+        // Create variables map from sceneStore
+        const variables = sceneStore.getVariables();
+        const variablesMap = variables.reduce((acc, v) => {
+            acc[v.name] = { value: v.value, type: v.type };
+            return acc;
+        }, {});
+
+        // Create full runtime context
+        const context = createRuntimeContext(variablesMap);
+        context.gameObject = targetObject;
+        context.scene = gameScene;
+
+        interpreter.run(context);
+    }
 
     onMount(() => {
         // Create a separate scene for game runtime
@@ -77,13 +103,12 @@
         // Start custom render loop
         startRenderLoop();
 
-        // Create interpreter after mesh is created
-        if (sceneObjects.length > 0) {
-            interpreter = new CodeInterpreter(
-                [],
-                sceneObjects[0],
-                sceneObjects[0]
-            );
+        // Run scripts
+        for (let i = 0; i < sceneObjects.length; i++) {
+            const obj = sceneObjects[i];
+            if (obj instanceof Types.BScript) {
+                startScript(obj);
+            }
         }
     });
 
@@ -107,7 +132,7 @@
     });
 
     // Execute compiled code when it changes
-    $effect(() => {
+    /*$effect(() => {
         if (compiledCode && compiledCode.length > 0 && interpreter) {
             interpreter.setCode(compiledCode);
 
@@ -125,7 +150,7 @@
 
             interpreter.run(context);
         }
-    });
+    });*/
 </script>
 
 <!-- GameRuntime uses a separate Three.js scene with custom render loop -->

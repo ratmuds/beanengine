@@ -2,10 +2,15 @@
     import { draggable } from "@neodrag/svelte";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
-    import { GripVertical, Edit3, Trash2 } from "lucide-svelte";
+    import { GripVertical, Edit3, Trash2, Plus, X } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
-    import { generateAvailableChips } from "$lib/chipConfig.js";
+    import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
     import { compileScript } from "$lib/compiler.js";
+    import * as Dialog from "./ui/dialog";
+    import Button from "./ui/button/button.svelte";
+    import Input from "./ui/input/input.svelte";
+    import * as ContextMenu from "./ui/context-menu";
+    import { sceneStore } from "$lib/sceneStore.js";
 
     let {
         items = $bindable([]),
@@ -25,6 +30,16 @@
 
     let codeListTitle = $state("Code List");
     let isEditingTitle = $state(false);
+
+    // Variable creation modal state
+    let isAddingVariable = $state(false);
+    let newVariableName = $state("");
+    let newVariableType = $state("string");
+    let newVariableValue = $state("");
+
+    // Variable editing modal state
+    let isEditingVariable = $state(false);
+    let editingVariable = $state(null);
 
     // Camera state for panning and zooming
     let camera = $state({
@@ -53,7 +68,6 @@
         }
         return params;
     }
-
 
     // Function to recursively compile blocks to executable structure
     function compileBlocks(blocks = undefined) {
@@ -88,7 +102,9 @@
     // Effect to load script data when selectedScript changes
     $effect(() => {
         if (selectedScript && selectedScript.code) {
-            items = Array.isArray(selectedScript.code) ? selectedScript.code : [];
+            items = Array.isArray(selectedScript.code)
+                ? selectedScript.code
+                : [];
         } else if (selectedScript) {
             items = [];
         }
@@ -114,7 +130,7 @@
     let dragSource = null; // Track where drag originated
     let validDropOccurred = false;
 
-    function handleDragStart(e, item, index, source = 'items') {
+    function handleDragStart(e, item, index, source = "items") {
         draggedItem = { item, index, source };
         dragSource = source;
         validDropOccurred = false;
@@ -137,11 +153,13 @@
         e.preventDefault();
         dragOverIndex = -1;
         validDropOccurred = true;
-        
+
         const source = e.dataTransfer.getData("application/x-source");
-        const originalIndex = parseInt(e.dataTransfer.getData("application/x-index"));
-        
-        if (source === 'items' && draggedItem && originalIndex !== dropIndex) {
+        const originalIndex = parseInt(
+            e.dataTransfer.getData("application/x-index")
+        );
+
+        if (source === "items" && draggedItem && originalIndex !== dropIndex) {
             const newItems = [...items];
             const [removed] = newItems.splice(originalIndex, 1);
             newItems.splice(dropIndex, 0, removed);
@@ -153,12 +171,14 @@
     function handleDragEnd(e) {
         // Clean up any item that was dragged but not dropped in a valid zone
         if (draggedItem && !validDropOccurred) {
-            if (draggedItem.source === 'items') {
+            if (draggedItem.source === "items") {
                 // Remove from items array
                 items = items.filter((_, i) => i !== draggedItem.index);
-            } else if (draggedItem.source === 'triggers') {
+            } else if (draggedItem.source === "triggers") {
                 // Remove from triggers array
-                activeTriggers = activeTriggers.filter((_, i) => i !== draggedItem.index);
+                activeTriggers = activeTriggers.filter(
+                    (_, i) => i !== draggedItem.index
+                );
             }
         }
         draggedItem = null;
@@ -167,8 +187,6 @@
         dragOverIndex = -1;
         triggerDragOverIndex = -1;
     }
-
-
 
     function startEditingTitle() {
         isEditingTitle = true;
@@ -252,16 +270,101 @@
         e.preventDefault();
         triggerDragOverIndex = -1;
         validDropOccurred = true;
-        
+
         const source = e.dataTransfer.getData("application/x-source");
-        const originalIndex = parseInt(e.dataTransfer.getData("application/x-index"));
-        
-        if (source === 'triggers' && originalIndex !== dropIndex) {
+        const originalIndex = parseInt(
+            e.dataTransfer.getData("application/x-index")
+        );
+
+        if (source === "triggers" && originalIndex !== dropIndex) {
             const newTriggers = [...activeTriggers];
             const [removed] = newTriggers.splice(originalIndex, 1);
             newTriggers.splice(dropIndex, 0, removed);
             activeTriggers = newTriggers;
         }
+    }
+
+    function openAddVariableModal() {
+        isAddingVariable = true;
+        newVariableName = "";
+        newVariableType = "string";
+        newVariableValue = "";
+    }
+
+    function closeAddVariableModal() {
+        isAddingVariable = false;
+        newVariableName = "";
+        newVariableType = "string";
+        newVariableValue = "";
+    }
+
+    function addVariable() {
+        if (!newVariableName.trim()) return;
+
+        let parsedValue = newVariableValue;
+
+        // Parse value based on type
+        if (newVariableType === "number") {
+            parsedValue = parseFloat(newVariableValue) || 0;
+        } else if (newVariableType === "boolean") {
+            parsedValue = newVariableValue.toLowerCase() === "true";
+        }
+
+        // Add to sceneStore immediately
+        sceneStore.updateVariable(newVariableName, parsedValue);
+
+        closeAddVariableModal();
+    }
+
+    function removeVariable(variableName) {
+        const currentVariables = $sceneStore.variables;
+        const filteredVariables = currentVariables.filter(
+            (v) => v.name !== variableName
+        );
+        sceneStore.setVariables(filteredVariables);
+    }
+
+    function editVariable(variable) {
+        editingVariable = { ...variable };
+        newVariableName = editingVariable.name;
+        newVariableType = editingVariable.type;
+        newVariableValue = editingVariable.value.toString();
+        isEditingVariable = true;
+    }
+
+    function deleteVariable(variable) {
+        removeVariable(variable.name);
+    }
+
+    function closeEditVariableModal() {
+        isEditingVariable = false;
+        editingVariable = null;
+        newVariableName = "";
+        newVariableType = "string";
+        newVariableValue = "";
+    }
+
+    function saveEditedVariable() {
+        if (!newVariableName.trim() || !editingVariable) return;
+
+        let parsedValue = newVariableValue;
+
+        // Parse value based on type
+        if (newVariableType === "number") {
+            parsedValue = parseFloat(newVariableValue) || 0;
+        } else if (newVariableType === "boolean") {
+            parsedValue = newVariableValue.toLowerCase() === "true";
+        }
+
+        // Remove old variable if name changed
+        if (editingVariable.name !== newVariableName) {
+            removeVariable(editingVariable.name);
+        }
+
+        // Update/add variable
+        sceneStore.updateVariable(newVariableName, parsedValue);
+
+        closeEditVariableModal();
     }
 </script>
 
@@ -394,6 +497,66 @@
                         {/each}
                     </div>
                 </div>
+
+                <!-- Variables Panel -->
+                <div
+                    class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg"
+                >
+                    <div
+                        class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
+                    >
+                        <span class="text-[#ccc] text-xs font-medium"
+                            >Variables</span
+                        >
+                    </div>
+                    <div class="p-2 space-y-1 max-h-32 overflow-y-auto">
+                        {#each $sceneStore.variables as variable (variable.name)}
+                            <ContextMenu.Root>
+                                <ContextMenu.Trigger>
+                                    <div
+                                        class="bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm inline-block mr-1 cursor-grab hover:from-green-600 hover:to-green-700 transition-all"
+                                        draggable="true"
+                                        ondragstart={(e) => {
+                                            // Generate a variable chip with the variable name pre-filled
+                                            const variableChip = generateChip("variable", {
+                                                name: variable.name
+                                            });
+                                            e.dataTransfer.setData(
+                                                "application/json",
+                                                JSON.stringify(variableChip)
+                                            );
+                                            e.dataTransfer.effectAllowed =
+                                                "copy";
+                                        }}
+                                    >
+                                        {variable.name}
+                                    </div>
+                                </ContextMenu.Trigger>
+                                <ContextMenu.Content>
+                                    <ContextMenu.Item
+                                        onclick={() => editVariable(variable)}
+                                    >
+                                        Edit Variable
+                                    </ContextMenu.Item>
+                                    <ContextMenu.Item
+                                        onclick={() => deleteVariable(variable)}
+                                        class="text-red-600"
+                                    >
+                                        Delete Variable
+                                    </ContextMenu.Item>
+                                </ContextMenu.Content>
+                            </ContextMenu.Root>
+                        {/each}
+                        <!-- Add Variable Button -->
+                        <button
+                            onclick={openAddVariableModal}
+                            class="border border-dashed border-green-500 text-green-500 px-2 py-1 rounded-full text-xs font-medium hover:bg-green-500/10 transition-colors inline-block mr-1"
+                        >
+                            <Plus class="w-3 h-3 inline mr-1" />
+                            Add Variable
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Code List Panel -->
@@ -434,27 +597,42 @@
                         Active Triggers
                     </div>
                     <div
-                        class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30 {triggerDragOverIndex >= 0 ? 'outline-2 outline-yellow-500 bg-yellow-500/10' : ''}"
+                        class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30 {triggerDragOverIndex >=
+                        0
+                            ? 'outline-2 outline-yellow-500 bg-yellow-500/10'
+                            : ''}"
                         ondrop={(e) => {
                             e.preventDefault();
                             triggerDragOverIndex = -1;
                             validDropOccurred = true;
                             const data = e.dataTransfer.getData("text/plain");
-                            const source = e.dataTransfer.getData("application/x-source");
-                            
+                            const source = e.dataTransfer.getData(
+                                "application/x-source"
+                            );
+
                             if (data) {
                                 try {
                                     const trigger = JSON.parse(data);
-                                    if (trigger.type && trigger.type.startsWith("on") && !source) {
+                                    if (
+                                        trigger.type &&
+                                        trigger.type.startsWith("on") &&
+                                        !source
+                                    ) {
                                         // Only create new trigger if it's from palette (no source)
                                         const newTrigger = {
                                             ...trigger,
                                             id: Date.now() + Math.random(),
                                         };
-                                        activeTriggers = [...activeTriggers, newTrigger];
+                                        activeTriggers = [
+                                            ...activeTriggers,
+                                            newTrigger,
+                                        ];
                                     }
                                 } catch (err) {
-                                    console.error("Failed to parse dropped data:", err);
+                                    console.error(
+                                        "Failed to parse dropped data:",
+                                        err
+                                    );
                                 }
                             }
                         }}
@@ -476,8 +654,15 @@
                                     <div
                                         class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-2 py-1 rounded text-xs font-medium shadow-sm cursor-move"
                                         draggable="true"
-                                        ondragstart={(e) => handleDragStart(e, trigger, i, 'triggers')}
-                                        ondragover={(e) => handleTriggerDragOver(e, i)}
+                                        ondragstart={(e) =>
+                                            handleDragStart(
+                                                e,
+                                                trigger,
+                                                i,
+                                                "triggers"
+                                            )}
+                                        ondragover={(e) =>
+                                            handleTriggerDragOver(e, i)}
                                         ondragleave={handleTriggerDragLeave}
                                         ondrop={(e) => handleTriggerDrop(e, i)}
                                         ondragend={handleDragEnd}
@@ -493,15 +678,42 @@
                 <Separator class="my-2" />
 
                 <div
-                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto {dragOverIndex >= 0 ? 'outline outline-blue-500 bg-blue-500/10' : ''}"
+                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto {dragOverIndex >=
+                    0
+                        ? 'outline outline-blue-500 bg-blue-500/10'
+                        : ''}"
                     ondrop={(e) => {
                         e.preventDefault();
                         dragOverIndex = -1;
                         validDropOccurred = true;
                         const data = e.dataTransfer.getData("text/plain");
-                        const source = e.dataTransfer.getData("application/x-source");
-                        
-                        if (data) {
+                        const jsonData =
+                            e.dataTransfer.getData("application/json");
+                        const source = e.dataTransfer.getData(
+                            "application/x-source"
+                        );
+
+                        // Handle variable chips (application/json)
+                        if (jsonData) {
+                            try {
+                                const chip = JSON.parse(jsonData);
+                                if (chip.type === "variable") {
+                                    // Create a new variable chip
+                                    const newChip = {
+                                        ...chip,
+                                        id: Date.now() + Math.random(),
+                                    };
+                                    items = [...items, newChip];
+                                }
+                            } catch (err) {
+                                console.error(
+                                    "Failed to parse dropped JSON data:",
+                                    err
+                                );
+                            }
+                        }
+                        // Handle blocks (text/plain)
+                        else if (data) {
                             try {
                                 const block = JSON.parse(data);
                                 if (!block.type?.startsWith("on") && !source) {
@@ -513,7 +725,10 @@
                                     items = [...items, newItem];
                                 }
                             } catch (err) {
-                                console.error("Failed to parse dropped data:", err);
+                                console.error(
+                                    "Failed to parse dropped data:",
+                                    err
+                                );
                             }
                         }
                     }}
@@ -528,12 +743,15 @@
                     {#each items as item, i (item.id)}
                         <div
                             draggable="true"
-                            ondragstart={(e) => handleDragStart(e, item, i, 'items')}
+                            ondragstart={(e) =>
+                                handleDragStart(e, item, i, "items")}
                             ondragover={(e) => handleDragOver(e, i)}
                             ondragleave={handleDragLeave}
                             ondrop={(e) => handleDrop(e, i)}
                             ondragend={handleDragEnd}
-                            class="{dragOverIndex === i ? 'outline outline-blue-500 bg-blue-500/10' : ''}"
+                            class={dragOverIndex === i
+                                ? "outline outline-blue-500 bg-blue-500/10"
+                                : ""}
                         >
                             <CodeBlock
                                 {item}
@@ -569,4 +787,161 @@
             ></div>
         </div>
     </div>
+
+    <!-- Add Variable Modal -->
+    <Dialog.Root bind:open={isAddingVariable}>
+        <Dialog.Content class="max-w-md">
+            <Dialog.Header>
+                <Dialog.Title>Add New Variable</Dialog.Title>
+                <Dialog.Description>
+                    Create a new global variable for your scripts.
+                </Dialog.Description>
+            </Dialog.Header>
+
+            <div class="space-y-4 py-4">
+                <div class="space-y-2">
+                    <label for="variableName" class="text-sm font-medium"
+                        >Name</label
+                    >
+                    <Input
+                        id="variableName"
+                        bind:value={newVariableName}
+                        placeholder="Enter variable name"
+                        class="w-full"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="variableType" class="text-sm font-medium"
+                        >Type</label
+                    >
+                    <select
+                        id="variableType"
+                        bind:value={newVariableType}
+                        class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                    >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="variableValue" class="text-sm font-medium"
+                        >Initial Value</label
+                    >
+                    {#if newVariableType === "boolean"}
+                        <select
+                            id="variableValue"
+                            bind:value={newVariableValue}
+                            class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                        >
+                            <option value="false">false</option>
+                            <option value="true">true</option>
+                        </select>
+                    {:else}
+                        <Input
+                            id="variableValue"
+                            bind:value={newVariableValue}
+                            placeholder={newVariableType === "number"
+                                ? "Enter number"
+                                : "Enter text"}
+                            type={newVariableType === "number"
+                                ? "number"
+                                : "text"}
+                            class="w-full"
+                        />
+                    {/if}
+                </div>
+            </div>
+
+            <Dialog.Footer>
+                <Button variant="outline" onclick={closeAddVariableModal}
+                    >Cancel</Button
+                >
+                <Button onclick={addVariable} disabled={!newVariableName.trim()}
+                    >Add Variable</Button
+                >
+            </Dialog.Footer>
+        </Dialog.Content>
+    </Dialog.Root>
+
+    <!-- Edit Variable Modal -->
+    <Dialog.Root bind:open={isEditingVariable}>
+        <Dialog.Content class="max-w-md">
+            <Dialog.Header>
+                <Dialog.Title>Edit Variable</Dialog.Title>
+                <Dialog.Description>
+                    Modify the variable's properties.
+                </Dialog.Description>
+            </Dialog.Header>
+
+            <div class="space-y-4 py-4">
+                <div class="space-y-2">
+                    <label for="editVariableName" class="text-sm font-medium"
+                        >Name</label
+                    >
+                    <Input
+                        id="editVariableName"
+                        bind:value={newVariableName}
+                        placeholder="Enter variable name"
+                        class="w-full"
+                    />
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editVariableType" class="text-sm font-medium"
+                        >Type</label
+                    >
+                    <select
+                        id="editVariableType"
+                        bind:value={newVariableType}
+                        class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                    >
+                        <option value="string">String</option>
+                        <option value="number">Number</option>
+                        <option value="boolean">Boolean</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label for="editVariableValue" class="text-sm font-medium"
+                        >Value</label
+                    >
+                    {#if newVariableType === "boolean"}
+                        <select
+                            id="editVariableValue"
+                            bind:value={newVariableValue}
+                            class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
+                        >
+                            <option value="false">false</option>
+                            <option value="true">true</option>
+                        </select>
+                    {:else}
+                        <Input
+                            id="editVariableValue"
+                            bind:value={newVariableValue}
+                            placeholder={newVariableType === "number"
+                                ? "Enter number"
+                                : "Enter text"}
+                            type={newVariableType === "number"
+                                ? "number"
+                                : "text"}
+                            class="w-full"
+                        />
+                    {/if}
+                </div>
+            </div>
+
+            <Dialog.Footer>
+                <Button variant="outline" onclick={closeEditVariableModal}
+                    >Cancel</Button
+                >
+                <Button
+                    onclick={saveEditedVariable}
+                    disabled={!newVariableName.trim()}>Save Changes</Button
+                >
+            </Dialog.Footer>
+        </Dialog.Content>
+    </Dialog.Root>
 </div>
