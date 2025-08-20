@@ -1,6 +1,4 @@
 <script lang="ts">
-    import { flip } from "svelte/animate";
-    import { dndzone } from "svelte-dnd-action";
     import { draggable } from "@neodrag/svelte";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
@@ -17,6 +15,7 @@
             { id: "var3", name: "isGameOver", type: "boolean", value: false },
         ]),
         compiledCode = $bindable([]),
+        selectedScript = $bindable(null),
     } = $props();
 
     // Available code block templates - generated from config
@@ -24,7 +23,6 @@
     // Available chip templates - generated from config
     let availableChips = $state(generateAvailableChips());
 
-    const flipDurationMs = 300;
     let codeListTitle = $state("Code List");
     let isEditingTitle = $state(false);
 
@@ -56,29 +54,6 @@
         return params;
     }
 
-    // Helper function to count nested chips in items
-    function countNestedChips(items) {
-        console.log(items);
-
-        let count = 0;
-        items.forEach((item) => {
-            if (item.fields) {
-                item.fields.forEach((field) => {
-                    if (field.inputs && field.inputs.length > 0) {
-                        count += field.inputs.length;
-                        // Recursively count chips in nested chips
-                        count += countNestedChips(
-                            field.inputs.filter((input) => input.fields)
-                        );
-                    }
-                });
-            }
-            if (item.children) {
-                count += countNestedChips(item.children);
-            }
-        });
-        return count;
-    }
 
     // Function to recursively compile blocks to executable structure
     function compileBlocks(blocks = undefined) {
@@ -110,6 +85,15 @@
         return result;
     }
 
+    // Effect to load script data when selectedScript changes
+    $effect(() => {
+        if (selectedScript && selectedScript.code) {
+            items = Array.isArray(selectedScript.code) ? selectedScript.code : [];
+        } else if (selectedScript) {
+            items = [];
+        }
+    });
+
     // Effect to update compiled code when items change
     $effect(() => {
         // Remove all logging to stop infinite loop
@@ -118,67 +102,73 @@
         }
     });
 
-    function handleDndConsider(e) {
-        const beforeCount = countNestedChips(items);
-        console.log(`🔄 DND CONSIDER - Before: ${beforeCount} chips`);
-        items = e.detail.items;
-        const afterCount = countNestedChips(items);
-        console.log(`🔄 DND CONSIDER - After: ${afterCount} chips`);
-        if (beforeCount !== afterCount) {
-            console.warn(
-                `❌ CHIP LOSS in handleDndConsider: ${beforeCount} -> ${afterCount}`
-            );
+    // Effect to save changes back to selectedScript
+    $effect(() => {
+        if (selectedScript && items) {
+            selectedScript.code = items;
         }
+    });
+
+    let draggedItem = null;
+    let dragOverIndex = -1;
+    let dragSource = null; // Track where drag originated
+    let validDropOccurred = false;
+
+    function handleDragStart(e, item, index, source = 'items') {
+        draggedItem = { item, index, source };
+        dragSource = source;
+        validDropOccurred = false;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify(item));
+        e.dataTransfer.setData("application/x-source", source);
+        e.dataTransfer.setData("application/x-index", index.toString());
     }
 
-    function handleDndFinalize(e) {
-        const beforeCount = countNestedChips(items);
-        console.log(`✅ DND FINALIZE - Before: ${beforeCount} chips`);
-        items = e.detail.items;
-        const afterCount = countNestedChips(items);
-        console.log(`✅ DND FINALIZE - After: ${afterCount} chips`);
-        if (beforeCount !== afterCount) {
-            console.warn(
-                `❌ CHIP LOSS in handleDndFinalize: ${beforeCount} -> ${afterCount}`
-            );
-        }
-        // Check if item was dropped outside of valid zones
-        if (e.detail.info && e.detail.info.trigger === "droppedOutside") {
-            // Remove the item from the list
-            items = items.filter((item) => item.id !== e.detail.info.id);
-        }
+    function handleDragOver(e, index) {
+        e.preventDefault();
+        dragOverIndex = index;
     }
 
-    function handleIfDndConsider(e, itemId) {
-        const item = items.find((i) => i.id === itemId);
-        if (item) {
-            item.children = e.detail.items;
-        }
+    function handleDragLeave(e) {
+        dragOverIndex = -1;
     }
 
-    function handleIfDndFinalize(e, itemId) {
-        const item = items.find((i) => i.id === itemId);
-        if (item) {
-            item.children = e.detail.items;
+    function handleDrop(e, dropIndex) {
+        e.preventDefault();
+        dragOverIndex = -1;
+        validDropOccurred = true;
+        
+        const source = e.dataTransfer.getData("application/x-source");
+        const originalIndex = parseInt(e.dataTransfer.getData("application/x-index"));
+        
+        if (source === 'items' && draggedItem && originalIndex !== dropIndex) {
+            const newItems = [...items];
+            const [removed] = newItems.splice(originalIndex, 1);
+            newItems.splice(dropIndex, 0, removed);
+            items = newItems;
         }
+        draggedItem = null;
     }
 
-    function handleBlockPaletteDnd(e) {
-        // Don't modify the palette - it's infinite
-        if (e.detail.info && e.detail.info.trigger === "droppedIntoZone") {
-            // Create a new item from the dragged block template
-            const draggedBlock = e.detail.items.find(
-                (item) => item.id === e.detail.info.id
-            );
-            if (draggedBlock) {
-                const newItem = {
-                    ...draggedBlock,
-                    id: Date.now() + Math.random(), // Generate unique ID
-                };
-                items = [...items, newItem];
+    function handleDragEnd(e) {
+        // Clean up any item that was dragged but not dropped in a valid zone
+        if (draggedItem && !validDropOccurred) {
+            if (draggedItem.source === 'items') {
+                // Remove from items array
+                items = items.filter((_, i) => i !== draggedItem.index);
+            } else if (draggedItem.source === 'triggers') {
+                // Remove from triggers array
+                activeTriggers = activeTriggers.filter((_, i) => i !== draggedItem.index);
             }
         }
+        draggedItem = null;
+        dragSource = null;
+        validDropOccurred = false;
+        dragOverIndex = -1;
+        triggerDragOverIndex = -1;
     }
+
+
 
     function startEditingTitle() {
         isEditingTitle = true;
@@ -247,18 +237,30 @@
     // Active triggers that have been dragged into the code list
     let activeTriggers = $state([]);
 
-    function handleActiveTriggersDndConsider(e) {
-        activeTriggers = e.detail.items;
+    let triggerDragOverIndex = -1;
+
+    function handleTriggerDragOver(e, index) {
+        e.preventDefault();
+        triggerDragOverIndex = index;
     }
 
-    function handleActiveTriggersDndFinalize(e) {
-        activeTriggers = e.detail.items;
-        // Check if trigger was dropped outside of valid zones
-        if (e.detail.info && e.detail.info.trigger === "droppedOutside") {
-            // Remove the trigger from the list
-            activeTriggers = activeTriggers.filter(
-                (trigger) => trigger.id !== e.detail.info.id
-            );
+    function handleTriggerDragLeave(e) {
+        triggerDragOverIndex = -1;
+    }
+
+    function handleTriggerDrop(e, dropIndex) {
+        e.preventDefault();
+        triggerDragOverIndex = -1;
+        validDropOccurred = true;
+        
+        const source = e.dataTransfer.getData("application/x-source");
+        const originalIndex = parseInt(e.dataTransfer.getData("application/x-index"));
+        
+        if (source === 'triggers' && originalIndex !== dropIndex) {
+            const newTriggers = [...activeTriggers];
+            const [removed] = newTriggers.splice(originalIndex, 1);
+            newTriggers.splice(dropIndex, 0, removed);
+            activeTriggers = newTriggers;
         }
     }
 </script>
@@ -432,50 +434,37 @@
                         Active Triggers
                     </div>
                     <div
-                        class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30"
-                        use:dndzone={{
-                            items: activeTriggers,
-                            flipDurationMs,
-                            dropTargetStyle: {
-                                outline: "2px solid #eab308",
-                                "outline-offset": "2px",
-                                "background-color": "rgba(234, 179, 8, 0.1)",
-                                "border-radius": "4px",
-                            },
-                            morphDisabled: true,
-                            dropFromOthersDisabled: true,
-                        }}
-                        onconsider={handleActiveTriggersDndConsider}
-                        onfinalize={handleActiveTriggersDndFinalize}
+                        class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30 {triggerDragOverIndex >= 0 ? 'outline-2 outline-yellow-500 bg-yellow-500/10' : ''}"
                         ondrop={(e) => {
                             e.preventDefault();
+                            triggerDragOverIndex = -1;
+                            validDropOccurred = true;
                             const data = e.dataTransfer.getData("text/plain");
+                            const source = e.dataTransfer.getData("application/x-source");
+                            
                             if (data) {
                                 try {
                                     const trigger = JSON.parse(data);
-                                    // Check if it's a trigger (not a code block)
-                                    if (
-                                        trigger.type &&
-                                        trigger.type.startsWith("on")
-                                    ) {
+                                    if (trigger.type && trigger.type.startsWith("on") && !source) {
+                                        // Only create new trigger if it's from palette (no source)
                                         const newTrigger = {
                                             ...trigger,
                                             id: Date.now() + Math.random(),
                                         };
-                                        activeTriggers = [
-                                            ...activeTriggers,
-                                            newTrigger,
-                                        ];
+                                        activeTriggers = [...activeTriggers, newTrigger];
                                     }
                                 } catch (err) {
-                                    console.error(
-                                        "Failed to parse dropped data:",
-                                        err
-                                    );
+                                    console.error("Failed to parse dropped data:", err);
                                 }
                             }
                         }}
-                        ondragover={(e) => e.preventDefault()}
+                        ondragover={(e) => {
+                            e.preventDefault();
+                            triggerDragOverIndex = 0;
+                        }}
+                        ondragleave={(e) => {
+                            triggerDragOverIndex = -1;
+                        }}
                     >
                         {#if activeTriggers.length === 0}
                             <div class="text-[#666] text-xs text-center py-2">
@@ -483,17 +472,17 @@
                             </div>
                         {:else}
                             <div class="flex flex-wrap gap-1">
-                                {#each activeTriggers as trigger (trigger.id)}
+                                {#each activeTriggers as trigger, i (trigger.id)}
                                     <div
-                                        animate:flip={{
-                                            duration: flipDurationMs,
-                                        }}
+                                        class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-2 py-1 rounded text-xs font-medium shadow-sm cursor-move"
+                                        draggable="true"
+                                        ondragstart={(e) => handleDragStart(e, trigger, i, 'triggers')}
+                                        ondragover={(e) => handleTriggerDragOver(e, i)}
+                                        ondragleave={handleTriggerDragLeave}
+                                        ondrop={(e) => handleTriggerDrop(e, i)}
+                                        ondragend={handleDragEnd}
                                     >
-                                        <div
-                                            class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-2 py-1 rounded text-xs font-medium shadow-sm"
-                                        >
-                                            {trigger.name}
-                                        </div>
+                                        {trigger.name}
                                     </div>
                                 {/each}
                             </div>
@@ -504,68 +493,56 @@
                 <Separator class="my-2" />
 
                 <div
-                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto"
-                    use:dndzone={{
-                        items: items,
-                        flipDurationMs,
-                        dropTargetStyle: {
-                            outline: "1px solid #3b82f6",
-                            "outline-offset": "1px",
-                            "background-color": "rgba(59, 130, 246, 0.08)",
-                            "border-radius": "4px",
-                            "transition-duration": "1s",
-                        },
-                        morphDisabled: true,
-                    }}
-                    onconsider={handleDndConsider}
-                    onfinalize={handleDndFinalize}
+                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto {dragOverIndex >= 0 ? 'outline outline-blue-500 bg-blue-500/10' : ''}"
                     ondrop={(e) => {
                         e.preventDefault();
+                        dragOverIndex = -1;
+                        validDropOccurred = true;
                         const data = e.dataTransfer.getData("text/plain");
+                        const source = e.dataTransfer.getData("application/x-source");
+                        
                         if (data) {
                             try {
                                 const block = JSON.parse(data);
-                                const newItem = {
-                                    ...block,
-                                    id: Date.now() + Math.random(),
-                                };
-                                items = [...items, newItem];
+                                if (!block.type?.startsWith("on") && !source) {
+                                    // Only create new item if it's from palette (no source)
+                                    const newItem = {
+                                        ...block,
+                                        id: Date.now() + Math.random(),
+                                    };
+                                    items = [...items, newItem];
+                                }
                             } catch (err) {
-                                console.error(
-                                    "Failed to parse dropped data:",
-                                    err
-                                );
+                                console.error("Failed to parse dropped data:", err);
                             }
                         }
                     }}
-                    ondragover={(e) => e.preventDefault()}
+                    ondragover={(e) => {
+                        e.preventDefault();
+                        dragOverIndex = 0;
+                    }}
+                    ondragleave={(e) => {
+                        dragOverIndex = -1;
+                    }}
                 >
                     {#each items as item, i (item.id)}
-                        <div animate:flip={{ duration: flipDurationMs }}>
+                        <div
+                            draggable="true"
+                            ondragstart={(e) => handleDragStart(e, item, i, 'items')}
+                            ondragover={(e) => handleDragOver(e, i)}
+                            ondragleave={handleDragLeave}
+                            ondrop={(e) => handleDrop(e, i)}
+                            ondragend={handleDragEnd}
+                            class="{dragOverIndex === i ? 'outline outline-blue-500 bg-blue-500/10' : ''}"
+                        >
                             <CodeBlock
                                 {item}
-                                onIfDndConsider={handleIfDndConsider}
-                                onIfDndFinalize={handleIfDndFinalize}
                                 onUpdate={(updatedItem) => {
-                                    const beforeCount = countNestedChips(items);
-                                    console.log(
-                                        `🔄 BLOCK UPDATE - Before: ${beforeCount} chips`
-                                    );
                                     const mainIndex = items.findIndex(
                                         (i) => i.id === updatedItem.id
                                     );
                                     if (mainIndex !== -1) {
                                         items[mainIndex] = updatedItem;
-                                        const afterCount =
-                                            countNestedChips(items);
-                                        console.log(
-                                            `🔄 BLOCK UPDATE - After: ${afterCount} chips`
-                                        );
-                                        if (beforeCount !== afterCount) {
-                                            console.warn(
-                                                `❌ CHIP LOSS in onUpdate: ${beforeCount} -> ${afterCount}`
-                                            );
-                                        }
                                     }
                                 }}
                             />

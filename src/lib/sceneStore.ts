@@ -58,12 +58,9 @@ class SceneManager {
             (obj) => obj.id === object.id
         );
         if (index !== -1) {
-            // Create a new array to trigger reactivity
-            this.scene.objects = [
-                ...this.scene.objects.slice(0, index),
-                object,
-                ...this.scene.objects.slice(index + 1),
-            ];
+            // Update the object in place and then create a new array to trigger reactivity
+            this.scene.objects[index] = object;
+            this.scene.objects = [...this.scene.objects];
         } else {
             console.warn("Object not found:", object.id);
         }

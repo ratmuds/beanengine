@@ -201,7 +201,24 @@
 
     let openTabs = $state(availableTabs.filter((tab) => tab.visible));
     let activeTab = $state("viewport");
-    let selectedScript = $state("PlayerController");
+    let selectedScriptId = $state(null);
+    let selectedScriptObject = $state(null);
+
+    // Get scripts from scene - reactive to store changes
+    let scripts = $derived($sceneStore ? $sceneStore.scene.objects.filter(obj => obj.type === 'script') : []);
+
+    // Update selected script object when selectedScriptId changes
+    $effect(() => {
+        if (selectedScriptId && scripts.length > 0) {
+            selectedScriptObject = scripts.find(script => script.id === selectedScriptId) || null;
+        } else if (scripts.length > 0 && !selectedScriptId) {
+            // Auto-select the first script if none is selected
+            selectedScriptId = scripts[0].id;
+            selectedScriptObject = scripts[0];
+        } else {
+            selectedScriptObject = null;
+        }
+    });
 
     function closeTab(tabId: string) {
         if (tabId === activeTab && openTabs.length > 1) {
@@ -740,18 +757,17 @@
                                             class="ml-auto flex items-center gap-3"
                                         >
                                             <select
-                                                bind:value={selectedScript}
+                                                bind:value={selectedScriptId}
                                                 class="bg-muted/50 text-foreground text-sm px-3 py-1 rounded border border-border/30 focus:border-blue-500 focus:outline-none"
+                                                disabled={scripts.length === 0}
                                             >
-                                                <option value="PlayerController"
-                                                    >PlayerController</option
-                                                >
-                                                <option value="GameManager"
-                                                    >GameManager</option
-                                                >
-                                                <option value="EnemyAI"
-                                                    >EnemyAI</option
-                                                >
+                                                {#if scripts.length === 0}
+                                                    <option value={null}>No scripts available</option>
+                                                {:else}
+                                                    {#each scripts as script}
+                                                        <option value={script.id}>{script.name}</option>
+                                                    {/each}
+                                                {/if}
                                             </select>
                                             <Button
                                                 variant="ghost"
@@ -760,7 +776,7 @@
                                                 onclick={() =>
                                                     console.log(
                                                         "Run script:",
-                                                        selectedScript
+                                                        selectedScriptObject?.name || 'No script selected'
                                                     )}
                                             >
                                                 <Play class="w-3 h-3 mr-1" />
@@ -770,7 +786,27 @@
                                     </div>
 
                                     <!-- Blockly Workspace -->
-                                    <CustomCodeEditor bind:compiledCode />
+                                    {#if scripts.length === 0}
+                                        <div class="flex-1 flex items-center justify-center bg-background/20">
+                                            <div class="text-center">
+                                                <Code2 class="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                                                <p class="text-foreground text-lg font-medium mb-2">No Scripts Found</p>
+                                                <p class="text-muted-foreground text-sm mb-4">Create a script in the Object Explorer to get started</p>
+                                                <Button 
+                                                    onclick={() => {
+                                                        console.log('Creating new script');
+                                                        createScript(-1);
+                                                    }}
+                                                    class="bg-blue-600 hover:bg-blue-700"
+                                                >
+                                                    <Plus class="w-4 h-4 mr-2" />
+                                                    Create Script
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    {:else}
+                                        <CustomCodeEditor bind:compiledCode selectedScript={selectedScriptObject} />
+                                    {/if}
 
                                     <!-- Debug: Show compiled code -->
                                     {#if compiledCode.length > 0}
