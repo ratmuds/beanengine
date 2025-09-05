@@ -1,38 +1,26 @@
 <script lang="ts">
-    import { createEventDispatcher } from "svelte";
-    import { Button, buttonVariants } from "$lib/components/ui/button";
+    import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
-    import { Switch } from "$lib/components/ui/switch";
     import Vector3Input from "./properties/Vector3Input.svelte";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
-    import ClassSelector from "./properties/ClassSelector.svelte";
     import {
         ChevronDown,
-        ChevronRight,
         Box,
-        Move3d,
-        Palette,
-        Eye,
         Search,
         Hexagon,
-        Sun,
         Settings,
         MoreHorizontal,
         Hash,
         FileCode,
     } from "lucide-svelte";
     import * as Types from "$lib/types";
+    import { assetStore } from "$lib/assetStore";
 
-    let { sceneStore, selectedObject, onPropertyChange } = $props();
+    const { sceneStore, selectedObject, onPropertyChange } = $props();
 
-    let object = $derived(
+    const object = $derived(
         $sceneStore.getScene().objects.find((obj) => obj.id === selectedObject)
     );
-
-    $effect(() => {
-        console.log("Selected Object:", selectedObject);
-        console.log("AAAAAAAAAAAAAAAAAAAAA", $sceneStore);
-    });
 </script>
 
 <div
@@ -89,8 +77,12 @@
                     value={object.name}
                     class="bg-muted/30 border-border/40 text-foreground text-base font-medium h-12 px-4 rounded-lg focus:border-blue-400/60 focus:bg-muted/50 focus:outline-none transition-all duration-200"
                     onchange={(e) => {
-                        object.name = e.target.value;
-                        onPropertyChange(object);
+                        const target = e.target;
+                        if (target && target.value !== undefined) {
+                            const updatedObject = object.clone();
+                            updatedObject.name = target.value;
+                            onPropertyChange(updatedObject);
+                        }
                     }}
                 />
                 <div
@@ -121,24 +113,34 @@
                         label="Position"
                         bind:value={object.position}
                         on:change={(e) => {
-                            object.position = e.detail.value;
-                            onPropertyChange(object);
+                            const updatedObject = object.clone();
+                            updatedObject.position = e.detail.value;
+                            onPropertyChange(updatedObject);
                         }}
                     />
                     <Vector3Input
                         label="Rotation"
                         bind:value={object.rotation}
                         on:change={(e) => {
-                            object.rotation = e.detail.value;
-                            onPropertyChange(object);
+                            // Convert Vector3 to BQuaternion (simplified conversion)
+                            const euler = e.detail.value;
+                            const updatedObject = object.clone();
+                            updatedObject.rotation = new Types.BQuaternion(
+                                euler.x,
+                                euler.y,
+                                euler.z,
+                                1 // w component
+                            );
+                            onPropertyChange(updatedObject);
                         }}
                     />
                     <Vector3Input
                         label="Scale"
                         bind:value={object.scale}
                         on:change={(e) => {
-                            object.scale = e.detail.value;
-                            onPropertyChange(object);
+                            const updatedObject = object.clone();
+                            updatedObject.scale = e.detail.value;
+                            onPropertyChange(updatedObject);
                         }}
                     />
                 </div>
@@ -159,16 +161,187 @@
                     </div>
 
                     <div class="space-y-3">
-                        <div
-                            class="flex items-center justify-between py-2 px-3 bg-muted/30 rounded-lg"
-                        >
-                            <span class="text-sm font-medium text-foreground/80"
-                                >Mesh Type</span
+                        <!-- Mesh Selector -->
+                        <div class="space-y-2">
+                            <label
+                                class="text-sm font-medium text-foreground/80"
                             >
-                            <span
-                                class="text-sm font-mono text-foreground bg-muted/40 px-2 py-1 rounded-md"
-                                >Block</span
-                            >
+                                Mesh Type
+                            </label>
+                            <DropdownMenu.Root>
+                                <DropdownMenu.Trigger>
+                                    <Button
+                                        variant="outline"
+                                        class="w-full justify-between bg-muted/30 border-border/40 hover:bg-muted/50 h-12"
+                                    >
+                                        <span class="text-left truncate">
+                                            {object.meshSource.type ===
+                                            "primitive"
+                                                ? object.meshSource.value
+                                                : assetStore.getAsset(
+                                                      object.meshSource.value
+                                                  )?.metadata.name}
+                                        </span>
+                                        <ChevronDown
+                                            class="w-4 h-4 text-muted-foreground"
+                                        />
+                                    </Button>
+                                </DropdownMenu.Trigger>
+                                <DropdownMenu.Content
+                                    class="w-80 max-h-64 overflow-y-auto"
+                                >
+                                    <!-- Primitive Meshes -->
+                                    <DropdownMenu.Label
+                                        >Primitives</DropdownMenu.Label
+                                    >
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "block"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <Box
+                                            class="w-4 h-4 text-blue-400 mr-2"
+                                        />
+                                        Block
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "sphere"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <div
+                                            class="w-4 h-4 bg-blue-400 rounded-full mr-2"
+                                        ></div>
+                                        Sphere
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "cylinder"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <div
+                                            class="w-4 h-4 bg-blue-400 rounded-sm mr-2"
+                                        ></div>
+                                        Cylinder
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "cone"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <div
+                                            class="w-4 h-4 bg-blue-400 mr-2"
+                                            style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
+                                        ></div>
+                                        Cone
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "plane"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <div
+                                            class="w-4 h-1 bg-blue-400 mr-2"
+                                        ></div>
+                                        Plane
+                                    </DropdownMenu.Item>
+                                    <DropdownMenu.Item
+                                        onclick={() => {
+                                            const updatedObject =
+                                                object.clone();
+                                            updatedObject.setPrimitiveMesh(
+                                                "wedge"
+                                            );
+                                            onPropertyChange(updatedObject);
+                                        }}
+                                    >
+                                        <div
+                                            class="w-4 h-4 bg-blue-400 mr-2"
+                                            style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
+                                        ></div>
+                                        Wedge
+                                    </DropdownMenu.Item>
+
+                                    <!-- Asset Meshes -->
+                                    {#if $assetStore
+                                        .getAllAssets()
+                                        .filter((asset) => asset.metadata.type === "mesh").length > 0}
+                                        <DropdownMenu.Separator />
+                                        <DropdownMenu.Label
+                                            >Assets</DropdownMenu.Label
+                                        >
+                                        {#each $assetStore
+                                            .getAllAssets()
+                                            .filter((asset) => asset.metadata.type === "mesh") as asset (asset.metadata.id)}
+                                            <DropdownMenu.Item
+                                                onclick={() => {
+                                                    console.log(object);
+                                                    const updatedObject =
+                                                        object.clone();
+                                                    console.log(updatedObject);
+                                                    updatedObject.setAssetMesh(
+                                                        asset.metadata.id
+                                                    );
+                                                    onPropertyChange(
+                                                        updatedObject
+                                                    );
+                                                }}
+                                            >
+                                                <div
+                                                    class="flex items-center gap-2 w-full"
+                                                >
+                                                    <Box
+                                                        class="w-4 h-4 text-purple-400"
+                                                    />
+                                                    <div class="flex-1 min-w-0">
+                                                        <div
+                                                            class="font-medium truncate"
+                                                        >
+                                                            {asset.metadata
+                                                                .name}
+                                                        </div>
+                                                        <div
+                                                            class="text-xs text-muted-foreground truncate"
+                                                        >
+                                                            {(
+                                                                asset.metadata
+                                                                    .size /
+                                                                1024 /
+                                                                1024
+                                                            ).toFixed(2)} MB
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </DropdownMenu.Item>
+                                        {/each}
+                                    {/if}
+                                </DropdownMenu.Content>
+                            </DropdownMenu.Root>
                         </div>
                     </div>
                 </div>
@@ -200,12 +373,14 @@
                                 >{object.code.length}</span
                             >
                         </div>
-                        
+
                         <div class="bg-muted/20 p-3 rounded-lg">
-                            <p class="text-xs text-muted-foreground mb-2">Script Editor</p>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            <p class="text-xs text-muted-foreground mb-2">
+                                Script Editor
+                            </p>
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 class="w-full justify-start"
                                 disabled
                             >

@@ -2,32 +2,26 @@
     import { createEventDispatcher } from "svelte";
     import { Button } from "$lib/components/ui/button";
     import { Copy, Clipboard } from "lucide-svelte";
+    import { BVector3 } from "$lib/types";
 
-    interface Vector3 {
-        x: number;
-        y: number;
-        z: number;
-    }
+    export let value = new BVector3(0, 0, 0);
+    export let label = "";
+    export let precision = 3;
+    export let step = 0.1;
+    export let disabled = false;
 
-    export let value: Vector3 = { x: 0, y: 0, z: 0 };
-    export let label: string = "";
-    export let precision: number = 3;
-    export let step: number = 0.1;
-    export let disabled: boolean = false;
-
-    const dispatch = createEventDispatcher<{
-        change: { value: Vector3 };
-    }>();
+    const dispatch = createEventDispatcher();
 
     let showCopied = false;
 
-    function formatNumber(num: number): string {
+    function formatNumber(num) {
         return Number(num.toFixed(precision)).toString();
     }
 
-    function handleInputChange(axis: "x" | "y" | "z", newValue: string) {
+    function handleInputChange(axis, newValue) {
         const numValue = parseFloat(newValue) || 0;
-        const updatedValue = { ...value, [axis]: numValue };
+        const updatedValue = new BVector3(value.x, value.y, value.z);
+        updatedValue[axis] = numValue;
         value = updatedValue;
         dispatch("change", { value: updatedValue });
     }
@@ -48,11 +42,7 @@
             const text = await navigator.clipboard.readText();
             const values = text.split(",").map((v) => parseFloat(v.trim()));
             if (values.length === 3 && values.every((v) => !isNaN(v))) {
-                const updatedValue = {
-                    x: values[0],
-                    y: values[1],
-                    z: values[2],
-                };
+                const updatedValue = new BVector3(values[0], values[1], values[2]);
                 value = updatedValue;
                 dispatch("change", { value: updatedValue });
             }

@@ -6,6 +6,7 @@
         TransformControls,
         interactivity,
         Outlines,
+        useGltf,
     } from "@threlte/extras";
     import * as Types from "$lib/types";
 
@@ -16,6 +17,8 @@
         transformMode = "translate",
         transformSpace = "local",
     } = $props();
+
+    import { assetStore } from "$lib/assetStore";
 
     interactivity();
 
@@ -64,7 +67,20 @@
                 selectedObject = object.id;
             }}
         >
-            <T.BoxGeometry args={[1, 1, 1]} />
+            {#if object.meshSource.type === "primitive"}
+                {#if object.meshSource.value === "block"}
+                    <T.BoxGeometry args={[1, 1, 1]} />
+                {/if}
+
+                {#if object.meshSource.value === "sphere"}
+                    <T.SphereGeometry args={[1, 1, 1]} />
+                {/if}
+            {:else}
+                {#await useGltf(assetStore.getAsset(object.meshSource.value)?.url) then gltf}
+                    <T is={gltf.scene} />
+                {/await}
+            {/if}
+
             <T.MeshStandardMaterial color={object.color || "#ffffff"} />
 
             {#if selectedObject === object.id}

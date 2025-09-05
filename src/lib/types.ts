@@ -101,6 +101,11 @@ class BVector3 {
         this.y = y;
         this.z = z;
     }
+
+    // Clone method to create a new instance with the same values
+    clone(): BVector3 {
+        return new BVector3(this.x, this.y, this.z);
+    }
 }
 
 // Represents a rotation in 3D space
@@ -115,6 +120,11 @@ class BQuaternion {
         this.y = y;
         this.z = z;
         this.w = w;
+    }
+
+    // Clone method to create a new instance with the same values
+    clone(): BQuaternion {
+        return new BQuaternion(this.x, this.y, this.z, this.w);
     }
 }
 
@@ -186,9 +196,18 @@ class BNode3D extends BObject {
     }
 }
 
+// Available primitive mesh types
+type PrimitiveMeshType = 'block' | 'sphere' | 'cylinder' | 'cone' | 'plane' | 'wedge';
+
+// Mesh source configuration
+interface MeshSource {
+    type: 'primitive' | 'asset';
+    value: string; // primitive name or asset ID
+}
+
 // Represents a physical part in the scene
 class BPart extends BNode3D {
-    mesh: string; // Reference to a mesh resource or base mesh ('block', 'sphere', etc.)
+    meshSource: MeshSource; // Mesh selection (primitive or asset)
     color: string;
     material: string;
     transparency: number;
@@ -215,7 +234,7 @@ class BPart extends BNode3D {
         super(name, id, parent);
         this.type = "part";
 
-        this.mesh = "block";
+        this.meshSource = { type: 'primitive', value: 'block' };
         this.color = "#ffffff";
         this.material = "plastic";
         this.transparency = 0;
@@ -231,6 +250,54 @@ class BPart extends BNode3D {
         this.canTouch = true;
         this.canCollide = true;
         this.canQuery = true;
+    }
+
+    // Set mesh to a primitive type
+    setPrimitiveMesh(primitive: PrimitiveMeshType) {
+        this.meshSource = { type: 'primitive', value: primitive };
+    }
+
+    // Set mesh to an asset from the asset store
+    setAssetMesh(assetId: string) {
+        this.meshSource = { type: 'asset', value: assetId };
+    }
+
+    // Get the effective mesh source as a string for display
+    getEffectiveMeshSource(): string {
+        if (this.meshSource.type === 'primitive') {
+            return `Primitive: ${this.meshSource.value}`;
+        }
+        return `Asset: ${this.meshSource.value}`;
+    }
+
+    // Check if using a primitive mesh
+    isPrimitiveMesh(): boolean {
+        return this.meshSource.type === 'primitive';
+    }
+
+    // Check if using an asset mesh
+    isAssetMesh(): boolean {
+        return this.meshSource.type === 'asset';
+    }
+
+    clone(): BPart {
+        // Create a fresh instance so we keep the prototype (and therefore all methods)
+        const cloned = new BPart(this.name, this.id, this.parent);
+
+        // Shallow-copy all enumerable own properties (cheap and covers new fields automatically)
+        Object.assign(cloned, this);
+
+        // Deep-clone transform-related value objects to avoid shared references
+        cloned.position = this.position.clone();
+        cloned.rotation = this.rotation.clone();
+        cloned.scale = this.scale.clone();
+        cloned.positionOffset = this.positionOffset.clone();
+        cloned.rotationOffset = this.rotationOffset.clone();
+
+        // Clone meshSource so modifications on the clone don’t mutate original
+        cloned.meshSource = { ...this.meshSource };
+
+        return cloned;
     }
 }
 
@@ -270,6 +337,60 @@ class BConstraint extends BObject {
     }
 }
 
+
+
+// Represents a camera in the scene
+class BCamera extends BNode3D {
+    fieldOfView: number; // Field of view in degrees
+    nearClipPlane: number; // Near clipping plane distance
+    farClipPlane: number; // Far clipping plane distance
+    projectionType: 'perspective' | 'orthographic';
+    orthographicSize: number; // Size for orthographic projection
+    aspectRatio: number; // Aspect ratio (width/height)
+    
+    // Camera-specific settings
+    isActive: boolean; // Whether this camera is currently active
+    clearColor: string; // Background clear color
+    clearFlags: 'skybox' | 'solid_color' | 'depth_only';
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name ? name : "Camera", id, parent);
+        this.type = "camera";
+        
+        // Default camera settings
+        this.fieldOfView = 60;
+        this.nearClipPlane = 0.1;
+        this.farClipPlane = 1000;
+        this.projectionType = 'perspective';
+        this.orthographicSize = 5;
+        this.aspectRatio = 16 / 9;
+        
+        this.isActive = false;
+        this.clearColor = "#87CEEB"; // Sky blue
+        this.clearFlags = 'solid_color';
+    }
+
+    // Set as perspective camera
+    setPerspective(fov: number, near: number, far: number) {
+        this.projectionType = 'perspective';
+        this.fieldOfView = fov;
+        this.nearClipPlane = near;
+        this.farClipPlane = far;
+    }
+
+    // Set as orthographic camera
+    setOrthographic(size: number, near: number, far: number) {
+        this.projectionType = 'orthographic';
+        this.orthographicSize = size;
+        this.nearClipPlane = near;
+        this.farClipPlane = far;
+    }
+}
+
 // Script (contains code omg no way)
 class BScript extends BObject {
     code: any[];
@@ -285,6 +406,135 @@ class BScript extends BObject {
     }
 }
 
+// --- Asset Management System ---
+
+// Supported asset types
+type AssetType = 'mesh' | 'texture' | 'audio' | 'material' | 'script' | 'other';
+
+// Asset metadata interface
+interface BAssetMetadata {
+    id: string;
+    name: string;
+    type: AssetType;
+    fileType: string; // e.g., 'gltf', 'png', 'mp3'
+    size: number; // file size in bytes
+    uploadedAt: Date;
+    tags: string[];
+    description?: string;
+    thumbnailUrl?: string; // for preview images
+}
+
+// Asset data container
+class BAsset {
+    metadata: BAssetMetadata;
+    data: File | ArrayBuffer | string; // The actual asset data
+    url?: string; // Object URL for browser access
+
+    constructor(file: File, type?: AssetType) {
+        this.data = file;
+        this.metadata = {
+            id: Math.random().toString(36).substring(2, 15),
+            name: file.name,
+            type: type || this.inferAssetType(file),
+            fileType: this.getFileExtension(file.name),
+            size: file.size,
+            uploadedAt: new Date(),
+            tags: [],
+            description: ''
+        };
+        
+        // Create object URL for browser access
+        this.url = URL.createObjectURL(file);
+    }
+
+    private inferAssetType(file: File): AssetType {
+        const extension = this.getFileExtension(file.name).toLowerCase();
+        
+        // 3D Mesh formats
+        if (['gltf', 'glb', 'obj', 'fbx', 'dae', 'ply'].includes(extension)) {
+            return 'mesh';
+        }
+        
+        // Texture formats
+        if (['png', 'jpg', 'jpeg', 'gif', 'bmp', 'tga', 'webp'].includes(extension)) {
+            return 'texture';
+        }
+        
+        // Audio formats
+        if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(extension)) {
+            return 'audio';
+        }
+        
+        // Material files
+        if (['mtl', 'mat'].includes(extension)) {
+            return 'material';
+        }
+        
+        // Script files
+        if (['js', 'ts', 'lua', 'py'].includes(extension)) {
+            return 'script';
+        }
+        
+        return 'other';
+    }
+
+    private getFileExtension(filename: string): string {
+        return filename.split('.').pop() || '';
+    }
+
+    // Clean up object URL when asset is removed
+    dispose() {
+        if (this.url) {
+            URL.revokeObjectURL(this.url);
+            this.url = undefined;
+        }
+    }
+
+    // Update metadata
+    updateMetadata(updates: Partial<BAssetMetadata>) {
+        this.metadata = { ...this.metadata, ...updates };
+    }
+
+    // Check if asset matches search query
+    matchesSearch(query: string): boolean {
+        const searchLower = query.toLowerCase();
+        return (
+            this.metadata.name.toLowerCase().includes(searchLower) ||
+            this.metadata.type.toLowerCase().includes(searchLower) ||
+            this.metadata.fileType.toLowerCase().includes(searchLower) ||
+            this.metadata.tags.some(tag => tag.toLowerCase().includes(searchLower)) ||
+            (this.metadata.description?.toLowerCase().includes(searchLower) ?? false)
+        );
+    }
+}
+
+// Asset collection for organizing assets
+class BAssetCollection {
+    id: string;
+    name: string;
+    description: string;
+    assetIds: string[];
+    createdAt: Date;
+
+    constructor(name: string, description = '') {
+        this.id = Math.random().toString(36).substring(2, 15);
+        this.name = name;
+        this.description = description;
+        this.assetIds = [];
+        this.createdAt = new Date();
+    }
+
+    addAsset(assetId: string) {
+        if (!this.assetIds.includes(assetId)) {
+            this.assetIds.push(assetId);
+        }
+    }
+
+    removeAsset(assetId: string) {
+        this.assetIds = this.assetIds.filter(id => id !== assetId);
+    }
+}
+
 // Export all classes
 export {
     BScene,
@@ -293,7 +543,14 @@ export {
     BQuaternion,
     BNode3D,
     BPart,
+    BCamera,
     BLight,
     BConstraint,
     BScript,
+    BAsset,
+    BAssetCollection,
+    type AssetType,
+    type BAssetMetadata,
+    type PrimitiveMeshType,
+    type MeshSource,
 };

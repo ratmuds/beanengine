@@ -11,40 +11,89 @@ class SceneManager {
         this.variables = [];
     }
 
+    createObject(
+        objectType: string,
+        parentId: string | number,
+        options?: {
+            position?: Types.BVector3;
+            name?: string;
+            [key: string]: any;
+        }
+    ): Types.BObject {
+        let newObject: Types.BObject;
+        const name = options?.name || this.generateObjectName(objectType);
+
+        switch (objectType.toLowerCase()) {
+            case 'part':
+                newObject = new Types.BPart(name, null, null);
+                if (newObject instanceof Types.BPart) {
+                    newObject.position = options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.scale = new Types.BVector3(1, 1, 1);
+                }
+                break;
+            case 'mesh':
+                newObject = new Types.BPart(name, null, null);
+                if (newObject instanceof Types.BPart) {
+                    newObject.position = options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.scale = new Types.BVector3(1, 1, 1);
+                    // Set mesh from asset if provided
+                    if (options?.assetId) {
+                        newObject.setAssetMesh(options.assetId);
+                    }
+                }
+                break;
+            case 'camera':
+                newObject = new Types.BCamera(name, null, null);
+                if (newObject instanceof Types.BCamera) {
+                    newObject.position = options?.position || new Types.BVector3(0, 5, 10);
+                    if (options?.fieldOfView) newObject.fieldOfView = options.fieldOfView;
+                    if (options?.isActive) newObject.isActive = options.isActive;
+                }
+                break;
+            case 'light':
+                newObject = new Types.BLight(name, null, null);
+                if (newObject instanceof Types.BLight) {
+                    newObject.position = options?.position || new Types.BVector3(0, 10, 0);
+                    if (options?.color) newObject.color = options.color;
+                    if (options?.intensity) newObject.intensity = options.intensity;
+                }
+                break;
+            case 'script':
+                newObject = new Types.BScript(name, null, null);
+                break;
+            default:
+                console.warn(`Unknown object type: ${objectType}`);
+                newObject = new Types.BObject(name, null, null);
+                break;
+        }
+
+        // Set parent if provided
+        if (parentId) {
+            newObject.parent = parentId;
+        }
+
+        this.scene.addObject(newObject);
+        return newObject;
+    }
+
+    private generateObjectName(objectType: string): string {
+        const typeCount = this.scene.objects.filter((obj) =>
+            obj.type === objectType.toLowerCase()
+        ).length;
+        const capitalizedType = objectType.charAt(0).toUpperCase() + objectType.slice(1);
+        return `${capitalizedType}${typeCount + 1}`;
+    }
+
+    // Convenience methods for backward compatibility and common use cases
     createPartInFrontOfCamera(
         parentId: string | number,
         position?: Types.BVector3
     ): Types.BPart {
-        const partCount = this.scene.objects.filter((obj) =>
-            obj.name.startsWith("Part")
-        ).length;
-        const partName = `Part${partCount + 1}`;
-
-        const newPart = new Types.BPart(partName, null, null);
-        newPart.position = position ? position : new Types.BVector3(0, 0, 0);
-        newPart.scale = new Types.BVector3(1, 1, 1);
-
-        // Set parent if provided
-        if (parentId) {
-            newPart.parent = parentId;
-        }
-
-        this.scene.addObject(newPart);
-
-        return newPart;
+        return this.createObject('part', parentId, { position }) as Types.BPart;
     }
 
-    createScript(parentId: string | number) {
-        const newScript = new Types.BScript(null, null);
-
-        // Set parent if provided
-        if (parentId) {
-            newScript.parent = parentId;
-        }
-
-        this.scene.addObject(newScript);
-
-        return newScript;
+    createScript(parentId: string | number): Types.BScript {
+        return this.createObject('script', parentId) as Types.BScript;
     }
 
     addObject(object: Types.BObject) {
@@ -130,14 +179,29 @@ function createSceneStore() {
     return {
         subscribe,
 
-        // This method will now update the store, making it reactive
+        // Generic object creation method
+        createObject: (
+            objectType: string,
+            parentId: string | number,
+            options?: {
+                position?: Types.BVector3;
+                name?: string;
+                [key: string]: any;
+            }
+        ) => {
+            update((currentManager) => {
+                currentManager.createObject(objectType, parentId, options);
+                return currentManager;
+            });
+        },
+
+        // Convenience methods for backward compatibility
         createPartInFrontOfCamera: (
             parentId: string | number,
             position?: Types.BVector3
         ) => {
             update((currentManager) => {
                 currentManager.createPartInFrontOfCamera(parentId, position);
-                // Return the same manager - update() call triggers reactivity
                 return currentManager;
             });
         },
@@ -145,7 +209,6 @@ function createSceneStore() {
         createScript: (parentId: string | number) => {
             update((currentManager) => {
                 currentManager.createScript(parentId);
-                // Return the same manager - update() call triggers reactivity
                 return currentManager;
             });
         },

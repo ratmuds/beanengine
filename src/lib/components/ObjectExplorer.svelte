@@ -1,6 +1,5 @@
 <script lang="ts">
     import { createEventDispatcher } from "svelte";
-    import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
     import * as Popover from "$lib/components/ui/popover/index.js";
     import * as Command from "$lib/components/ui/command/index.js";
@@ -8,7 +7,6 @@
     import ItemSwitcher from "./ItemSwitcher.svelte";
     import {
         FolderOpen,
-        Folder,
         Camera,
         Lightbulb,
         Box,
@@ -26,8 +24,6 @@
         Navigation,
         FileCode,
     } from "lucide-svelte";
-    import Separator from "./ui/separator/separator.svelte";
-    import * as Types from "$lib/types";
 
     /*export let sceneObjects: Array<{
         id: string;
@@ -108,7 +104,7 @@
         const allObjects = $sceneStore.getScene().objects;
         const rootObjects = allObjects.filter((obj) => !obj.parent);
 
-        let hierarchicalObjects = flattenObjectsHierarchy(
+        const hierarchicalObjects = flattenObjectsHierarchy(
             rootObjects,
             allObjects
         );
@@ -126,6 +122,10 @@
                 return FileCode;
             case "part":
                 return Box;
+            case "mesh":
+                return FileImage;
+            case "camera":
+                return Camera;
             case "light":
                 return Lightbulb;
             case "constraint":
@@ -300,7 +300,7 @@
     }
 
     function handleAddObjectType(type: string) {
-        console.log(`Adding object of type: ${type}`);
+
         
         // Auto-expand the parent if it's not -1 (root)
         if (addDialogParentId !== -1) {
@@ -373,6 +373,12 @@
                                     onSelect={() =>
                                         handleAddObjectType("Script")}
                                     class="rounded-lg m-1">Script</Command.Item
+                                >
+
+                                <Command.Item
+                                    value="camera"
+                                    onSelect={() => handleAddObjectType("Camera")}
+                                    class="rounded-lg m-1">Camera</Command.Item
                                 >
                                 <Command.Item class="rounded-lg m-1"
                                     >Light</Command.Item
@@ -472,16 +478,13 @@
                     <!-- Connection lines for depth visualization -->
                     {#if obj.depth > 0}
                         <div class="absolute left-0 top-0 bottom-0 flex">
-                            {#each Array(obj.depth) as _, i}
+                            {#each Array(obj.depth) as _}
                                 <div
                                     class="w-5 flex justify-center"
-                                    style="margin-left: {i * 20}px"
                                 >
-                                    {#if i === obj.depth - 1}
-                                        <div
-                                            class="w-px bg-border/40 h-full"
-                                        ></div>
-                                    {/if}
+                                    <div
+                                        class="w-px bg-border/40 h-full"
+                                    ></div>
                                 </div>
                             {/each}
                         </div>
@@ -517,6 +520,10 @@
                             <Icon class="w-5 h-5 text-yellow-400" />
                         {:else if obj.type === "part"}
                             <Icon class="w-5 h-5 text-blue-400" />
+                        {:else if obj.type === "mesh"}
+                            <Icon class="w-5 h-5 text-cyan-400" />
+                        {:else if obj.type === "camera"}
+                            <Icon class="w-5 h-5 text-indigo-400" />
                         {:else if obj.type === "constraint"}
                             <Icon class="w-5 h-5 text-purple-400" />
                         {:else}

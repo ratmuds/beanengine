@@ -54,18 +54,23 @@
     import * as Types from "$lib/types";
     import { sceneStore } from "$lib/sceneStore";
 
+    import AssetBrowser from "$lib/components/AssetBrowser.svelte";
+    import { assetStore } from "$lib/assetStore";
+    import type { BAsset } from "$lib/types";
+
     function handleAddObject(
         event: CustomEvent<{ parentId: string | number; type?: string }>
     ) {
         const { type, parentId } = event.detail;
 
-        if (type === "Part") {
-            createPartInFrontOfCamera(parentId);
-        } else if (type === "Script") {
-            createScript(parentId);
-        } else {
-            console.log("Add object:", event.detail);
+        if (!type) {
+            console.warn("No object type specified");
+            return;
         }
+
+        // Use the generic createObject method
+        sceneStore.createObject(type.toLowerCase(), parentId);
+        console.log(`Created ${type} object with parent:`, parentId);
     }
 
     function handleReparentObject(
@@ -73,13 +78,6 @@
     ) {
         const { objectId, newParentId } = event.detail;
         sceneStore.reparentObject(objectId, newParentId);
-    }
-
-    function createPartInFrontOfCamera(
-        parentId: string | number,
-        position?: Types.BVector3
-    ) {
-        sceneStore.createPartInFrontOfCamera(parentId, position);
     }
 
     function createScript(parentId: string | number) {
@@ -325,6 +323,24 @@
             centerPanelSize = 60;
 
             // TODO: make this remember previous size
+        }
+    }
+
+    // Asset browser handlers
+    function handleAssetSelected(event: CustomEvent<{ asset: BAsset }>) {
+        console.log('Asset selected:', event.detail.asset.metadata.name);
+    }
+    
+    function handleAssetDoubleClick(event: CustomEvent<{ asset: BAsset }>) {
+        const asset = event.detail.asset;
+        console.log('Asset double-clicked:', asset.metadata.name);
+        
+        // For 3D meshes, create a new part with the mesh
+        if (asset.metadata.type === 'mesh') {
+            const newPart = sceneStore.createPartInFrontOfCamera(-1);
+            // In a real implementation, you'd load the mesh and assign it
+            // newPart.mesh = asset.metadata.id; // Reference to the asset
+            console.log('Created part with mesh:', asset.metadata.name);
         }
     }
 </script>
@@ -863,21 +879,10 @@
                             </Tabs.Content>
 
                             <Tabs.Content value="assets" class="h-full m-0 p-0">
-                                <div
-                                    class="h-full bg-gray-900/20 flex items-center justify-center"
-                                >
-                                    <div class="text-center">
-                                        <Package
-                                            class="w-12 h-12 mx-auto mb-3 text-gray-600"
-                                        />
-                                        <p class="text-gray-500 text-sm">
-                                            Asset Browser
-                                        </p>
-                                        <p class="text-gray-600 text-xs">
-                                            Browse and manage your assets
-                                        </p>
-                                    </div>
-                                </div>
+                                <AssetBrowser 
+                                    onassetSelected={handleAssetSelected}
+                                    onassetDoubleClick={handleAssetDoubleClick}
+                                />
                             </Tabs.Content>
 
                             <Tabs.Content
