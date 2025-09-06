@@ -2,6 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
     import Vector3Input from "./properties/Vector3Input.svelte";
+    import AxisLockControls from "./properties/AxisLockControls.svelte";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
     import {
         ChevronDown,
@@ -343,6 +344,18 @@
                                 </DropdownMenu.Content>
                             </DropdownMenu.Root>
                         </div>
+                    </div>
+                    
+                    <!-- Axis Lock Controls -->
+                    <div class="space-y-2">
+                        <h3 class="text-sm font-medium text-foreground/80">Physics Constraints</h3>
+                        <AxisLockControls 
+                            {object} 
+                            on:change={(e) => {
+                                const updatedObject = e.detail.object;
+                                onPropertyChange(updatedObject);
+                            }}
+                        />
                     </div>
                 </div>
             {/if}

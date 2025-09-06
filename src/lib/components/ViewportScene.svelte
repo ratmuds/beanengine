@@ -60,33 +60,90 @@
         quaternion={rotation}
         {scale}
     >
-        <T.Mesh
-            castShadow
-            receiveShadow
-            onclick={() => {
-                selectedObject = object.id;
-            }}
-        >
-            {#if object.meshSource.type === "primitive"}
-                {#if object.meshSource.value === "block"}
-                    <T.BoxGeometry args={[1, 1, 1]} />
+        {#if object instanceof Types.BPart}
+            <!-- Render Parts with meshes -->
+            <T.Mesh
+                castShadow
+                receiveShadow
+                onclick={() => {
+                    selectedObject = object.id;
+                }}
+            >
+                {#if object.meshSource.type === "primitive"}
+                    {#if object.meshSource.value === "block"}
+                        <T.BoxGeometry args={[1, 1, 1]} />
+                    {/if}
+
+                    {#if object.meshSource.value === "sphere"}
+                        <T.SphereGeometry args={[1, 32, 32]} />
+                    {/if}
+
+                    {#if object.meshSource.value === "cylinder"}
+                        <T.CylinderGeometry args={[1, 1, 2, 32]} />
+                    {/if}
+
+                    {#if object.meshSource.value === "cone"}
+                        <T.ConeGeometry args={[1, 2, 32]} />
+                    {/if}
+
+                    {#if object.meshSource.value === "plane"}
+                        <T.PlaneGeometry args={[2, 2]} />
+                    {/if}
+                {:else if object.meshSource.value && assetStore.getAsset(object.meshSource.value)?.url}
+                    {#await useGltf(assetStore.getAsset(object.meshSource.value).url) then gltf}
+                        <T is={gltf.scene} />
+                    {/await}
                 {/if}
 
-                {#if object.meshSource.value === "sphere"}
-                    <T.SphereGeometry args={[1, 1, 1]} />
+                <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+
+                {#if selectedObject === object.id}
+                    <Outlines color="#00aaff" />
                 {/if}
-            {:else}
-                {#await useGltf(assetStore.getAsset(object.meshSource.value)?.url) then gltf}
-                    <T is={gltf.scene} />
-                {/await}
-            {/if}
+            </T.Mesh>
+        {:else if object instanceof Types.BCamera}
+            <!-- Render Camera with wireframe representation -->
+            <T.Mesh
+                onclick={() => {
+                    selectedObject = object.id;
+                }}
+            >
+                <T.ConeGeometry args={[0.5, 1, 4]} />
+                <T.MeshBasicMaterial color="#ffff00" wireframe />
 
-            <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+                {#if selectedObject === object.id}
+                    <Outlines color="#00aaff" />
+                {/if}
+            </T.Mesh>
+        {:else if object instanceof Types.BLight}
+            <!-- Render Light with sphere representation -->
+            <T.Mesh
+                onclick={() => {
+                    selectedObject = object.id;
+                }}
+            >
+                <T.SphereGeometry args={[0.3, 16, 16]} />
+                <T.MeshBasicMaterial color={object.color || "#ffffff"} />
 
-            {#if selectedObject === object.id}
-                <Outlines color="#00aaff" />
-            {/if}
-        </T.Mesh>
+                {#if selectedObject === object.id}
+                    <Outlines color="#00aaff" />
+                {/if}
+            </T.Mesh>
+        {:else}
+            <!-- Render other BNode3D objects with a default cube -->
+            <T.Mesh
+                onclick={() => {
+                    selectedObject = object.id;
+                }}
+            >
+                <T.BoxGeometry args={[0.5, 0.5, 0.5]} />
+                <T.MeshBasicMaterial color="#888888" wireframe />
+
+                {#if selectedObject === object.id}
+                    <Outlines color="#00aaff" />
+                {/if}
+            </T.Mesh>
+        {/if}
     </T.Group>
 
     {#if activeTool !== "select" && selectedObject === object.id}
@@ -103,12 +160,16 @@
                     object.position.x = transform.position.x;
                     object.position.y = transform.position.y;
                     object.position.z = transform.position.z;
-                    object.rotation.x = transform.rotation.x;
-                    object.rotation.y = transform.rotation.y;
-                    object.rotation.z = transform.rotation.z;
+                    object.rotation.x = transform.quaternion.x;
+                    object.rotation.y = transform.quaternion.y;
+                    object.rotation.z = transform.quaternion.z;
+                    object.rotation.w = transform.quaternion.w;
                     object.scale.x = transform.scale.x;
                     object.scale.y = transform.scale.y;
                     object.scale.z = transform.scale.z;
+
+                    // Update the object in the store to trigger reactivity
+                    sceneStore.updateObject(object);
                 }
             }}
         />

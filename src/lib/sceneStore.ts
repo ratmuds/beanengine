@@ -69,7 +69,13 @@ class SceneManager {
 
         // Set parent if provided
         if (parentId) {
-            newObject.parent = parentId;
+            const parentObject = this.getObjectById(parentId.toString());
+            if (parentObject) {
+                newObject.parent = parentObject;
+                parentObject.addChild(newObject);
+            } else {
+                console.warn(`Parent object with ID ${parentId} not found`);
+            }
         }
 
         this.scene.addObject(newObject);
@@ -124,17 +130,23 @@ class SceneManager {
             return;
         }
 
+        // Remove from current parent if it has one
+        if (objectToReparent.parent) {
+            objectToReparent.parent.removeChild(objectToReparent);
+        }
+
         // If newParentId is -1, set parent to null (make it root)
         if (newParentId === -1) {
             objectToReparent.parent = null;
         } else {
             // Find the new parent object
-            const newParent = this.scene.objects.find(obj => obj.id === newParentId);
+            const newParent = this.scene.objects.find(obj => obj.id === newParentId.toString());
             if (!newParent) {
                 console.warn("New parent object not found:", newParentId);
                 return;
             }
-            objectToReparent.parent = newParentId;
+            objectToReparent.parent = newParent;
+            newParent.addChild(objectToReparent);
         }
 
         // Trigger reactivity by creating a new array
@@ -164,6 +176,63 @@ class SceneManager {
     getVariables(): Array<{ name: string; value: any; type: string }> {
         console.log('[SceneStore] Getting variables:', this.variables);
         return this.variables;
+    }
+
+    // Helper functions for object management
+    getObjectById(id: string): Types.BObject | undefined {
+        return this.scene.objects.find(obj => obj.id === id);
+    }
+
+    getObjectsByType<T extends Types.BObject>(type: string): T[] {
+        return this.scene.objects.filter(obj => obj.type === type) as T[];
+    }
+
+    getFirstObjectByType<T extends Types.BObject>(type: string): T | undefined {
+        return this.scene.objects.find(obj => obj.type === type) as T | undefined;
+    }
+
+    getAllCameras(): Types.BCamera[] {
+        return this.getObjectsByType<Types.BCamera>('camera');
+    }
+
+    getAllLights(): Types.BLight[] {
+        return this.getObjectsByType<Types.BLight>('light');
+    }
+
+    getAllParts(): Types.BPart[] {
+        return this.getObjectsByType<Types.BPart>('part');
+    }
+
+    getAllScripts(): Types.BScript[] {
+        return this.getObjectsByType<Types.BScript>('script');
+    }
+
+    getActiveCamera(): Types.BCamera | undefined {
+        return this.getAllCameras().find(camera => camera.isActive);
+    }
+
+    setActiveCamera(cameraId: string): void {
+        // Deactivate all cameras first
+        this.getAllCameras().forEach(camera => {
+            camera.isActive = false;
+        });
+        
+        // Activate the specified camera
+        const camera = this.getObjectById(cameraId) as Types.BCamera;
+        if (camera && camera instanceof Types.BCamera) {
+            camera.isActive = true;
+        }
+    }
+
+    getChildrenOf(parentId: string): Types.BObject[] {
+        return this.scene.objects.filter(obj => 
+            obj.parent && 
+            (typeof obj.parent === 'string' ? obj.parent === parentId : obj.parent.id === parentId)
+        );
+    }
+
+    getRootObjects(): Types.BObject[] {
+        return this.scene.objects.filter(obj => !obj.parent);
     }
 }
 
@@ -273,6 +342,54 @@ function createSceneStore() {
 
         getVariables: () => {
             return manager.getVariables();
+        },
+
+        // Helper functions
+        getObjectById: (id: string) => {
+            return manager.getObjectById(id);
+        },
+
+        getObjectsByType: <T extends Types.BObject>(type: string): T[] => {
+            return manager.getObjectsByType<T>(type);
+        },
+
+        getFirstObjectByType: <T extends Types.BObject>(type: string): T | undefined => {
+            return manager.getFirstObjectByType<T>(type);
+        },
+
+        getAllCameras: () => {
+            return manager.getAllCameras();
+        },
+
+        getAllLights: () => {
+            return manager.getAllLights();
+        },
+
+        getAllParts: () => {
+            return manager.getAllParts();
+        },
+
+        getAllScripts: () => {
+            return manager.getAllScripts();
+        },
+
+        getActiveCamera: () => {
+            return manager.getActiveCamera();
+        },
+
+        setActiveCamera: (cameraId: string) => {
+            update((currentManager) => {
+                currentManager.setActiveCamera(cameraId);
+                return currentManager;
+            });
+        },
+
+        getChildrenOf: (parentId: string) => {
+            return manager.getChildrenOf(parentId);
+        },
+
+        getRootObjects: () => {
+            return manager.getRootObjects();
         },
     };
 }

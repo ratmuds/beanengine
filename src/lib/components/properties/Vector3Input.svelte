@@ -42,7 +42,11 @@
             const text = await navigator.clipboard.readText();
             const values = text.split(",").map((v) => parseFloat(v.trim()));
             if (values.length === 3 && values.every((v) => !isNaN(v))) {
-                const updatedValue = new BVector3(values[0], values[1], values[2]);
+                const updatedValue = new BVector3(
+                    values[0],
+                    values[1],
+                    values[2]
+                );
                 value = updatedValue;
                 dispatch("change", { value: updatedValue });
             }
@@ -63,7 +67,7 @@
         <!-- Simple pill container -->
         <div class="px-4 py-3">
             <div class="flex items-center gap-2">
-                <!-- X Input - Subtle color hints -->
+                <!-- X Input -->
                 <div
                     class="group flex-1 bg-red-500/8 border border-red-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-red-400/40 hover:bg-red-500/12 hover:scale-105 focus-within:border-red-400/50 focus-within:bg-red-500/15 focus-within:scale-105"
                 >
@@ -77,7 +81,7 @@
                     />
                 </div>
 
-                <!-- Y Input - Subtle color hints -->
+                <!-- Y Input -->
                 <div
                     class="group flex-1 bg-green-500/8 border border-green-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-green-400/40 hover:bg-green-500/12 hover:scale-105 focus-within:border-green-400/50 focus-within:bg-green-500/15 focus-within:scale-105"
                 >
@@ -91,7 +95,7 @@
                     />
                 </div>
 
-                <!-- Z Input - Subtle color hints -->
+                <!-- Z Input -->
                 <div
                     class="group flex-1 bg-blue-500/8 border border-blue-400/25 rounded-full px-4 py-2.5 transition-all duration-300 ease-out hover:border-blue-400/40 hover:bg-blue-500/12 hover:scale-105 focus-within:border-blue-400/50 focus-within:bg-blue-500/15 focus-within:scale-105"
                 >
