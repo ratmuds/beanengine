@@ -26,10 +26,7 @@ Bean Engine is a **visual programming game development platform** that bridges t
 4. **Asset Management** - Handle 3D models, textures, audio
 5. **Editor Interface** - Professional multi-panel layout
 
-### Recent Updates
-- **Vector3 Clone Bug Fix (Latest)**: Fixed critical bug where `this.scale.clone is not a function` error occurred when changing mesh types. The issue was in Vector3Input.svelte where plain JavaScript objects `{ ...value, [axis]: numValue }` were being created instead of proper BVector3 instances. Fixed by importing BVector3 and creating proper instances with `new BVector3()` in both `handleInputChange()` and `pasteVector()` functions.
-- **PropertiesPanel Reactivity Fix**: Fixed Svelte reactivity issues in PropertiesPanel.svelte where direct object mutations weren't triggering UI updates. Now all property changes create a new object copy using the spread operator before calling `onPropertyChange()`, ensuring proper reactivity for name, position, rotation, scale, and assetId changes.
-- **Scene Store Refactoring**: Replaced individual object creation methods with a generic `createObject()` method that supports all object types (Part, Mesh, Camera, Light, Script) through a factory pattern. This makes adding new object types much more maintainable.
+
 
 ## Project Structure
 Raymund Thongthipaya
@@ -910,6 +907,16 @@ class BMyObject extends BNode3D {
 - Three.js objects are properly disposed when removed
 - Event listeners are cleaned up in component destruction
 - Large assets are loaded asynchronously
+
+## Recent Changes & Updates
+
+### Component Updates
+- **PropertyDropdown.svelte**: 
+  - Fixed TypeScript linting errors by correcting type annotations in $props() destructuring and removing incompatible TypeScript syntax for Svelte 5 compatibility
+  - **MAJOR UPDATE**: Replaced custom keyboard handling and dropdown implementation with shadcn-svelte Select components for better accessibility, maintainability, and consistency with the design system
+  - Removed ~150 lines of custom keyboard navigation, focus management, and click-outside handling
+  - Now uses `$lib/components/ui/select` components from shadcn-svelte
+  - Maintains the same API and slot system for backward compatibility
 
 ## Development Tools
 

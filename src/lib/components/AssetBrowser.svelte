@@ -5,7 +5,6 @@
     import { Badge } from '$lib/components/ui/badge';
     import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
     import { assetStore } from '$lib/assetStore';
-    import type { BAsset, AssetType } from '$lib/types';
     import {
         Upload,
         Search,
@@ -14,7 +13,6 @@
         List,
         Trash2,
         Download,
-        Eye,
         Package,
         Image,
         Music,
@@ -22,29 +20,35 @@
         Box,
         Palette,
         MoreHorizontal,
-        Plus,
         FolderOpen
     } from 'lucide-svelte';
 
-    const dispatch = createEventDispatcher<{
-        assetSelected: { asset: BAsset };
-        assetDoubleClick: { asset: BAsset };
-    }>();
+    const dispatch = createEventDispatcher();
 
     // View state
-    let viewMode: 'grid' | 'list' = $state('grid');
+    let viewMode = $state('grid');
     let dragOver = $state(false);
-    let uploadInput: HTMLInputElement;
+    let uploadInput;
 
+    // Local state for search and filter
+    let searchQuery = $state('');
+    let filterType = $state('all');
+    let selectedAssets = $state([]);
+    
     // Get reactive data from store
-    let filteredAssets = $derived($assetStore.getFilteredAssets());
-    let selectedAssets = $derived($assetStore.getSelectedAssets());
-    let stats = $derived($assetStore.getStats());
-    let searchQuery = $derived($assetStore.searchQuery);
-    let filterType = $derived($assetStore.filterType);
+    let allAssets = $derived($assetStore.getAllAssets());
+    let filteredAssets = $derived(allAssets.filter(asset => {
+        if (searchQuery && !asset.metadata.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return false;
+        }
+        if (filterType !== 'all' && asset.metadata.type !== filterType) {
+            return false;
+        }
+        return true;
+    }));
 
     // File type icons mapping
-    const getAssetIcon = (type: AssetType) => {
+    const getAssetIcon = (type) => {
         switch (type) {
             case 'mesh': return Box;
             case 'texture': return Image;
@@ -56,7 +60,7 @@
     };
 
     // File size formatting
-    const formatFileSize = (bytes: number): string => {
+    const formatFileSize = (bytes) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -65,18 +69,20 @@
     };
 
     // Upload handling
-    const handleFileUpload = async (files: FileList) => {
+    const handleFileUpload = async (files) => {
         if (files.length === 0) return;
         
         try {
-            await assetStore.addMultipleAssets(files);
+            for (const file of files) {
+                await assetStore.addAsset(file);
+            }
             console.log(`Uploaded ${files.length} asset(s)`);
         } catch (error) {
             console.error('Failed to upload assets:', error);
         }
     };
 
-    const handleDrop = (event: DragEvent) => {
+    const handleDrop = (event) => {
         event.preventDefault();
         dragOver = false;
         
@@ -86,44 +92,61 @@
         }
     };
 
-    const handleDragOver = (event: DragEvent) => {
+    const handleDragOver = (event) => {
         event.preventDefault();
         dragOver = true;
     };
 
-    const handleDragLeave = (event: DragEvent) => {
+    const handleDragLeave = (event) => {
         event.preventDefault();
         dragOver = false;
     };
 
     // Asset selection
-    const handleAssetClick = (asset: BAsset, event: MouseEvent) => {
+    const handleAssetClick = (asset, event) => {
         const multiSelect = event.ctrlKey || event.metaKey;
-        assetStore.selectAsset(asset.metadata.id, multiSelect);
+        
+        if (multiSelect) {
+            const index = selectedAssets.findIndex(a => a.metadata.id === asset.metadata.id);
+            if (index >= 0) {
+                selectedAssets = selectedAssets.filter((_, i) => i !== index);
+            } else {
+                selectedAssets = [...selectedAssets, asset];
+            }
+        } else {
+            selectedAssets = [asset];
+        }
+        
         dispatch('assetSelected', { asset });
     };
 
-    const handleAssetDoubleClick = (asset: BAsset) => {
+    const handleAssetDoubleClick = (asset) => {
         dispatch('assetDoubleClick', { asset });
     };
 
     // Search and filter
-    const handleSearchInput = (event: Event) => {
-        const target = event.target as HTMLInputElement;
-        assetStore.setSearchQuery(target.value);
+    const handleSearchInput = (event) => {
+        const target = event.target;
+        searchQuery = target.value;
     };
 
-    const handleFilterChange = (type: AssetType | 'all') => {
-        assetStore.setFilterType(type);
+    const handleFilterChange = (type) => {
+        filterType = type;
     };
 
     // Asset actions
     const handleDeleteSelected = () => {
-        const count = assetStore.removeSelectedAssets();
+        let count = 0;
+        for (const asset of selectedAssets) {
+            if (assetStore.removeAsset(asset.metadata.id)) {
+                count++;
+            }
+        }
+        selectedAssets = [];
         console.log(`Deleted ${count} asset(s)`);
     };
 
-    const handleDownloadAsset = (asset: BAsset) => {
+    const handleDownloadAsset = (asset) => {
         if (asset.url) {
             const a = document.createElement('a');
             a.href = asset.url;
@@ -223,7 +246,7 @@
         <div class="flex items-center justify-between text-sm text-muted-foreground">
             <div class="flex items-center gap-4">
                 <span>{filteredAssets.length} assets</span>
-                <span>{formatFileSize(stats.totalSize)}</span>
+                <span>{formatFileSize(allAssets.reduce((total, asset) => total + asset.metadata.size, 0))}</span>
             </div>
             
             {#if selectedAssets.length > 0}
@@ -254,7 +277,7 @@
             <!-- Empty state -->
             <div class="h-full flex items-center justify-center">
                 <div class="text-center">
-                    {#if $assetStore.getAllAssets().length === 0}
+                    {#if allAssets.length === 0}
                         <FolderOpen class="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
                         <h3 class="text-lg font-medium text-foreground mb-2">No Assets Yet</h3>
                         <p class="text-muted-foreground mb-4">Upload your first 3D model, texture, or audio file</p>

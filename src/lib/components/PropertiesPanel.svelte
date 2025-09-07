@@ -2,8 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import Input from "$lib/components/ui/input/input.svelte";
     import Vector3Input from "./properties/Vector3Input.svelte";
-    import AxisLockControls from "./properties/AxisLockControls.svelte";
-    import * as DropdownMenu from "$lib/components/ui/dropdown-menu/index.js";
+
     import {
         ChevronDown,
         Box,
@@ -16,12 +15,100 @@
     } from "lucide-svelte";
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
+    import { materialStore } from "$lib/materialStore";
+    import PropertyDropdown from "./PropertyDropdown.svelte";
 
     const { sceneStore, selectedObject, onPropertyChange } = $props();
 
     const object = $derived(
         $sceneStore.getScene().objects.find((obj) => obj.id === selectedObject)
     );
+
+    // Mesh selector reactive variables
+    const meshOptions = $derived(() => {
+        if (!object || !(object instanceof Types.BPart)) return [];
+        
+        const primitives = [
+            { id: 'primitive-block', label: 'Block', data: { type: 'primitive', value: 'block' } },
+            { id: 'primitive-sphere', label: 'Sphere', data: { type: 'primitive', value: 'sphere' } },
+            { id: 'primitive-cylinder', label: 'Cylinder', data: { type: 'primitive', value: 'cylinder' } },
+            { id: 'primitive-cone', label: 'Cone', data: { type: 'primitive', value: 'cone' } },
+            { id: 'primitive-plane', label: 'Plane', data: { type: 'primitive', value: 'plane' } },
+            { id: 'primitive-wedge', label: 'Wedge', data: { type: 'primitive', value: 'wedge' } }
+        ];
+        
+        const allAssets = $assetStore.getAllAssets();
+        const assets = (allAssets && Array.isArray(allAssets)) 
+            ? allAssets
+                .filter(asset => asset.metadata.type === 'mesh')
+                .map(asset => ({
+                    id: `asset-${asset.metadata.id}`,
+                    label: asset.metadata.name,
+                    data: { type: 'asset', value: asset.metadata.id, size: asset.metadata.size }
+                }))
+            : [];
+        
+        return [...primitives, ...assets];
+    });
+
+    let meshSelectorValue = $state(null);
+    
+    $effect(() => {
+        if (!object || !(object instanceof Types.BPart)) {
+            meshSelectorValue = null;
+            return;
+        }
+        
+        if (object.meshSource.type === 'primitive') {
+            meshSelectorValue = `primitive-${object.meshSource.value}`;
+        } else {
+            meshSelectorValue = `asset-${object.meshSource.value}`;
+        }
+    });
+
+    function handleMeshChange(event) {
+        if (!object || !(object instanceof Types.BPart)) return;
+        
+        const { option } = event.detail;
+        const updatedObject = object.clone();
+        
+        if (option.data.type === 'primitive') {
+            updatedObject.setPrimitiveMesh(option.data.value);
+        } else {
+            updatedObject.setAssetMesh(option.data.value);
+        }
+        
+        onPropertyChange(updatedObject);
+    }
+
+    // Material selector reactive variables
+    const materialOptions = $derived(() => {
+        const materials = $materialStore.getAllMaterials();
+        if (!materials || !Array.isArray(materials)) return [];
+        return materials.map(material => ({
+            id: material.id,
+            label: material.name,
+            data: { material }
+        }));
+    });
+
+    let materialSelectorValue = $state(null);
+    
+    $effect(() => {
+        if (!object || !(object instanceof Types.BPart)) {
+            materialSelectorValue = null;
+            return;
+        }
+        materialSelectorValue = object.material;
+    });
+
+    function handleMaterialChange(event) {
+        if (!object || !(object instanceof Types.BPart)) return;
+        
+        const updatedObject = object.clone();
+        updatedObject.material = event.detail.value;
+        onPropertyChange(updatedObject);
+    }
 </script>
 
 <div
@@ -163,199 +250,106 @@
 
                     <div class="space-y-3">
                         <!-- Mesh Selector -->
-                        <div class="space-y-2">
-                            <label
-                                class="text-sm font-medium text-foreground/80"
-                            >
-                                Mesh Type
-                            </label>
-                            <DropdownMenu.Root>
-                                <DropdownMenu.Trigger>
-                                    <Button
-                                        variant="outline"
-                                        class="w-full justify-between bg-muted/30 border-border/40 hover:bg-muted/50 h-12"
-                                    >
-                                        <span class="text-left truncate">
-                                            {object.meshSource.type ===
-                                            "primitive"
-                                                ? object.meshSource.value
-                                                : assetStore.getAsset(
-                                                      object.meshSource.value
-                                                  )?.metadata.name}
-                                        </span>
-                                        <ChevronDown
-                                            class="w-4 h-4 text-muted-foreground"
-                                        />
-                                    </Button>
-                                </DropdownMenu.Trigger>
-                                <DropdownMenu.Content
-                                    class="w-80 max-h-64 overflow-y-auto"
-                                >
-                                    <!-- Primitive Meshes -->
-                                    <DropdownMenu.Label
-                                        >Primitives</DropdownMenu.Label
-                                    >
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "block"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <Box
-                                            class="w-4 h-4 text-blue-400 mr-2"
-                                        />
-                                        Block
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "sphere"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <div
-                                            class="w-4 h-4 bg-blue-400 rounded-full mr-2"
-                                        ></div>
-                                        Sphere
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "cylinder"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <div
-                                            class="w-4 h-4 bg-blue-400 rounded-sm mr-2"
-                                        ></div>
-                                        Cylinder
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "cone"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <div
-                                            class="w-4 h-4 bg-blue-400 mr-2"
-                                            style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
-                                        ></div>
-                                        Cone
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "plane"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <div
-                                            class="w-4 h-1 bg-blue-400 mr-2"
-                                        ></div>
-                                        Plane
-                                    </DropdownMenu.Item>
-                                    <DropdownMenu.Item
-                                        onclick={() => {
-                                            const updatedObject =
-                                                object.clone();
-                                            updatedObject.setPrimitiveMesh(
-                                                "wedge"
-                                            );
-                                            onPropertyChange(updatedObject);
-                                        }}
-                                    >
-                                        <div
-                                            class="w-4 h-4 bg-blue-400 mr-2"
-                                            style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
-                                        ></div>
-                                        Wedge
-                                    </DropdownMenu.Item>
-
-                                    <!-- Asset Meshes -->
-                                    {#if $assetStore
-                                        .getAllAssets()
-                                        .filter((asset) => asset.metadata.type === "mesh").length > 0}
-                                        <DropdownMenu.Separator />
-                                        <DropdownMenu.Label
-                                            >Assets</DropdownMenu.Label
-                                        >
-                                        {#each $assetStore
-                                            .getAllAssets()
-                                            .filter((asset) => asset.metadata.type === "mesh") as asset (asset.metadata.id)}
-                                            <DropdownMenu.Item
-                                                onclick={() => {
-                                                    console.log(object);
-                                                    const updatedObject =
-                                                        object.clone();
-                                                    console.log(updatedObject);
-                                                    updatedObject.setAssetMesh(
-                                                        asset.metadata.id
-                                                    );
-                                                    onPropertyChange(
-                                                        updatedObject
-                                                    );
-                                                }}
-                                            >
-                                                <div
-                                                    class="flex items-center gap-2 w-full"
-                                                >
-                                                    <Box
-                                                        class="w-4 h-4 text-purple-400"
-                                                    />
-                                                    <div class="flex-1 min-w-0">
-                                                        <div
-                                                            class="font-medium truncate"
-                                                        >
-                                                            {asset.metadata
-                                                                .name}
-                                                        </div>
-                                                        <div
-                                                            class="text-xs text-muted-foreground truncate"
-                                                        >
-                                                            {(
-                                                                asset.metadata
-                                                                    .size /
-                                                                1024 /
-                                                                1024
-                                                            ).toFixed(2)} MB
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </DropdownMenu.Item>
-                                        {/each}
+                        <PropertyDropdown
+                            label="Mesh Type"
+                            bind:value={meshSelectorValue}
+                            options={meshOptions}
+                            placeholder="Select a mesh"
+                            on:change={handleMeshChange}
+                        >
+                            <svelte:fragment slot="trigger" let:selectedOption>
+                                <div class="flex items-center gap-2">
+                                    {#if selectedOption?.data.type === 'primitive'}
+                                        {#if selectedOption.data.value === 'block'}
+                                            <Box class="w-4 h-4 text-blue-400" />
+                                        {:else if selectedOption.data.value === 'sphere'}
+                                            <div class="w-4 h-4 bg-blue-400 rounded-full"></div>
+                                        {:else if selectedOption.data.value === 'cylinder'}
+                                            <div class="w-4 h-4 bg-blue-400 rounded-sm"></div>
+                                        {:else if selectedOption.data.value === 'cone'}
+                                            <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"></div>
+                                        {:else if selectedOption.data.value === 'plane'}
+                                            <div class="w-4 h-1 bg-blue-400"></div>
+                                        {:else if selectedOption.data.value === 'wedge'}
+                                            <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"></div>
+                                        {/if}
+                                    {:else if selectedOption}
+                                        <Box class="w-4 h-4 text-purple-400" />
                                     {/if}
-                                </DropdownMenu.Content>
-                            </DropdownMenu.Root>
-                        </div>
-                    </div>
-                    
-                    <!-- Axis Lock Controls -->
-                    <div class="space-y-2">
-                        <h3 class="text-sm font-medium text-foreground/80">Physics Constraints</h3>
-                        <AxisLockControls 
-                            {object} 
-                            on:change={(e) => {
-                                const updatedObject = e.detail.object;
-                                onPropertyChange(updatedObject);
-                            }}
-                        />
+                                    <span class="truncate">{selectedOption?.label || "Select a mesh"}</span>
+                                </div>
+                            </svelte:fragment>
+                            
+                            <svelte:fragment let:option>
+                                <div class="flex items-center gap-2 w-full">
+                                    {#if option.data.type === 'primitive'}
+                                        {#if option.data.value === 'block'}
+                                            <Box class="w-4 h-4 text-blue-400" />
+                                        {:else if option.data.value === 'sphere'}
+                                            <div class="w-4 h-4 bg-blue-400 rounded-full"></div>
+                                        {:else if option.data.value === 'cylinder'}
+                                            <div class="w-4 h-4 bg-blue-400 rounded-sm"></div>
+                                        {:else if option.data.value === 'cone'}
+                                            <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"></div>
+                                        {:else if option.data.value === 'plane'}
+                                            <div class="w-4 h-1 bg-blue-400"></div>
+                                        {:else if option.data.value === 'wedge'}
+                                            <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"></div>
+                                        {/if}
+                                    {:else}
+                                        <Box class="w-4 h-4 text-purple-400" />
+                                    {/if}
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium truncate">{option.label}</div>
+                                        {#if option.data.type === 'asset'}
+                                            <div class="text-xs text-muted-foreground truncate">
+                                                {(option.data.size / 1024 / 1024).toFixed(2)} MB
+                                            </div>
+                                        {/if}
+                                    </div>
+                                </div>
+                            </svelte:fragment>
+                        </PropertyDropdown>
+
+                        <!-- Material Selector -->
+                        <PropertyDropdown
+                            label="Material"
+                            bind:value={materialSelectorValue}
+                            options={materialOptions}
+                            placeholder="Select material..."
+                            on:change={handleMaterialChange}
+                        >
+                            <svelte:fragment slot="trigger" let:selectedOption let:isOpen>
+                                <Button
+                                    variant="outline"
+                                    class="w-full justify-between bg-muted/30 border-border/40 hover:bg-muted/50 h-12"
+                                >
+                                    <span class="text-left truncate">
+                                        {selectedOption?.label || "Select material..."}
+                                    </span>
+                                    <ChevronDown
+                                        class="w-4 h-4 text-muted-foreground transition-transform {isOpen ? 'rotate-180' : ''}"
+                                    />
+                                </Button>
+                            </svelte:fragment>
+                            
+                            <svelte:fragment slot="item" let:option>
+                                <div class="flex items-center gap-2 w-full">
+                                    <div
+                                        class="w-4 h-4 rounded border border-border/40"
+                                        style="background-color: {option.data.material.color}"
+                                    ></div>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="font-medium truncate">
+                                            {option.data.material.name}
+                                        </div>
+                                        <div class="text-xs text-muted-foreground truncate">
+                                            {option.data.material.type.toUpperCase()}
+                                        </div>
+                                    </div>
+                                </div>
+                            </svelte:fragment>
+                        </PropertyDropdown>
                     </div>
                 </div>
             {/if}

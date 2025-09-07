@@ -19,6 +19,7 @@
     } = $props();
 
     import { assetStore } from "$lib/assetStore";
+    import { materialStore } from "$lib/materialStore";
 
     interactivity();
 
@@ -95,7 +96,35 @@
                     {/await}
                 {/if}
 
-                <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+                <!-- Material Rendering -->
+                {#if $materialStore.getMaterial(object.material)}
+                    {@const material = $materialStore.getMaterial(object.material)}
+                    {#if material.type === "basic"}
+                        <!-- Basic Material -->
+                        {#if material.textures.albedo && $assetStore.getAsset(material.textures.albedo)}
+                            <T.MeshStandardMaterial 
+                                color={material.color}
+                                map={$assetStore.getAsset(material.textures.albedo).url}
+                            />
+                        {:else}
+                            <T.MeshStandardMaterial color={material.color} />
+                        {/if}
+                    {:else if material.type === "pbr"}
+                        <!-- PBR Material -->
+                        <T.MeshStandardMaterial 
+                            color={material.color}
+                            map={material.textures.albedo && $assetStore.getAsset(material.textures.albedo) ? $assetStore.getAsset(material.textures.albedo).url : null}
+                            normalMap={material.textures.normal && $assetStore.getAsset(material.textures.normal) ? $assetStore.getAsset(material.textures.normal).url : null}
+                            metalnessMap={material.textures.metallic && $assetStore.getAsset(material.textures.metallic) ? $assetStore.getAsset(material.textures.metallic).url : null}
+                            roughnessMap={material.textures.roughness && $assetStore.getAsset(material.textures.roughness) ? $assetStore.getAsset(material.textures.roughness).url : null}
+                            aoMap={material.textures.ao && $assetStore.getAsset(material.textures.ao) ? $assetStore.getAsset(material.textures.ao).url : null}
+                            emissiveMap={material.textures.emission && $assetStore.getAsset(material.textures.emission) ? $assetStore.getAsset(material.textures.emission).url : null}
+                        />
+                    {/if}
+                {:else}
+                    <!-- Fallback to object color -->
+                    <T.MeshStandardMaterial color={object.color || "#ffffff"} />
+                {/if}
 
                 {#if selectedObject === object.id}
                     <Outlines color="#00aaff" />

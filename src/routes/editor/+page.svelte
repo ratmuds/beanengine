@@ -55,6 +55,8 @@
     import { sceneStore } from "$lib/sceneStore";
 
     import AssetBrowser from "$lib/components/AssetBrowser.svelte";
+    import MaterialBrowser from "$lib/components/MaterialBrowser.svelte";
+    import { materialStore } from "$lib/materialStore";
     import { assetStore } from "$lib/assetStore";
     import type { BAsset } from "$lib/types";
 
@@ -91,13 +93,14 @@
     function handleKeydown(event: KeyboardEvent) {
         // Don't handle shortcuts if user is typing in an input field
         const target = event.target as HTMLElement;
-        if (target && (
-            target.tagName === 'INPUT' || 
-            target.tagName === 'TEXTAREA' || 
-            target.isContentEditable ||
-            target.closest('input') ||
-            target.closest('textarea')
-        )) {
+        if (
+            target &&
+            (target.tagName === "INPUT" ||
+                target.tagName === "TEXTAREA" ||
+                target.isContentEditable ||
+                target.closest("input") ||
+                target.closest("textarea"))
+        ) {
             return;
         }
 
@@ -215,12 +218,18 @@
     let selectedScriptObject = $state(null);
 
     // Get scripts from scene - reactive to store changes
-    let scripts = $derived($sceneStore ? $sceneStore.scene.objects.filter(obj => obj.type === 'script') : []);
+    let scripts = $derived(
+        $sceneStore
+            ? $sceneStore.scene.objects.filter((obj) => obj.type === "script")
+            : []
+    );
 
     // Update selected script object when selectedScriptId changes
     $effect(() => {
         if (selectedScriptId && scripts.length > 0) {
-            selectedScriptObject = scripts.find(script => script.id === selectedScriptId) || null;
+            selectedScriptObject =
+                scripts.find((script) => script.id === selectedScriptId) ||
+                null;
         } else if (scripts.length > 0 && !selectedScriptId) {
             // Auto-select the first script if none is selected
             selectedScriptId = scripts[0].id;
@@ -328,19 +337,19 @@
 
     // Asset browser handlers
     function handleAssetSelected(event: CustomEvent<{ asset: BAsset }>) {
-        console.log('Asset selected:', event.detail.asset.metadata.name);
+        console.log("Asset selected:", event.detail.asset.metadata.name);
     }
-    
+
     function handleAssetDoubleClick(event: CustomEvent<{ asset: BAsset }>) {
         const asset = event.detail.asset;
-        console.log('Asset double-clicked:', asset.metadata.name);
-        
+        console.log("Asset double-clicked:", asset.metadata.name);
+
         // For 3D meshes, create a new part with the mesh
-        if (asset.metadata.type === 'mesh') {
+        if (asset.metadata.type === "mesh") {
             const newPart = sceneStore.createPartInFrontOfCamera(-1);
             // In a real implementation, you'd load the mesh and assign it
             // newPart.mesh = asset.metadata.id; // Reference to the asset
-            console.log('Created part with mesh:', asset.metadata.name);
+            console.log("Created part with mesh:", asset.metadata.name);
         }
     }
 </script>
@@ -790,10 +799,15 @@
                                                 disabled={scripts.length === 0}
                                             >
                                                 {#if scripts.length === 0}
-                                                    <option value={null}>No scripts available</option>
+                                                    <option value={null}
+                                                        >No scripts available</option
+                                                    >
                                                 {:else}
                                                     {#each scripts as script}
-                                                        <option value={script.id}>{script.name}</option>
+                                                        <option
+                                                            value={script.id}
+                                                            >{script.name}</option
+                                                        >
                                                     {/each}
                                                 {/if}
                                             </select>
@@ -804,7 +818,8 @@
                                                 onclick={() =>
                                                     console.log(
                                                         "Run script:",
-                                                        selectedScriptObject?.name || 'No script selected'
+                                                        selectedScriptObject?.name ||
+                                                            "No script selected"
                                                     )}
                                             >
                                                 <Play class="w-3 h-3 mr-1" />
@@ -815,25 +830,46 @@
 
                                     <!-- Blockly Workspace -->
                                     {#if scripts.length === 0}
-                                        <div class="flex-1 flex items-center justify-center bg-background/20">
+                                        <div
+                                            class="flex-1 flex items-center justify-center bg-background/20"
+                                        >
                                             <div class="text-center">
-                                                <Code2 class="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                                                <p class="text-foreground text-lg font-medium mb-2">No Scripts Found</p>
-                                                <p class="text-muted-foreground text-sm mb-4">Create a script in the Object Explorer to get started</p>
-                                                <Button 
+                                                <Code2
+                                                    class="w-12 h-12 mx-auto mb-4 text-muted-foreground"
+                                                />
+                                                <p
+                                                    class="text-foreground text-lg font-medium mb-2"
+                                                >
+                                                    No Scripts Found
+                                                </p>
+                                                <p
+                                                    class="text-muted-foreground text-sm mb-4"
+                                                >
+                                                    Create a script in the
+                                                    Object Explorer to get
+                                                    started
+                                                </p>
+                                                <Button
                                                     onclick={() => {
-                                                        console.log('Creating new script');
+                                                        console.log(
+                                                            "Creating new script"
+                                                        );
                                                         createScript(-1);
                                                     }}
                                                     class="bg-blue-600 hover:bg-blue-700"
                                                 >
-                                                    <Plus class="w-4 h-4 mr-2" />
+                                                    <Plus
+                                                        class="w-4 h-4 mr-2"
+                                                    />
                                                     Create Script
                                                 </Button>
                                             </div>
                                         </div>
                                     {:else}
-                                        <CustomCodeEditor bind:compiledCode selectedScript={selectedScriptObject} />
+                                        <CustomCodeEditor
+                                            bind:compiledCode
+                                            selectedScript={selectedScriptObject}
+                                        />
                                     {/if}
 
                                     <!-- Debug: Show compiled code -->
@@ -859,27 +895,11 @@
                                 value="materials"
                                 class="h-full m-0 p-0"
                             >
-                                <div
-                                    class="h-full bg-background/20 flex items-center justify-center"
-                                >
-                                    <div class="text-center">
-                                        <Palette
-                                            class="w-12 h-12 mx-auto mb-3 text-muted-foreground"
-                                        />
-                                        <p class="text-foreground text-sm">
-                                            Materials Editor
-                                        </p>
-                                        <p
-                                            class="text-muted-foreground text-xs"
-                                        >
-                                            Create and edit materials here
-                                        </p>
-                                    </div>
-                                </div>
+                                <MaterialBrowser />
                             </Tabs.Content>
 
                             <Tabs.Content value="assets" class="h-full m-0 p-0">
-                                <AssetBrowser 
+                                <AssetBrowser
                                     onassetSelected={handleAssetSelected}
                                     onassetDoubleClick={handleAssetDoubleClick}
                                 />
