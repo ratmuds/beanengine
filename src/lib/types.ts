@@ -136,11 +136,11 @@ class BQuaternion {
 class BNode3D extends BObject {
     // Local transform (relative to parent)
     position: BVector3;
-    rotation: BQuaternion;
+    rotation: BVector3;
     scale: BVector3;
 
     positionOffset: BVector3;
-    rotationOffset: BQuaternion;
+    rotationOffset: BVector3;
 
     constructor(
         name: string | null,
@@ -150,10 +150,10 @@ class BNode3D extends BObject {
         super(name, id, parent);
         this.type = "node3d";
         this.position = new BVector3();
-        this.rotation = new BQuaternion();
+        this.rotation = new BVector3();
         this.scale = new BVector3(1, 1, 1);
         this.positionOffset = new BVector3();
-        this.rotationOffset = new BQuaternion();
+        this.rotationOffset = new BVector3();
     }
 
     // Get world position (absolute position in scene)
@@ -378,7 +378,7 @@ class BCamera extends BNode3D {
         this.type = "camera";
 
         // Default camera settings
-        this.fieldOfView = 60;
+        this.fieldOfView = 90;
         this.nearClipPlane = 0.1;
         this.farClipPlane = 1000;
         this.projectionType = "perspective";
@@ -588,6 +588,7 @@ class BMaterial {
             ao: "",
             emission: "",
         };
+        this.threeTexture = null;
     }
 }
 
@@ -596,7 +597,6 @@ export {
     BScene,
     BObject,
     BVector3,
-    BQuaternion,
     BNode3D,
     BPart,
     BCamera,

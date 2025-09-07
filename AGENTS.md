@@ -25,6 +25,135 @@ Bean Engine is a **visual programming game development platform** that bridges t
 3. **Code Compilation & Execution** - Convert blocks to runnable code
 4. **Asset Management** - Handle 3D models, textures, audio
 5. **Editor Interface** - Professional multi-panel layout
+6. **Component Architecture** - GameObject/Component system for runtime
+
+### Component Architecture Deep Dive
+
+The Bean Engine uses a component-based architecture that wraps the existing BNode3D system. Here's how it works:
+
+#### 1. Base Component Class (`Component.ts`)
+```typescript
+abstract class Component {
+    protected gameObject: GameObject;
+    abstract update(delta: number): void;
+    destroy(): void;
+}
+```
+- **Purpose**: Abstract base for all components
+- **Key Methods**: 
+  - `update(delta)`: Called every frame for component logic
+  - `destroy()`: Cleanup when component is removed
+- **GameObject Reference**: Each component has access to its parent GameObject
+
+#### 2. GameObject Class (`GameObject.ts`)
+```typescript
+class GameObject {
+    public readonly id: string;
+    public readonly bNode: Types.BNode3D;
+    private components: Component[] = [];
+    
+    addComponent(component: Component): void
+    removeComponent<T>(componentClass: new (...args: any[]) => T): void
+    getComponent<T>(componentClass: new (...args: any[]) => T): T | null
+    hasComponent<T>(componentClass: new (...args: any[]) => T): boolean
+    update(delta: number): void
+}
+```
+- **Purpose**: Wraps BNode3D objects and manages their components
+- **Component Management**: Add, remove, query components by type
+- **Transform Sync**: Automatically syncs position/rotation between BNode3D and THREE.js
+- **Update Loop**: Calls update() on all attached components
+
+#### 3. VisualComponent (`VisualComponent.ts`)
+```typescript
+class VisualComponent extends Component {
+    public mesh: THREE.Mesh | null = null;
+    public light: THREE.Light | null = null;
+    private scene: THREE.Scene;
+    
+    private createVisualRepresentation(): void
+    private createPartMesh(part: Types.BPart): void
+    update(delta: number): void
+}
+```
+- **Purpose**: Handles THREE.js mesh creation and rendering
+- **Mesh Creation**: Creates appropriate geometry based on BNode3D type:
+  - BPart → Box/Sphere/Cylinder/Cone geometry
+  - BLight → THREE.js lights (Point/Directional/Ambient)
+  - BCamera → Visual representation (wireframe)
+- **Transform Updates**: Syncs GameObject transform to THREE.js mesh every frame
+- **Scene Management**: Automatically adds/removes meshes from THREE.js scene
+
+#### 4. ScriptComponent (`ScriptComponent.ts`)
+```typescript
+class ScriptComponent extends Component {
+    private interpreter: CodeInterpreter | null = null;
+    private script: Types.BScript;
+    private scene: THREE.Scene;
+    private variablesMap: Record<string, { value: any; type: string }>;
+    
+    private initializeInterpreter(): void
+    update(delta: number): void
+    restartScript(newCode?: string): void
+}
+```
+- **Purpose**: Manages code execution for BScript nodes
+- **Code Execution**: Uses CodeInterpreter to run user scripts
+- **Runtime Context**: Provides access to gameObject, scene, deltaTime, variables
+- **Script Lifecycle**: Initialize on creation, update continuously, restart on code changes
+
+#### 5. GameObjectManager (`GameObjectManager.ts`)
+```typescript
+class GameObjectManager {
+    private gameObjects: Map<string, GameObject> = new Map();
+    private scene: THREE.Scene;
+    private camera: THREE.Camera | null = null;
+    
+    initializeFromScene(sceneStore: any): THREE.Camera | null
+    update(delta: number): void
+    getGameObject(id: string): GameObject | null
+    getGameObjectsWithComponent<T>(componentClass): GameObject[]
+}
+```
+- **Purpose**: Central manager for all GameObjects in the scene
+- **Scene Initialization**: Converts BNode3D tree into GameObject/Component structure
+- **Update Loop**: Calls update() on all GameObjects (which call their components)
+- **Query System**: Find GameObjects by ID or by component type
+- **Camera Management**: Extracts and manages scene camera
+
+#### Data Flow & Lifecycle
+
+1. **Initialization**:
+   ```
+   SceneStore → GameObjectManager.initializeFromScene()
+   ├── Create GameObject for each BNode3D
+   ├── Add VisualComponent for renderable objects
+   ├── Add ScriptComponent for BScript nodes
+   └── Setup camera and lighting
+   ```
+
+2. **Runtime Loop** (60fps):
+   ```
+   GameRuntime.svelte → GameObjectManager.update(delta)
+   ├── For each GameObject:
+   │   ├── GameObject.update(delta)
+   │   ├── VisualComponent.update() → sync transforms
+   │   └── ScriptComponent.update() → run user code
+   └── THREE.js renders the scene
+   ```
+
+3. **Component Communication**:
+   - Components access their GameObject via `this.gameObject`
+   - GameObjects can query for other components: `gameObject.getComponent(VisualComponent)`
+   - GameObjectManager provides scene-wide queries: `getGameObjectsWithComponent(ScriptComponent)`
+
+#### Benefits of This Architecture
+
+- **Separation of Concerns**: Visual, script, and physics logic are separate
+- **Extensibility**: Easy to add new component types (PhysicsComponent, AudioComponent, etc.)
+- **Performance**: Only active components update each frame
+- **Maintainability**: Clear ownership and lifecycle management
+- **Compatibility**: Wraps existing BNode3D system without breaking changes
 
 
 
@@ -937,9 +1066,18 @@ class BMyObject extends BNode3D {
 - Asset dependency tracking
 
 ### Physics Integration
-- Cannon.js or similar physics engine
+- **RAPIER Physics Engine**: Using @dimforge/rapier3d-compat for 3D physics simulation
+- **Asynchronous Initialization**: Physics world requires `await RAPIER.init()` before use
+- **SceneStore Integration**: Physics world accessible via `sceneStore.getPhysicsWorld()`
+- **Initialization Pattern**: Use `sceneStore.waitForInitialization()` to ensure physics is ready
 - Collision detection and response
 - Physics debugging visualization
+
+#### RAPIER Usage Notes
+- The compat version embeds WASM as base64, avoiding bundler issues
+- Physics world is initialized asynchronously in SceneManager constructor
+- Components should check if physics world is available before use
+- Use `manager.getPhysicsWorld()` which returns `RAPIER.World | null`
 
 ### Performance Optimization
 - Web Workers for heavy computation

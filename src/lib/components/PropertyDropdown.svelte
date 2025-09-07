@@ -19,14 +19,13 @@
     );
 
     $effect(() => {
-        console.log(selectedOption);
+        console.log("NEW SELECTED OPTION ", selectedOption);
     });
 
     // Convert null to undefined for the Select component
     let selectValue = $derived(value ?? undefined);
 
     function handleValueChange(newValue) {
-        console.log("AAAAAAAAAAAAAAAAAAAA");
         if (newValue !== value) {
             const option = (
                 typeof options === "function" ? options() : options

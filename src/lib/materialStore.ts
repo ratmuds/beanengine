@@ -16,6 +16,13 @@ class MaterialManager {
         let plastic = await this.addMaterial("Plastic", "basic");
         this.updateMaterialProperty(plastic.id, {
             builtin: true,
+            textures: {
+                albedo: "/materials/prototype/albedo.png",
+                normal: "",
+                metallic: "",
+                roughness: "",
+                ao: "",
+            },
         });
 
         this.addMaterial("Test", "basic");

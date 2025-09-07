@@ -7,6 +7,7 @@
         interactivity,
         Outlines,
         useGltf,
+        useTexture,
     } from "@threlte/extras";
     import * as Types from "$lib/types";
 
@@ -52,15 +53,9 @@
         object.rotation.x,
         object.rotation.y,
         object.rotation.z,
-        object.rotation.w,
     ]}
     {@const scale = [object.scale.x, object.scale.y, object.scale.z]}
-    <T.Group
-        bind:ref={groupRefs[object.id]}
-        {position}
-        quaternion={rotation}
-        {scale}
-    >
+    <T.Group bind:ref={groupRefs[object.id]} {position} {rotation} {scale}>
         {#if object instanceof Types.BPart}
             <!-- Render Parts with meshes -->
             <T.Mesh
@@ -98,27 +93,60 @@
 
                 <!-- Material Rendering -->
                 {#if $materialStore.getMaterial(object.material)}
-                    {@const material = $materialStore.getMaterial(object.material)}
+                    {@const material = $materialStore.getMaterial(
+                        object.material
+                    )}
                     {#if material.type === "basic"}
                         <!-- Basic Material -->
                         {#if material.textures.albedo && $assetStore.getAsset(material.textures.albedo)}
-                            <T.MeshStandardMaterial 
+                            <T.MeshStandardMaterial
                                 color={material.color}
-                                map={$assetStore.getAsset(material.textures.albedo).url}
+                                map={$assetStore.getAsset(
+                                    material.textures.albedo
+                                ).url}
                             />
                         {:else}
                             <T.MeshStandardMaterial color={material.color} />
                         {/if}
                     {:else if material.type === "pbr"}
                         <!-- PBR Material -->
-                        <T.MeshStandardMaterial 
+                        <T.MeshStandardMaterial
                             color={material.color}
-                            map={material.textures.albedo && $assetStore.getAsset(material.textures.albedo) ? $assetStore.getAsset(material.textures.albedo).url : null}
-                            normalMap={material.textures.normal && $assetStore.getAsset(material.textures.normal) ? $assetStore.getAsset(material.textures.normal).url : null}
-                            metalnessMap={material.textures.metallic && $assetStore.getAsset(material.textures.metallic) ? $assetStore.getAsset(material.textures.metallic).url : null}
-                            roughnessMap={material.textures.roughness && $assetStore.getAsset(material.textures.roughness) ? $assetStore.getAsset(material.textures.roughness).url : null}
-                            aoMap={material.textures.ao && $assetStore.getAsset(material.textures.ao) ? $assetStore.getAsset(material.textures.ao).url : null}
-                            emissiveMap={material.textures.emission && $assetStore.getAsset(material.textures.emission) ? $assetStore.getAsset(material.textures.emission).url : null}
+                            map={material.textures.albedo &&
+                            $assetStore.getAsset(material.textures.albedo)
+                                ? useTexture(
+                                      $assetStore.getAsset(
+                                          material.textures.albedo
+                                      ).url
+                                  )
+                                : null}
+                            normalMap={material.textures.normal &&
+                            $assetStore.getAsset(material.textures.normal)
+                                ? $assetStore.getAsset(material.textures.normal)
+                                      .url
+                                : null}
+                            metalnessMap={material.textures.metallic &&
+                            $assetStore.getAsset(material.textures.metallic)
+                                ? $assetStore.getAsset(
+                                      material.textures.metallic
+                                  ).url
+                                : null}
+                            roughnessMap={material.textures.roughness &&
+                            $assetStore.getAsset(material.textures.roughness)
+                                ? $assetStore.getAsset(
+                                      material.textures.roughness
+                                  ).url
+                                : null}
+                            aoMap={material.textures.ao &&
+                            $assetStore.getAsset(material.textures.ao)
+                                ? $assetStore.getAsset(material.textures.ao).url
+                                : null}
+                            emissiveMap={material.textures.emission &&
+                            $assetStore.getAsset(material.textures.emission)
+                                ? $assetStore.getAsset(
+                                      material.textures.emission
+                                  ).url
+                                : null}
                         />
                     {/if}
                 {:else}
@@ -133,6 +161,7 @@
         {:else if object instanceof Types.BCamera}
             <!-- Render Camera with wireframe representation -->
             <T.Mesh
+                rotation={[Math.PI / 2, Math.PI / 4, 0]}
                 onclick={() => {
                     selectedObject = object.id;
                 }}
@@ -189,10 +218,9 @@
                     object.position.x = transform.position.x;
                     object.position.y = transform.position.y;
                     object.position.z = transform.position.z;
-                    object.rotation.x = transform.quaternion.x;
-                    object.rotation.y = transform.quaternion.y;
-                    object.rotation.z = transform.quaternion.z;
-                    object.rotation.w = transform.quaternion.w;
+                    object.rotation.x = transform.rotation.x;
+                    object.rotation.y = transform.rotation.y;
+                    object.rotation.z = transform.rotation.z;
                     object.scale.x = transform.scale.x;
                     object.scale.y = transform.scale.y;
                     object.scale.z = transform.scale.z;

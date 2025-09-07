@@ -1,14 +1,61 @@
 // src/lib/sceneStore.ts
 import { writable } from "svelte/store";
 import * as Types from "$lib/types";
+import RAPIER from "@dimforge/rapier3d-compat";
 
 class SceneManager {
     public scene: Types.BScene;
     public variables: Array<{ name: string; value: any; type: string }>;
+    public physicsWorld: RAPIER.World | null = null;
+    public physicsInitialized: boolean = false;
+    private initPromise: Promise<void> | null = null;
 
     constructor(scene?: Types.BScene) {
         this.scene = scene || new Types.BScene();
         this.variables = [];
+        // Initialize physics world asynchronously
+        this.initializePhysics();
+    }
+
+    private async initializePhysics(): Promise<void> {
+        if (this.initPromise) {
+            return this.initPromise;
+        }
+
+        this.initPromise = (async () => {
+            try {
+                await RAPIER.init();
+                const gravity = new RAPIER.Vector3(0, -9.81, 0);
+                this.physicsWorld = new RAPIER.World(gravity);
+                this.physicsInitialized = true;
+                console.log(
+                    "[SceneStore] Physics world initialized successfully"
+                );
+            } catch (error) {
+                console.error(
+                    "[SceneStore] Failed to initialize physics world:",
+                    error
+                );
+                throw error;
+            }
+        })();
+
+        return this.initPromise;
+    }
+
+    public async waitForPhysicsInitialization(): Promise<void> {
+        if (this.physicsInitialized) {
+            return;
+        }
+        return this.initializePhysics();
+    }
+
+    public getPhysicsWorld(): RAPIER.World | null {
+        return this.physicsWorld;
+    }
+
+    public getPhysicsInitialized(): boolean {
+        return this.physicsInitialized;
     }
 
     createObject(
@@ -24,17 +71,19 @@ class SceneManager {
         const name = options?.name || this.generateObjectName(objectType);
 
         switch (objectType.toLowerCase()) {
-            case 'part':
+            case "part":
                 newObject = new Types.BPart(name, null, null);
                 if (newObject instanceof Types.BPart) {
-                    newObject.position = options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 0, 0);
                     newObject.scale = new Types.BVector3(1, 1, 1);
                 }
                 break;
-            case 'mesh':
+            case "mesh":
                 newObject = new Types.BPart(name, null, null);
                 if (newObject instanceof Types.BPart) {
-                    newObject.position = options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 0, 0);
                     newObject.scale = new Types.BVector3(1, 1, 1);
                     // Set mesh from asset if provided
                     if (options?.assetId) {
@@ -42,23 +91,28 @@ class SceneManager {
                     }
                 }
                 break;
-            case 'camera':
+            case "camera":
                 newObject = new Types.BCamera(name, null, null);
                 if (newObject instanceof Types.BCamera) {
-                    newObject.position = options?.position || new Types.BVector3(0, 5, 10);
-                    if (options?.fieldOfView) newObject.fieldOfView = options.fieldOfView;
-                    if (options?.isActive) newObject.isActive = options.isActive;
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 5, 10);
+                    if (options?.fieldOfView)
+                        newObject.fieldOfView = options.fieldOfView;
+                    if (options?.isActive)
+                        newObject.isActive = options.isActive;
                 }
                 break;
-            case 'light':
+            case "light":
                 newObject = new Types.BLight(name, null, null);
                 if (newObject instanceof Types.BLight) {
-                    newObject.position = options?.position || new Types.BVector3(0, 10, 0);
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 10, 0);
                     if (options?.color) newObject.color = options.color;
-                    if (options?.intensity) newObject.intensity = options.intensity;
+                    if (options?.intensity)
+                        newObject.intensity = options.intensity;
                 }
                 break;
-            case 'script':
+            case "script":
                 newObject = new Types.BScript(name, null, null);
                 break;
             default:
@@ -83,10 +137,11 @@ class SceneManager {
     }
 
     private generateObjectName(objectType: string): string {
-        const typeCount = this.scene.objects.filter((obj) =>
-            obj.type === objectType.toLowerCase()
+        const typeCount = this.scene.objects.filter(
+            (obj) => obj.type === objectType.toLowerCase()
         ).length;
-        const capitalizedType = objectType.charAt(0).toUpperCase() + objectType.slice(1);
+        const capitalizedType =
+            objectType.charAt(0).toUpperCase() + objectType.slice(1);
         return `${capitalizedType}${typeCount + 1}`;
     }
 
@@ -95,11 +150,11 @@ class SceneManager {
         parentId: string | number,
         position?: Types.BVector3
     ): Types.BPart {
-        return this.createObject('part', parentId, { position }) as Types.BPart;
+        return this.createObject("part", parentId, { position }) as Types.BPart;
     }
 
     createScript(parentId: string | number): Types.BScript {
-        return this.createObject('script', parentId) as Types.BScript;
+        return this.createObject("script", parentId) as Types.BScript;
     }
 
     addObject(object: Types.BObject) {
@@ -124,7 +179,9 @@ class SceneManager {
     }
 
     reparentObject(objectId: string, newParentId: string | number) {
-        const objectToReparent = this.scene.objects.find(obj => obj.id === objectId);
+        const objectToReparent = this.scene.objects.find(
+            (obj) => obj.id === objectId
+        );
         if (!objectToReparent) {
             console.warn("Object to reparent not found:", objectId);
             return;
@@ -140,7 +197,9 @@ class SceneManager {
             objectToReparent.parent = null;
         } else {
             // Find the new parent object
-            const newParent = this.scene.objects.find(obj => obj.id === newParentId.toString());
+            const newParent = this.scene.objects.find(
+                (obj) => obj.id === newParentId.toString()
+            );
             if (!newParent) {
                 console.warn("New parent object not found:", newParentId);
                 return;
@@ -158,14 +217,19 @@ class SceneManager {
     }
 
     setVariables(variables: Array<{ name: string; value: any; type: string }>) {
-        console.log('[SceneStore] Setting variables:', variables);
+        console.log("[SceneStore] Setting variables:", variables);
         this.variables = variables;
     }
 
     updateVariable(name: string, value: any) {
-        const variable = this.variables.find(v => v.name === name);
+        const variable = this.variables.find((v) => v.name === name);
         if (variable) {
-            console.log(`[SceneStore] Updating variable '${name}':`, variable.value, '->', value);
+            console.log(
+                `[SceneStore] Updating variable '${name}':`,
+                variable.value,
+                "->",
+                value
+            );
             variable.value = value;
         } else {
             console.log(`[SceneStore] Adding new variable '${name}':`, value);
@@ -174,49 +238,51 @@ class SceneManager {
     }
 
     getVariables(): Array<{ name: string; value: any; type: string }> {
-        console.log('[SceneStore] Getting variables:', this.variables);
+        console.log("[SceneStore] Getting variables:", this.variables);
         return this.variables;
     }
 
     // Helper functions for object management
     getObjectById(id: string): Types.BObject | undefined {
-        return this.scene.objects.find(obj => obj.id === id);
+        return this.scene.objects.find((obj) => obj.id === id);
     }
 
     getObjectsByType<T extends Types.BObject>(type: string): T[] {
-        return this.scene.objects.filter(obj => obj.type === type) as T[];
+        return this.scene.objects.filter((obj) => obj.type === type) as T[];
     }
 
     getFirstObjectByType<T extends Types.BObject>(type: string): T | undefined {
-        return this.scene.objects.find(obj => obj.type === type) as T | undefined;
+        return this.scene.objects.find((obj) => obj.type === type) as
+            | T
+            | undefined;
     }
 
     getAllCameras(): Types.BCamera[] {
-        return this.getObjectsByType<Types.BCamera>('camera');
+        return this.getObjectsByType<Types.BCamera>("camera");
     }
 
     getAllLights(): Types.BLight[] {
-        return this.getObjectsByType<Types.BLight>('light');
+        return this.getObjectsByType<Types.BLight>("light");
     }
 
     getAllParts(): Types.BPart[] {
-        return this.getObjectsByType<Types.BPart>('part');
+        return this.getObjectsByType<Types.BPart>("part");
     }
 
     getAllScripts(): Types.BScript[] {
-        return this.getObjectsByType<Types.BScript>('script');
+        return this.getObjectsByType<Types.BScript>("script");
     }
 
     getActiveCamera(): Types.BCamera | undefined {
-        return this.getAllCameras().find(camera => camera.isActive);
+        return this.getAllCameras().find((camera) => camera.isActive);
     }
 
     setActiveCamera(cameraId: string): void {
         // Deactivate all cameras first
-        this.getAllCameras().forEach(camera => {
+        this.getAllCameras().forEach((camera) => {
             camera.isActive = false;
         });
-        
+
         // Activate the specified camera
         const camera = this.getObjectById(cameraId) as Types.BCamera;
         if (camera && camera instanceof Types.BCamera) {
@@ -225,14 +291,17 @@ class SceneManager {
     }
 
     getChildrenOf(parentId: string): Types.BObject[] {
-        return this.scene.objects.filter(obj => 
-            obj.parent && 
-            (typeof obj.parent === 'string' ? obj.parent === parentId : obj.parent.id === parentId)
+        return this.scene.objects.filter(
+            (obj) =>
+                obj.parent &&
+                (typeof obj.parent === "string"
+                    ? obj.parent === parentId
+                    : obj.parent.id === parentId)
         );
     }
 
     getRootObjects(): Types.BObject[] {
-        return this.scene.objects.filter(obj => !obj.parent);
+        return this.scene.objects.filter((obj) => !obj.parent);
     }
 }
 
@@ -322,7 +391,9 @@ function createSceneStore() {
             });
         },
 
-        setVariables: (variables: Array<{ name: string; value: any; type: string }>) => {
+        setVariables: (
+            variables: Array<{ name: string; value: any; type: string }>
+        ) => {
             update((currentManager) => {
                 currentManager.setVariables(variables);
                 return currentManager;
@@ -340,6 +411,18 @@ function createSceneStore() {
             return manager.getScene();
         },
 
+        getPhysicsWorld: () => {
+            return manager.getPhysicsWorld();
+        },
+
+        getPhysicsInitialized: () => {
+            return manager.getPhysicsInitialized();
+        },
+
+        waitForPhysicsInitialization: async () => {
+            return manager.waitForPhysicsInitialization();
+        },
+
         getVariables: () => {
             return manager.getVariables();
         },
@@ -353,7 +436,9 @@ function createSceneStore() {
             return manager.getObjectsByType<T>(type);
         },
 
-        getFirstObjectByType: <T extends Types.BObject>(type: string): T | undefined => {
+        getFirstObjectByType: <T extends Types.BObject>(
+            type: string
+        ): T | undefined => {
             return manager.getFirstObjectByType<T>(type);
         },
 

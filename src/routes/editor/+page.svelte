@@ -736,22 +736,7 @@
                                         >
                                             <Canvas>
                                                 {#if play}
-                                                    <GameRuntime
-                                                        {sceneStore}
-                                                        {compiledCode}
-                                                        variables={[
-                                                            {
-                                                                name: "playerY",
-                                                                value: 42,
-                                                                type: "number",
-                                                            },
-                                                            {
-                                                                name: "score",
-                                                                value: 100,
-                                                                type: "number",
-                                                            },
-                                                        ]}
-                                                    />
+                                                    <GameRuntime />
                                                 {:else}
                                                     <Scene
                                                         {sceneStore}
