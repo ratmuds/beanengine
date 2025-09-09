@@ -29,7 +29,7 @@
             <GripVertical class="w-5 h-5" />
         </div>
 
-        <div class="ml-6 flex items-center gap-2 cursor-grab" use:dragHandle>
+        <div class="ml-7 flex items-center gap-2 cursor-grab" use:dragHandle>
             <p class="text-lg text-foreground font-semibold">{config.label}</p>
             <Tooltip.Provider>
                 <Tooltip.Root>
