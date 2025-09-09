@@ -1,9 +1,9 @@
 <script lang="ts">
-    import { dndzone } from "svelte-dnd-action";
+    import { dndzone, dragHandle } from "svelte-dnd-action";
     import Self from "./CodeBlock.svelte";
     import FieldInput from "./FieldInput.svelte";
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Info } from "lucide-svelte";
+    import { Info, GripVertical } from "lucide-svelte";
     import { blockConfig } from "$lib/blockConfig.js";
 
     let {
@@ -17,13 +17,20 @@
 </script>
 
 <div
-    class="bg-muted m-2 p-2 cursor-grab border-l-4 border-l-{config
+    class="bg-muted relative m-2 p-2 pl-0 border-l-4 border-l-{config
         ? config.color
         : 'gray-500'} hover:bg-muted transition-colors spacemono w-fit"
 >
     {#if config}
-        <div class="flex items-center gap-2">
-            <p class="text-sm text-foreground">{config.label}</p>
+        <div
+            use:dragHandle
+            class="absolute l-0 w-6 h-5/6 flex items-center justify-center text-gray-500 hover:text-gray-300"
+        >
+            <GripVertical class="w-5 h-5" />
+        </div>
+
+        <div class="ml-6 flex items-center gap-2 cursor-grab" use:dragHandle>
+            <p class="text-lg text-foreground font-semibold">{config.label}</p>
             <Tooltip.Provider>
                 <Tooltip.Root>
                     <Tooltip.Trigger>
@@ -36,7 +43,7 @@
             </Tooltip.Provider>
         </div>
 
-        <div class="flex items-start mt-3 gap-1 w-fit min-w-0">
+        <div class="ml-6 flex items-start mt-3 gap-1 w-fit min-w-0">
             {#each config.fields as field}
                 {#if field.label}<p class="mx-1">{field.label}</p>{/if}
                 <FieldInput {field} {item} {onUpdate} />

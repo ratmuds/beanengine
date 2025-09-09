@@ -20,7 +20,7 @@
 
         // Step physics world
         if (physicsInitialized) {
-            sceneStore.getPhysicsWorld().step();
+            sceneStore?.getPhysicsWorld()?.step();
         }
 
         // Update game objects
@@ -81,7 +81,7 @@
         if (animationId) {
             cancelAnimationFrame(animationId);
         }
-        
+
         // Clean up GameObjects and their physics components
         if (gameObjectManager) {
             gameObjectManager.destroy();

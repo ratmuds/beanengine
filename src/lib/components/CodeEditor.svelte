@@ -1,5 +1,6 @@
 <script lang="ts">
     import { draggable } from "@neodrag/svelte";
+    import { dndzone, dragHandleZone, type DndEvent } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
     import { GripVertical, Edit3, Trash2, Plus, X } from "lucide-svelte";
@@ -50,55 +51,6 @@
     let isDragging = $state(false);
     let lastMousePos = $state({ x: 0, y: 0 });
 
-    // Function to extract parameters from block fields
-    function extractParams(item) {
-        const params = {};
-        if (item.fields) {
-            item.fields.forEach((field) => {
-                // If a chip is connected to the input, use the chip object directly.
-                if (field.inputs && field.inputs.length > 0) {
-                    // Using the first chip if multiple are connected.
-                    // The runtime will be responsible for evaluating this chip object.
-                    params[field.bind] = field.inputs[0];
-                } else {
-                    // Otherwise, use the literal value from the block's property.
-                    params[field.bind] = item[field.bind];
-                }
-            });
-        }
-        return params;
-    }
-
-    // Function to recursively compile blocks to executable structure
-    function compileBlocks(blocks = undefined) {
-        if (!blocks) {
-            blocks = items;
-        }
-
-        // Convert proxy to regular array if needed
-        const blocksArray = Array.isArray(blocks) ? blocks : Array.from(blocks);
-
-        if (blocksArray.length === 0) {
-            return [];
-        }
-
-        const result = blocksArray.map((block) => {
-            const compiled = {
-                type: block.type,
-                params: extractParams(block),
-            };
-
-            // Handle blocks with children (if, repeat, etc.)
-            if (block.children && Array.isArray(block.children)) {
-                compiled.children = compileBlocks(block.children);
-            }
-
-            return compiled;
-        });
-
-        return result;
-    }
-
     // Effect to load script data when selectedScript changes
     $effect(() => {
         if (selectedScript && selectedScript.code) {
@@ -125,56 +77,39 @@
         }
     });
 
-    let draggedItem = null;
-    let dragOverIndex = -1;
-    let dragSource = null; // Track where drag originated
+    // DND functions for code blocks using svelte-dnd-action
+    function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+        items = e.detail.items;
+    }
+
+    function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+        items = e.detail.items;
+    }
+
+    // Keep HTML drag for triggers since they need different behavior
+    let draggedItem: any = null;
+    let dragSource: string | null = null;
     let validDropOccurred = false;
 
-    function handleDragStart(e, item, index, source = "items") {
+    function handleDragStart(
+        e: DragEvent,
+        item: any,
+        index: number,
+        source = "items"
+    ) {
         draggedItem = { item, index, source };
         dragSource = source;
         validDropOccurred = false;
-        e.dataTransfer.effectAllowed = "move";
-        e.dataTransfer.setData("text/plain", JSON.stringify(item));
-        e.dataTransfer.setData("application/x-source", source);
-        e.dataTransfer.setData("application/x-index", index.toString());
+        e.dataTransfer!.effectAllowed = "move";
+        e.dataTransfer!.setData("text/plain", JSON.stringify(item));
+        e.dataTransfer!.setData("application/x-source", source);
+        e.dataTransfer!.setData("application/x-index", index.toString());
     }
 
-    function handleDragOver(e, index) {
-        e.preventDefault();
-        dragOverIndex = index;
-    }
-
-    function handleDragLeave(e) {
-        dragOverIndex = -1;
-    }
-
-    function handleDrop(e, dropIndex) {
-        e.preventDefault();
-        dragOverIndex = -1;
-        validDropOccurred = true;
-
-        const source = e.dataTransfer.getData("application/x-source");
-        const originalIndex = parseInt(
-            e.dataTransfer.getData("application/x-index")
-        );
-
-        if (source === "items" && draggedItem && originalIndex !== dropIndex) {
-            const newItems = [...items];
-            const [removed] = newItems.splice(originalIndex, 1);
-            newItems.splice(dropIndex, 0, removed);
-            items = newItems;
-        }
-        draggedItem = null;
-    }
-
-    function handleDragEnd(e) {
+    function handleDragEnd(e: DragEvent) {
         // Clean up any item that was dragged but not dropped in a valid zone
         if (draggedItem && !validDropOccurred) {
-            if (draggedItem.source === "items") {
-                // Remove from items array
-                items = items.filter((_, i) => i !== draggedItem.index);
-            } else if (draggedItem.source === "triggers") {
+            if (draggedItem.source === "triggers") {
                 // Remove from triggers array
                 activeTriggers = activeTriggers.filter(
                     (_, i) => i !== draggedItem.index
@@ -184,7 +119,6 @@
         draggedItem = null;
         dragSource = null;
         validDropOccurred = false;
-        dragOverIndex = -1;
         triggerDragOverIndex = -1;
     }
 
@@ -518,9 +452,12 @@
                                         draggable="true"
                                         ondragstart={(e) => {
                                             // Generate a variable chip with the variable name pre-filled
-                                            const variableChip = generateChip("variable", {
-                                                name: variable.name
-                                            });
+                                            const variableChip = generateChip(
+                                                "variable",
+                                                {
+                                                    name: variable.name,
+                                                }
+                                            );
                                             e.dataTransfer.setData(
                                                 "application/json",
                                                 JSON.stringify(variableChip)
@@ -678,13 +615,24 @@
                 <Separator class="my-2" />
 
                 <div
-                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto {dragOverIndex >=
-                    0
-                        ? 'outline outline-blue-500 bg-blue-500/10'
-                        : ''}"
+                    class="p-3 h-[calc(100vh-220px)] overflow-y-auto"
+                    use:dragHandleZone={{
+                        items: items,
+                        flipDurationMs: 300,
+                        dropTargetStyle: {
+                            outline: "2px solid #3b82f6",
+                            "outline-offset": "2px",
+                            "border-radius": "8px",
+                        },
+                        dragDisabled: false,
+                        morphDisabled: true,
+                        dropFromOthersDisabled: false,
+                        dragHandleSelector: ".dnd-drag-handle",
+                    }}
+                    onconsider={handleDndConsider}
+                    onfinalize={handleDndFinalize}
                     ondrop={(e) => {
                         e.preventDefault();
-                        dragOverIndex = -1;
                         validDropOccurred = true;
                         const data = e.dataTransfer.getData("text/plain");
                         const jsonData =
@@ -734,37 +682,20 @@
                     }}
                     ondragover={(e) => {
                         e.preventDefault();
-                        dragOverIndex = 0;
-                    }}
-                    ondragleave={(e) => {
-                        dragOverIndex = -1;
                     }}
                 >
-                    {#each items as item, i (item.id)}
-                        <div
-                            draggable="true"
-                            ondragstart={(e) =>
-                                handleDragStart(e, item, i, "items")}
-                            ondragover={(e) => handleDragOver(e, i)}
-                            ondragleave={handleDragLeave}
-                            ondrop={(e) => handleDrop(e, i)}
-                            ondragend={handleDragEnd}
-                            class={dragOverIndex === i
-                                ? "outline outline-blue-500 bg-blue-500/10"
-                                : ""}
-                        >
-                            <CodeBlock
-                                {item}
-                                onUpdate={(updatedItem) => {
-                                    const mainIndex = items.findIndex(
-                                        (i) => i.id === updatedItem.id
-                                    );
-                                    if (mainIndex !== -1) {
-                                        items[mainIndex] = updatedItem;
-                                    }
-                                }}
-                            />
-                        </div>
+                    {#each items as item (item.id)}
+                        <CodeBlock
+                            {item}
+                            onUpdate={(updatedItem) => {
+                                const mainIndex = items.findIndex(
+                                    (i) => i.id === updatedItem.id
+                                );
+                                if (mainIndex !== -1) {
+                                    items[mainIndex] = updatedItem;
+                                }
+                            }}
+                        />
                     {/each}
                 </div>
             </div>
