@@ -55,54 +55,26 @@ export class VisualComponent extends Component {
         if (part.meshSource?.type === "primitive") {
             switch (part.meshSource.value) {
                 case "block":
-                    geometry = new THREE.BoxGeometry(
-                        part.scale.x,
-                        part.scale.y,
-                        part.scale.z
-                    );
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
                     break;
                 case "sphere":
-                    geometry = new THREE.SphereGeometry(
-                        Math.max(part.scale.x, part.scale.y, part.scale.z) / 2,
-                        32,
-                        32
-                    );
+                    geometry = new THREE.SphereGeometry(0.5, 32, 32);
                     break;
                 case "cylinder":
-                    geometry = new THREE.CylinderGeometry(
-                        part.scale.x / 2,
-                        part.scale.x / 2,
-                        part.scale.y,
-                        32
-                    );
+                    geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
                     break;
                 case "cone":
-                    geometry = new THREE.ConeGeometry(
-                        part.scale.x / 2,
-                        part.scale.y,
-                        32
-                    );
+                    geometry = new THREE.ConeGeometry(0.5, 1, 32);
                     break;
                 case "plane":
-                    geometry = new THREE.PlaneGeometry(
-                        part.scale.x,
-                        part.scale.z
-                    );
+                    geometry = new THREE.PlaneGeometry(1, 1);
                     break;
                 default:
-                    geometry = new THREE.BoxGeometry(
-                        part.scale.x,
-                        part.scale.y,
-                        part.scale.z
-                    );
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
             }
         } else {
             // Default to box for non-primitive meshes
-            geometry = new THREE.BoxGeometry(
-                part.scale.x,
-                part.scale.y,
-                part.scale.z
-            );
+            geometry = new THREE.BoxGeometry(1, 1, 1);
         }
 
         const material = new THREE.MeshStandardMaterial({
@@ -165,9 +137,17 @@ export class VisualComponent extends Component {
     private updateMeshTransform(): void {
         if (this.mesh) {
             const transform = this.gameObject.transform;
-            this.mesh.position.copy(transform.position);
+            this.mesh.position.set(
+                transform.position.x,
+                transform.position.y,
+                transform.position.z
+            );
             this.mesh.quaternion.copy(transform.rotation);
             this.mesh.scale.copy(transform.scale);
+
+            // Force THREE.js to update the transformation matrices
+            this.mesh.updateMatrix();
+            this.mesh.updateMatrixWorld(true);
         }
     }
 
@@ -178,13 +158,17 @@ export class VisualComponent extends Component {
         if (this.light) {
             const transform = this.gameObject.transform;
             this.light.position.copy(transform.position);
+
+            // Force THREE.js to update the transformation matrices
+            this.light.updateMatrix();
+            this.light.updateMatrixWorld(true);
         }
     }
 
     /**
      * Update component - sync visual representation with transform
      */
-    update(delta: number): void {
+    update(_delta: number): void {
         this.updateMeshTransform();
         this.updateLightTransform();
     }

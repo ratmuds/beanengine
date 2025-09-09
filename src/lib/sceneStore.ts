@@ -58,6 +58,36 @@ class SceneManager {
         return this.physicsInitialized;
     }
 
+    /**
+     * Reset the physics world by removing all bodies and colliders
+     * This should be called when stopping play mode to clean up physics state
+     */
+    public resetPhysicsWorld(): void {
+        if (this.physicsWorld) {
+            // Remove all rigid bodies
+            const bodies = this.physicsWorld.bodies;
+            for (let i = bodies.len() - 1; i >= 0; i--) {
+                const body = bodies.get(i);
+                if (body) {
+                    this.physicsWorld.removeRigidBody(body);
+                }
+            }
+
+            // Remove all colliders
+            const colliders = this.physicsWorld.colliders;
+            for (let i = colliders.len() - 1; i >= 0; i--) {
+                const collider = colliders.get(i);
+                if (collider) {
+                    this.physicsWorld.removeCollider(collider, true);
+                }
+            }
+
+            console.log(
+                "[SceneStore] Physics world reset - all bodies and colliders removed"
+            );
+        }
+    }
+
     createObject(
         objectType: string,
         parentId: string | number,
@@ -125,6 +155,10 @@ class SceneManager {
         if (parentId) {
             const parentObject = this.getObjectById(parentId.toString());
             if (parentObject) {
+                console.log(
+                    `Parent object with ID ${parentId} found:`,
+                    parentObject
+                );
                 newObject.parent = parentObject;
                 parentObject.addChild(newObject);
             } else {
@@ -417,6 +451,13 @@ function createSceneStore() {
 
         getPhysicsInitialized: () => {
             return manager.getPhysicsInitialized();
+        },
+
+        resetPhysicsWorld: () => {
+            update((currentManager) => {
+                currentManager.resetPhysicsWorld();
+                return currentManager;
+            });
         },
 
         waitForPhysicsInitialization: async () => {

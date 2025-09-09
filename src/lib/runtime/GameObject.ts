@@ -3,7 +3,40 @@ import * as Types from "$lib/types";
 import { Component } from "./Component";
 
 /**
+ * Utility functions for converting between Euler angles and quaternions
+ */
+export class RotationUtils {
+    /**
+     * Convert Euler angles (BVector3) to THREE.Quaternion
+     */
+    static eulerToQuaternion(euler: Types.BVector3): THREE.Quaternion {
+        const threeEuler = new THREE.Euler(euler.x, euler.y, euler.z);
+        return new THREE.Quaternion().setFromEuler(threeEuler);
+    }
+
+    /**
+     * Convert THREE.Quaternion to Euler angles (BVector3)
+     */
+    static quaternionToEuler(quaternion: THREE.Quaternion): Types.BVector3 {
+        const threeEuler = new THREE.Euler().setFromQuaternion(quaternion);
+        return new Types.BVector3(threeEuler.x, threeEuler.y, threeEuler.z);
+    }
+
+    /**
+     * Convert BVector3 Euler to normalized THREE.Quaternion
+     */
+    static eulerToNormalizedQuaternion(
+        euler: Types.BVector3
+    ): THREE.Quaternion {
+        const quaternion = this.eulerToQuaternion(euler);
+        quaternion.normalize();
+        return quaternion;
+    }
+}
+
+/**
  * Transform data that can be shared between components
+ * Uses quaternions for rotation to avoid gimbal lock and work better with physics
  */
 export interface Transform {
     position: THREE.Vector3;
@@ -27,15 +60,10 @@ export class GameObject {
         this.bNode = bNode;
 
         // Initialize transform from BNode3D
+        // Convert Euler angles from BNode3D to quaternions for runtime
         this.transform = {
             position: new THREE.Vector3().copy(bNode.position),
-            rotation: new THREE.Quaternion().setFromEuler(
-                new THREE.Euler(
-                    bNode.rotation.x,
-                    bNode.rotation.y,
-                    bNode.rotation.z
-                )
-            ),
+            rotation: RotationUtils.eulerToNormalizedQuaternion(bNode.rotation),
             scale: new THREE.Vector3().copy(bNode.scale),
         };
     }
@@ -87,6 +115,8 @@ export class GameObject {
         return this.componentMap.has(componentClass.name);
     }
 
+
+
     /**
      * Update all components
      */
@@ -103,21 +133,6 @@ export class GameObject {
                 }
             }
         }
-    }
-
-    /**
-     * Sync transform back to BNode3D (useful for editor integration)
-     */
-    syncToBNode(): void {
-        this.bNode.position.copy(this.transform.position);
-
-        // Convert quaternion back to Euler for BNode3D
-        const euler = new THREE.Euler().setFromQuaternion(
-            this.transform.rotation
-        );
-        this.bNode.rotation.set(euler.x, euler.y, euler.z);
-
-        this.bNode.scale.copy(this.transform.scale);
     }
 
     /**

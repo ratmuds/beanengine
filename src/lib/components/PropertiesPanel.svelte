@@ -247,15 +247,9 @@
                         label="Rotation"
                         bind:value={object.rotation}
                         on:change={(e) => {
-                            // Convert Vector3 to BQuaternion (simplified conversion)
-                            const euler = e.detail.value;
+                            // Keep Euler angles for BNode3D (user-facing)
                             const updatedObject = object.clone();
-                            updatedObject.rotation = new Types.BQuaternion(
-                                euler.x,
-                                euler.y,
-                                euler.z,
-                                1 // w component
-                            );
+                            updatedObject.rotation = e.detail.value;
                             onPropertyChange(updatedObject);
                         }}
                     />

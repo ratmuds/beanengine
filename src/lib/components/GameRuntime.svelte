@@ -81,6 +81,11 @@
         if (animationId) {
             cancelAnimationFrame(animationId);
         }
+        
+        // Clean up GameObjects and their physics components
+        if (gameObjectManager) {
+            gameObjectManager.destroy();
+        }
     });
 
     // Script execution is now handled by ScriptComponent within GameObjectManager

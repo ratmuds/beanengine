@@ -233,12 +233,8 @@ class BPart extends BNode3D {
     receiveShadows: boolean;
     visible: boolean;
 
-    axisLockPosX: boolean;
-    axisLockPosY: boolean;
-    axisLockPosZ: boolean;
-    axisLockRotX: boolean;
-    axisLockRotY: boolean;
-    axisLockRotZ: boolean;
+    positionLocked: boolean;
+    rotationLocked: boolean;
 
     canTouch: boolean;
     canCollide: boolean;
@@ -259,12 +255,8 @@ class BPart extends BNode3D {
         this.castShadows = true;
         this.receiveShadows = true;
         this.visible = true;
-        this.axisLockPosX = false;
-        this.axisLockPosY = false;
-        this.axisLockPosZ = false;
-        this.axisLockRotX = false;
-        this.axisLockRotY = false;
-        this.axisLockRotZ = false;
+        this.positionLocked = false;
+        this.rotationLocked = false;
         this.canTouch = true;
         this.canCollide = true;
         this.canQuery = true;

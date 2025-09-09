@@ -38,18 +38,7 @@
 
     let { sceneStore, selectedObject = $bindable(-1) } = $props();
 
-    const dispatch = createEventDispatcher<{
-        selectObject: { id: string };
-        toggleExpanded: { id: string };
-        addObject: { parentId: string | number; type?: string };
-        reparentObject: { objectId: string; newParentId: string | number };
-        deleteObject: { id: string };
-        duplicateObject: { id: string };
-        copyObject: { id: string };
-        toggleVisibility: { id: string };
-        toggleLock: { id: string };
-        gotoObject: { id: string };
-    }>();
+    const dispatch = createEventDispatcher();
 
     let searchQuery = $state("");
     let contextMenu: { x: number; y: number; objectId: string } | null =
@@ -62,7 +51,20 @@
     // Track expanded state of objects
     let expandedObjects = $state(new Set<string>());
 
-    let filteredObjects = $state([]);
+    interface ObjectTreeItem {
+        id: string;
+        name: string;
+        type: string;
+        depth: number;
+        hasChildren: boolean;
+        expanded: boolean;
+        children: string[];
+        visible?: boolean;
+        locked?: boolean;
+        parent?: any;
+    }
+
+    let filteredObjects = $state<ObjectTreeItem[]>([]);
 
     function flattenObjectsHierarchy(
         objects: any[],
@@ -73,9 +75,13 @@
 
         for (const obj of objects) {
             // Find children of this object
-            const children = allObjects.filter(
-                (child) => child.parent === obj.id
-            );
+            const children = allObjects.filter((child) => {
+                if (!child.parent) return false;
+                // Handle both string parent IDs and parent objects
+                return typeof child.parent === "string"
+                    ? child.parent === obj.id
+                    : child.parent.id === obj.id;
+            });
 
             // Check if this object is expanded
             const isExpanded = expandedObjects.has(obj.id);
@@ -102,7 +108,7 @@
 
     $effect(() => {
         const allObjects = $sceneStore.getScene().objects;
-        const rootObjects = allObjects.filter((obj) => !obj.parent);
+        const rootObjects = allObjects.filter((obj: any) => !obj.parent);
 
         const hierarchicalObjects = flattenObjectsHierarchy(
             rootObjects,
@@ -242,11 +248,18 @@
     function handleDragLeave(event: DragEvent, targetObjectId: string) {
         // Only clear dragOverObject if we're actually leaving this element
         // and not just moving to a child element
-        const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+        const rect = (
+            event.currentTarget as HTMLElement
+        ).getBoundingClientRect();
         const x = event.clientX;
         const y = event.clientY;
-        
-        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+
+        if (
+            x < rect.left ||
+            x > rect.right ||
+            y < rect.top ||
+            y > rect.bottom
+        ) {
             if (dragOverObject === targetObjectId) {
                 dragOverObject = null;
             }
@@ -300,14 +313,12 @@
     }
 
     function handleAddObjectType(type: string) {
-
-        
         // Auto-expand the parent if it's not -1 (root)
-        if (addDialogParentId !== -1) {
-            expandedObjects.add(addDialogParentId);
+        if (addDialogParentId !== -1 && addDialogParentId != null) {
+            expandedObjects.add(addDialogParentId.toString());
             expandedObjects = new Set(expandedObjects);
         }
-        
+
         dispatch("addObject", {
             type,
             parentId: addDialogParentId,
@@ -377,7 +388,8 @@
 
                                 <Command.Item
                                     value="camera"
-                                    onSelect={() => handleAddObjectType("Camera")}
+                                    onSelect={() =>
+                                        handleAddObjectType("Camera")}
                                     class="rounded-lg m-1">Camera</Command.Item
                                 >
                                 <Command.Item class="rounded-lg m-1"
@@ -431,11 +443,11 @@
     </div>
 
     <!-- Object Tree -->
-    <div 
+    <div
         class="flex-1 overflow-y-auto p-3 relative z-10"
         ondragover={(e) => {
             e.preventDefault();
-            if (draggedObject) {
+            if (draggedObject && e.dataTransfer) {
                 e.dataTransfer.dropEffect = "move";
             }
         }}
@@ -451,8 +463,24 @@
                 dragOverObject = null;
             }
         }}
+        onclick={(e) => {
+            // Unselect when clicking on empty space
+            if (e.target === e.currentTarget) {
+                selectedObject = -1;
+                dispatch("selectObject", { id: -1 });
+            }
+        }}
     >
-        <div class="space-y-1">
+        <div
+            class="space-y-1"
+            onclick={(e) => {
+                // Unselect when clicking on empty space within the list
+                if (e.target === e.currentTarget) {
+                    selectedObject = -1;
+                    dispatch("selectObject", { id: -1 });
+                }
+            }}
+        >
             {#each filteredObjects as obj (obj.id)}
                 {@const Icon = getObjectIcon(obj)}
                 {@const hasChildren = obj.hasChildren}
@@ -479,12 +507,8 @@
                     {#if obj.depth > 0}
                         <div class="absolute left-0 top-0 bottom-0 flex">
                             {#each Array(obj.depth) as _}
-                                <div
-                                    class="w-5 flex justify-center"
-                                >
-                                    <div
-                                        class="w-px bg-border/40 h-full"
-                                    ></div>
+                                <div class="w-5 flex justify-center">
+                                    <div class="w-px bg-border/40 h-full"></div>
                                 </div>
                             {/each}
                         </div>

@@ -4,6 +4,7 @@ import { VisualComponent } from "./VisualComponent";
 import { ScriptComponent } from "./ScriptComponent";
 import * as Types from "$lib/types";
 import { PhysicsComponent } from "./PhysicsComponent";
+import { sceneStore } from "$lib/sceneStore";
 
 /**
  * GameObjectManager handles the lifecycle of all GameObjects in the scene
@@ -43,6 +44,11 @@ export class GameObjectManager {
         // Process all scene objects
         for (const obj of sceneObjects) {
             if (obj instanceof Types.BNode3D) {
+                console.warn(
+                    "NOT ALL PROPERTY REPLICATION IMPLEMENTED YET. ADDING",
+                    obj
+                );
+
                 // Create GameObject wrapper
                 const gameObject = new GameObject(obj);
                 this.gameObjects.set(obj.id, gameObject);
@@ -122,11 +128,13 @@ export class GameObjectManager {
             bCamera.position.z
         );
 
-        camera.rotation.set(
+        // Convert BCamera Euler rotation to Three.js quaternion
+        const euler = new THREE.Euler(
             bCamera.rotation.x,
             bCamera.rotation.y,
             bCamera.rotation.z
         );
+        camera.quaternion.setFromEuler(euler);
 
         camera.updateProjectionMatrix();
         camera.updateMatrixWorld();
@@ -142,6 +150,8 @@ export class GameObjectManager {
             gameObject.update(delta);
         }
     }
+
+
 
     /**
      * Get a GameObject by its ID
@@ -241,5 +251,9 @@ export class GameObjectManager {
      */
     destroy(): void {
         this.clear();
+        
+        // Reset physics world after all GameObjects are destroyed
+        // This ensures no double-removal of physics bodies/colliders
+        sceneStore.resetPhysicsWorld();
     }
 }
