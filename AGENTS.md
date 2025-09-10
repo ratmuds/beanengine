@@ -1,5 +1,7 @@
 # Bean Engine - Agent Documentation
 
+Use pnpm. Use Svelte 5 Runes.
+
 ## 1. Project Overview
 
 Bean Engine is a web-based game development platform designed to bridge the gap between visual block-based programming (like Scratch) and professional 3D game engines. It's built with SvelteKit, Three.js (via Threlte), and TypeScript.

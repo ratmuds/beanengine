@@ -48,6 +48,7 @@
     import GameRuntime from "$lib/components/GameRuntime.svelte";
     import CustomCodeEditor from "$lib/components/CodeEditor.svelte";
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
+    import CodePalette from "$lib/components/CodePalette.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
     import ViewportLoader from "$lib/components/ViewportLoader.svelte";
 
@@ -614,7 +615,7 @@
     <!-- Main Content Area -->
     <div class="flex-1 overflow-hidden relative z-10">
         <ResizablePaneGroup direction="horizontal" class="h-full">
-            <!-- Left Panel - Object Explorer -->
+            <!-- Left Panel - Conditional Content -->
             <ResizablePane
                 defaultSize={leftPanelSize}
                 size={leftPanelSize}
@@ -624,13 +625,29 @@
                 collapsedSize={0}
                 class="transition-all duration-700 ease-out"
             >
-                <ObjectExplorer
-                    bind:this={objectExplorerRef}
-                    {sceneStore}
-                    bind:selectedObject
-                    on:addObject={handleAddObject}
-                    on:reparentObject={handleReparentObject}
-                />
+                {#if activeTab === "viewport"}
+                    <ObjectExplorer
+                        bind:this={objectExplorerRef}
+                        {sceneStore}
+                        bind:selectedObject
+                        on:addObject={handleAddObject}
+                        on:reparentObject={handleReparentObject}
+                    />
+                {:else if activeTab === "script"}
+                    <CodePalette
+                        {sceneStore}
+                        selectedScript={selectedScriptObject}
+                    />
+                {:else}
+                    <!-- Default to Object Explorer for other tabs -->
+                    <ObjectExplorer
+                        bind:this={objectExplorerRef}
+                        {sceneStore}
+                        bind:selectedObject
+                        on:addObject={handleAddObject}
+                        on:reparentObject={handleReparentObject}
+                    />
+                {/if}
             </ResizablePane>
 
             <ResizableHandle />

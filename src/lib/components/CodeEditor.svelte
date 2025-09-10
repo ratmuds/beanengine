@@ -1,17 +1,15 @@
 <script lang="ts">
     import { draggable } from "@neodrag/svelte";
-    import { dndzone, dragHandleZone, type DndEvent } from "svelte-dnd-action";
+    import { dndzone, dragHandleZone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
-    import { GripVertical, Edit3, Trash2, Plus, X } from "lucide-svelte";
-    import { generateAvailableBlocks } from "$lib/blockConfig.js";
-    import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
+    import { GripVertical, Edit3, Trash2, X } from "lucide-svelte";
+
     import { compileScript } from "$lib/compiler.js";
     import * as Dialog from "./ui/dialog";
     import Button from "./ui/button/button.svelte";
     import Input from "./ui/input/input.svelte";
-    import * as ContextMenu from "./ui/context-menu";
-    import { sceneStore } from "$lib/sceneStore.js";
+
 
     let {
         items = $bindable([]),
@@ -24,23 +22,12 @@
         selectedScript = $bindable(null),
     } = $props();
 
-    // Available code block templates - generated from config
-    let availableBlocks = $state(generateAvailableBlocks());
-    // Available chip templates - generated from config
-    let availableChips = $state(generateAvailableChips());
+
 
     let codeListTitle = $state("Code List");
     let isEditingTitle = $state(false);
 
-    // Variable creation modal state
-    let isAddingVariable = $state(false);
-    let newVariableName = $state("");
-    let newVariableType = $state("string");
-    let newVariableValue = $state("");
 
-    // Variable editing modal state
-    let isEditingVariable = $state(false);
-    let editingVariable = $state(null);
 
     // Camera state for panning and zooming
     let camera = $state({
@@ -179,12 +166,7 @@
         }
     }
 
-    // Available trigger templates for dragging
-    let availableTriggers = $state([
-        { id: "trigger1", type: "onStart", name: "On Start" },
-        { id: "trigger2", type: "onUpdate", name: "On Update" },
-        { id: "trigger3", type: "onKeyPress", name: "On Key Press" },
-    ]);
+
 
     // Active triggers that have been dragged into the code list
     let activeTriggers = $state([]);
@@ -218,88 +200,7 @@
         }
     }
 
-    function openAddVariableModal() {
-        isAddingVariable = true;
-        newVariableName = "";
-        newVariableType = "string";
-        newVariableValue = "";
-    }
 
-    function closeAddVariableModal() {
-        isAddingVariable = false;
-        newVariableName = "";
-        newVariableType = "string";
-        newVariableValue = "";
-    }
-
-    function addVariable() {
-        if (!newVariableName.trim()) return;
-
-        let parsedValue = newVariableValue;
-
-        // Parse value based on type
-        if (newVariableType === "number") {
-            parsedValue = parseFloat(newVariableValue) || 0;
-        } else if (newVariableType === "boolean") {
-            parsedValue = newVariableValue.toLowerCase() === "true";
-        }
-
-        // Add to sceneStore immediately
-        sceneStore.updateVariable(newVariableName, parsedValue);
-
-        closeAddVariableModal();
-    }
-
-    function removeVariable(variableName) {
-        const currentVariables = $sceneStore.variables;
-        const filteredVariables = currentVariables.filter(
-            (v) => v.name !== variableName
-        );
-        sceneStore.setVariables(filteredVariables);
-    }
-
-    function editVariable(variable) {
-        editingVariable = { ...variable };
-        newVariableName = editingVariable.name;
-        newVariableType = editingVariable.type;
-        newVariableValue = editingVariable.value.toString();
-        isEditingVariable = true;
-    }
-
-    function deleteVariable(variable) {
-        removeVariable(variable.name);
-    }
-
-    function closeEditVariableModal() {
-        isEditingVariable = false;
-        editingVariable = null;
-        newVariableName = "";
-        newVariableType = "string";
-        newVariableValue = "";
-    }
-
-    function saveEditedVariable() {
-        if (!newVariableName.trim() || !editingVariable) return;
-
-        let parsedValue = newVariableValue;
-
-        // Parse value based on type
-        if (newVariableType === "number") {
-            parsedValue = parseFloat(newVariableValue) || 0;
-        } else if (newVariableType === "boolean") {
-            parsedValue = newVariableValue.toLowerCase() === "true";
-        }
-
-        // Remove old variable if name changed
-        if (editingVariable.name !== newVariableName) {
-            removeVariable(editingVariable.name);
-        }
-
-        // Update/add variable
-        sceneStore.updateVariable(newVariableName, parsedValue);
-
-        closeEditVariableModal();
-    }
 </script>
 
 <div
@@ -323,178 +224,7 @@
         class="absolute inset-0"
         style="transform: translate({camera.x}px, {camera.y}px) scale({camera.zoom}); transform-origin: 0 0;"
     >
-        <div class="flex gap-6 p-6">
-            <!-- Left Sidebar -->
-            <div class="w-64 relative z-10 flex flex-col gap-4">
-                <button
-                    onclick={() => {
-                        console.log("Manual compile triggered");
-                        console.log("Items:", $state.snapshot(items));
-                        const result = compileScript(items);
-                        console.log("Manual compile result:", result);
-                        console.log(
-                            "Compiled code prop:",
-                            $state.snapshot(compiledCode)
-                        );
-                    }}
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
-                >
-                    Debug Compile
-                </button>
-
-                <!-- Code Blocks Palette -->
-                <div
-                    class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg flex-1"
-                >
-                    <div
-                        class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-2 rounded-t-md"
-                    >
-                        <span class="text-[#ccc] text-sm font-medium"
-                            >Code Blocks</span
-                        >
-                    </div>
-                    <div
-                        class="p-3 space-y-2 max-h-[calc(100vh-300px)] overflow-y-auto"
-                    >
-                        {#each availableBlocks as block (block.id)}
-                            <div
-                                class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 rounded text-sm font-medium cursor-grab hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm"
-                                draggable="true"
-                                ondragstart={(e) => {
-                                    e.dataTransfer.setData(
-                                        "text/plain",
-                                        JSON.stringify(block)
-                                    );
-                                }}
-                            >
-                                {block.type}
-                            </div>
-                        {/each}
-                    </div>
-                </div>
-
-                <!-- Triggers Palette -->
-                <div
-                    class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg"
-                >
-                    <div
-                        class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-2 rounded-t-md"
-                    >
-                        <span class="text-[#ccc] text-sm font-medium"
-                            >Triggers</span
-                        >
-                    </div>
-                    <div class="p-3 space-y-2 max-h-48 overflow-y-auto">
-                        {#each availableTriggers as trigger (trigger.id)}
-                            <div
-                                class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-3 py-2 rounded text-sm font-medium cursor-grab hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-sm"
-                                draggable="true"
-                                ondragstart={(e) => {
-                                    e.dataTransfer.setData(
-                                        "text/plain",
-                                        JSON.stringify(trigger)
-                                    );
-                                }}
-                            >
-                                {trigger.name}
-                            </div>
-                        {/each}
-                    </div>
-                </div>
-
-                <!-- Chips Panel -->
-                <div
-                    class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg h-32"
-                >
-                    <div
-                        class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
-                    >
-                        <span class="text-[#ccc] text-xs font-medium"
-                            >Chips</span
-                        >
-                    </div>
-                    <div class="p-2 space-y-1 h-20 overflow-y-auto">
-                        {#each availableChips as chip (chip.id)}
-                            <div
-                                class="bg-gradient-to-r from-orange-500 to-orange-600 text-white px-2 py-1 rounded-full text-xs font-medium cursor-grab hover:from-orange-600 hover:to-orange-700 transition-all shadow-sm inline-block mr-1"
-                                draggable="true"
-                                ondragstart={(e) => {
-                                    e.dataTransfer.setData(
-                                        "application/json",
-                                        JSON.stringify(chip)
-                                    );
-                                    e.dataTransfer.effectAllowed = "copy";
-                                }}
-                            >
-                                {chip.type}
-                            </div>
-                        {/each}
-                    </div>
-                </div>
-
-                <!-- Variables Panel -->
-                <div
-                    class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg"
-                >
-                    <div
-                        class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
-                    >
-                        <span class="text-[#ccc] text-xs font-medium"
-                            >Variables</span
-                        >
-                    </div>
-                    <div class="p-2 space-y-1 max-h-32 overflow-y-auto">
-                        {#each $sceneStore.variables as variable (variable.name)}
-                            <ContextMenu.Root>
-                                <ContextMenu.Trigger>
-                                    <div
-                                        class="bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm inline-block mr-1 cursor-grab hover:from-green-600 hover:to-green-700 transition-all"
-                                        draggable="true"
-                                        ondragstart={(e) => {
-                                            // Generate a variable chip with the variable name pre-filled
-                                            const variableChip = generateChip(
-                                                "variable",
-                                                {
-                                                    name: variable.name,
-                                                }
-                                            );
-                                            e.dataTransfer.setData(
-                                                "application/json",
-                                                JSON.stringify(variableChip)
-                                            );
-                                            e.dataTransfer.effectAllowed =
-                                                "copy";
-                                        }}
-                                    >
-                                        {variable.name}
-                                    </div>
-                                </ContextMenu.Trigger>
-                                <ContextMenu.Content>
-                                    <ContextMenu.Item
-                                        onclick={() => editVariable(variable)}
-                                    >
-                                        Edit Variable
-                                    </ContextMenu.Item>
-                                    <ContextMenu.Item
-                                        onclick={() => deleteVariable(variable)}
-                                        class="text-red-600"
-                                    >
-                                        Delete Variable
-                                    </ContextMenu.Item>
-                                </ContextMenu.Content>
-                            </ContextMenu.Root>
-                        {/each}
-                        <!-- Add Variable Button -->
-                        <button
-                            onclick={openAddVariableModal}
-                            class="border border-dashed border-green-500 text-green-500 px-2 py-1 rounded-full text-xs font-medium hover:bg-green-500/10 transition-colors inline-block mr-1"
-                        >
-                            <Plus class="w-3 h-3 inline mr-1" />
-                            Add Variable
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div class="flex justify-center p-6">
 
             <!-- Code List Panel -->
             <div
@@ -641,18 +371,16 @@
                             "application/x-source"
                         );
 
-                        // Handle variable chips (application/json)
+                        // Handle chips (application/json)
                         if (jsonData) {
                             try {
                                 const chip = JSON.parse(jsonData);
-                                if (chip.type === "variable") {
-                                    // Create a new variable chip
-                                    const newChip = {
-                                        ...chip,
-                                        id: Date.now() + Math.random(),
-                                    };
-                                    items = [...items, newChip];
-                                }
+                                // Create a new chip item for any chip type
+                                const newChip = {
+                                    ...chip,
+                                    id: Date.now() + Math.random(),
+                                };
+                                items = [...items, newChip];
                             } catch (err) {
                                 console.error(
                                     "Failed to parse dropped JSON data:",
@@ -719,160 +447,5 @@
         </div>
     </div>
 
-    <!-- Add Variable Modal -->
-    <Dialog.Root bind:open={isAddingVariable}>
-        <Dialog.Content class="max-w-md">
-            <Dialog.Header>
-                <Dialog.Title>Add New Variable</Dialog.Title>
-                <Dialog.Description>
-                    Create a new global variable for your scripts.
-                </Dialog.Description>
-            </Dialog.Header>
 
-            <div class="space-y-4 py-4">
-                <div class="space-y-2">
-                    <label for="variableName" class="text-sm font-medium"
-                        >Name</label
-                    >
-                    <Input
-                        id="variableName"
-                        bind:value={newVariableName}
-                        placeholder="Enter variable name"
-                        class="w-full"
-                    />
-                </div>
-
-                <div class="space-y-2">
-                    <label for="variableType" class="text-sm font-medium"
-                        >Type</label
-                    >
-                    <select
-                        id="variableType"
-                        bind:value={newVariableType}
-                        class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                    >
-                        <option value="string">String</option>
-                        <option value="number">Number</option>
-                        <option value="boolean">Boolean</option>
-                    </select>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="variableValue" class="text-sm font-medium"
-                        >Initial Value</label
-                    >
-                    {#if newVariableType === "boolean"}
-                        <select
-                            id="variableValue"
-                            bind:value={newVariableValue}
-                            class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                        >
-                            <option value="false">false</option>
-                            <option value="true">true</option>
-                        </select>
-                    {:else}
-                        <Input
-                            id="variableValue"
-                            bind:value={newVariableValue}
-                            placeholder={newVariableType === "number"
-                                ? "Enter number"
-                                : "Enter text"}
-                            type={newVariableType === "number"
-                                ? "number"
-                                : "text"}
-                            class="w-full"
-                        />
-                    {/if}
-                </div>
-            </div>
-
-            <Dialog.Footer>
-                <Button variant="outline" onclick={closeAddVariableModal}
-                    >Cancel</Button
-                >
-                <Button onclick={addVariable} disabled={!newVariableName.trim()}
-                    >Add Variable</Button
-                >
-            </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Root>
-
-    <!-- Edit Variable Modal -->
-    <Dialog.Root bind:open={isEditingVariable}>
-        <Dialog.Content class="max-w-md">
-            <Dialog.Header>
-                <Dialog.Title>Edit Variable</Dialog.Title>
-                <Dialog.Description>
-                    Modify the variable's properties.
-                </Dialog.Description>
-            </Dialog.Header>
-
-            <div class="space-y-4 py-4">
-                <div class="space-y-2">
-                    <label for="editVariableName" class="text-sm font-medium"
-                        >Name</label
-                    >
-                    <Input
-                        id="editVariableName"
-                        bind:value={newVariableName}
-                        placeholder="Enter variable name"
-                        class="w-full"
-                    />
-                </div>
-
-                <div class="space-y-2">
-                    <label for="editVariableType" class="text-sm font-medium"
-                        >Type</label
-                    >
-                    <select
-                        id="editVariableType"
-                        bind:value={newVariableType}
-                        class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                    >
-                        <option value="string">String</option>
-                        <option value="number">Number</option>
-                        <option value="boolean">Boolean</option>
-                    </select>
-                </div>
-
-                <div class="space-y-2">
-                    <label for="editVariableValue" class="text-sm font-medium"
-                        >Value</label
-                    >
-                    {#if newVariableType === "boolean"}
-                        <select
-                            id="editVariableValue"
-                            bind:value={newVariableValue}
-                            class="w-full px-3 py-2 border border-input bg-background rounded-md text-sm"
-                        >
-                            <option value="false">false</option>
-                            <option value="true">true</option>
-                        </select>
-                    {:else}
-                        <Input
-                            id="editVariableValue"
-                            bind:value={newVariableValue}
-                            placeholder={newVariableType === "number"
-                                ? "Enter number"
-                                : "Enter text"}
-                            type={newVariableType === "number"
-                                ? "number"
-                                : "text"}
-                            class="w-full"
-                        />
-                    {/if}
-                </div>
-            </div>
-
-            <Dialog.Footer>
-                <Button variant="outline" onclick={closeEditVariableModal}
-                    >Cancel</Button
-                >
-                <Button
-                    onclick={saveEditedVariable}
-                    disabled={!newVariableName.trim()}>Save Changes</Button
-                >
-            </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Root>
 </div>
