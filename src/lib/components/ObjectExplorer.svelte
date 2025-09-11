@@ -24,6 +24,7 @@
         Navigation,
         FileCode,
     } from "lucide-svelte";
+    import { sceneStore } from "$lib/sceneStore";
 
     /*export let sceneObjects: Array<{
         id: string;
@@ -36,7 +37,7 @@
         children?: string[];
     }> = [];*/
 
-    let { sceneStore, selectedObject = $bindable(-1) } = $props();
+    let { selectedObject = $bindable(-1) } = $props();
 
     const dispatch = createEventDispatcher();
 

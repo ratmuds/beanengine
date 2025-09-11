@@ -181,7 +181,7 @@
                         e.dataTransfer.effectAllowed = "copy";
                     }}
                 >
-                    {block.type}
+                    {block.label}
 
                     <div class="float-right">
                         <Tooltip.Provider>

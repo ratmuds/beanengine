@@ -13,18 +13,34 @@
         MoreHorizontal,
         Hash,
         FileCode,
+        RefreshCw,
     } from "lucide-svelte";
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
     import { materialStore } from "$lib/materialStore";
     import PropertyDropdown from "./PropertyDropdown.svelte";
     import AxisLockControls from "./properties/AxisLockControls.svelte";
+    import { sceneStore } from "$lib/sceneStore";
 
-    const { sceneStore, selectedObject, onPropertyChange } = $props();
+    let { selectedObject, onPropertyChange } = $props();
+
+    let refreshCounter = $state(0);
 
     const object = $derived(
         $sceneStore.getScene().objects.find((obj) => obj.id === selectedObject)
     );
+
+    function updateObjectInfo() {
+        console.log("Forcing refresh of object info...");
+
+        let tempSelectedObject = selectedObject;
+
+        selectedObject = -1;
+
+        setTimeout(() => {
+            selectedObject = tempSelectedObject;
+        }, 0);
+    }
 
     // Mesh selector reactive variables
     const meshOptions = $derived(() => {
@@ -235,21 +251,6 @@
                         </h3>
                     </div>
 
-                    <Alert.Root>
-                        <Alert.Title class="font-semibold">Warning</Alert.Title>
-                        <Alert.Description>
-                            Due to limitations, these values will not update in
-                            realtime. You need to reselect it to view new
-                            values.
-
-                            <br class="my-2" />
-
-                            Changing the values in these will also break the
-                            transform gizmos in the viewport, so you will need
-                            to reselect it to fix it again.
-                        </Alert.Description>
-                    </Alert.Root>
-
                     <Vector3Input
                         label="Position"
                         bind:value={object.position}
@@ -278,6 +279,23 @@
                             onPropertyChange(updatedObject);
                         }}
                     />
+
+                    <Alert.Root>
+                        <Alert.Title class="font-semibold">Warning</Alert.Title>
+                        <Alert.Description>
+                            Due to limitations, these values will not update in
+                            realtime.
+
+                            <Button
+                                variant="outline"
+                                class="mt-2"
+                                onclick={updateObjectInfo}
+                            >
+                                <RefreshCw />
+                                Update</Button
+                            >
+                        </Alert.Description>
+                    </Alert.Root>
                 </div>
             {/if}
 

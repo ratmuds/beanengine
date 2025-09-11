@@ -10,9 +10,9 @@
         useTexture,
     } from "@threlte/extras";
     import * as Types from "$lib/types";
+    import { sceneStore } from "$lib/sceneStore";
 
     let {
-        sceneStore,
         selectedObject = $bindable(-1),
         activeTool = "select",
         transformMode = "translate",
@@ -30,12 +30,21 @@
 
     // Workaround because Svelte reactivity breaks the transform controls so we have to recreate it everytime
     function resetTransformControlsState() {
+        console.log("Resetting transform controls state...");
+
         showTransformControls = false;
 
         setTimeout(() => {
             showTransformControls = true;
         }, 10);
     }
+
+    $effect(() => {
+        // Reference the store so when it updates we can reset the transform controls state
+        const scene = $sceneStore.getScene();
+
+        resetTransformControlsState();
+    });
 
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)

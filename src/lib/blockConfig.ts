@@ -1,4 +1,4 @@
-import { Type, Hash, GitBranch, Move3D, User } from "lucide-svelte";
+import { Type, Hash, GitBranch, Move3D, User, Variable } from "lucide-svelte";
 
 export interface BlockField {
     type: string;
@@ -79,11 +79,32 @@ export const blockConfig: Record<string, BlockConfig> = {
         ],
         info: "Moves the target object to a specific position. If no target is provided, it moves the object this script is on.",
     },
+
+    mousebutton: {
+        color: colorMap.purple,
+        label: "Mouse Button",
+        fields: [
+            {
+                type: "text",
+                bind: "button",
+                placeholder: "left, right, middle",
+                icon: Type,
+            },
+            {
+                type: "text",
+                bind: "variable",
+                placeholder: "variable name",
+                icon: Variable,
+            },
+        ],
+        info: "Sets the variable provided to 'true' or 'false' if the mouse button is pressed.",
+    },
 };
 
 export function generateAvailableBlocks() {
     return Object.keys(blockConfig).map((type) => ({
         id: type,
+        label: blockConfig[type].label,
         type,
         color: blockConfig[type].color,
         info: blockConfig[type].info,

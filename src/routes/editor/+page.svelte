@@ -628,21 +628,16 @@
                 {#if activeTab === "viewport"}
                     <ObjectExplorer
                         bind:this={objectExplorerRef}
-                        {sceneStore}
                         bind:selectedObject
                         on:addObject={handleAddObject}
                         on:reparentObject={handleReparentObject}
                     />
                 {:else if activeTab === "script"}
-                    <CodePalette
-                        {sceneStore}
-                        selectedScript={selectedScriptObject}
-                    />
+                    <CodePalette selectedScript={selectedScriptObject} />
                 {:else}
                     <!-- Default to Object Explorer for other tabs -->
                     <ObjectExplorer
                         bind:this={objectExplorerRef}
-                        {sceneStore}
                         bind:selectedObject
                         on:addObject={handleAddObject}
                         on:reparentObject={handleReparentObject}
@@ -756,7 +751,6 @@
                                                     <GameRuntime />
                                                 {:else}
                                                     <Scene
-                                                        {sceneStore}
                                                         bind:selectedObject
                                                         {activeTool}
                                                         {transformMode}
@@ -1002,7 +996,6 @@
                 class="transition-all duration-700 ease-out"
             >
                 <PropertiesPanel
-                    {sceneStore}
                     {selectedObject}
                     onPropertyChange={handlePropertyChange}
                 />
