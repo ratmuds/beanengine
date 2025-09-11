@@ -14,32 +14,23 @@ export interface BlockConfig {
     fields: BlockField[];
     info: string;
     end?: string;
+    children?: boolean;
 }
 
-export const blockConfig: Record<string, BlockConfig> = {
-    say: {
-        color: "purple-500",
-        label: "Say",
-        fields: [
-            {
-                type: "text",
-                bind: "text",
-                placeholder: "message",
-                icon: Type,
-            },
-            {
-                type: "number",
-                bind: "duration",
-                label: "for",
-                placeholder: "seconds",
-                icon: Hash,
-            },
-        ],
-        info: "Shows a message over the object for a duration",
-    },
+// Color mapping for Tailwind colors to actual colors
+const colorMap: Record<string, string> = {
+    red: "oklch(63.7% 0.237 25.331)",
+    orange: "oklch(70.5% 0.213 47.604)",
+    yellow: "oklch(79.5% 0.184 86.047)",
+    green: "oklch(72.3% 0.219 149.579)",
+    blue: "oklch(62.3% 0.214 259.815)",
+    purple: "oklch(62.7% 0.265 303.9)",
+    gray: "oklch(55.2% 0.016 285.938)",
+};
 
+export const blockConfig: Record<string, BlockConfig> = {
     if: {
-        color: "blue-500",
+        color: colorMap.blue,
         label: "If",
         fields: [
             {
@@ -51,10 +42,11 @@ export const blockConfig: Record<string, BlockConfig> = {
         ],
         info: "Runs code if condition is true",
         end: "then",
+        children: true,
     },
 
     wait: {
-        color: "blue-500",
+        color: colorMap.blue,
         label: "Wait",
         fields: [
             {
@@ -68,7 +60,7 @@ export const blockConfig: Record<string, BlockConfig> = {
     },
 
     moveto: {
-        color: "green-500",
+        color: colorMap.green,
         label: "Move",
         fields: [
             {
@@ -87,93 +79,19 @@ export const blockConfig: Record<string, BlockConfig> = {
         ],
         info: "Moves the target object to a specific position. If no target is provided, it moves the object this script is on.",
     },
-
-    move: {
-        color: "green-500",
-        label: "Move",
-        fields: [
-            {
-                type: "text",
-                bind: "direction",
-                placeholder: "direction",
-                icon: Move3D,
-            },
-            {
-                type: "number",
-                bind: "speed",
-                placeholder: "speed",
-                icon: Hash,
-            },
-        ],
-        info: "Moves the object in a direction at a specific speed",
-    },
-
-    setsize: {
-        color: "green-500",
-        label: "Set Size",
-        fields: [
-            {
-                type: "text",
-                bind: "target",
-                placeholder: "(self)",
-                icon: User,
-            },
-            {
-                type: "text",
-                bind: "size",
-                label: "to",
-                placeholder: "width, height, depth",
-                icon: Move3D,
-            },
-        ],
-        info: "Sets the size of the target object. If no target is provided, it sets the size of the object this script is on.",
-    },
-
-    setrotation: {
-        color: "green-500",
-        label: "Set Rotation",
-        fields: [
-            {
-                type: "text",
-                bind: "target",
-                placeholder: "(self)",
-                icon: User,
-            },
-            {
-                type: "text",
-                bind: "rotation",
-                label: "to",
-                placeholder: "x, y, z, (w if quaternion)",
-                icon: Move3D,
-            },
-        ],
-        info: "Sets the rotation of the target object. If no target is provided, it sets the rotation of the object this script is on. Rotation can be in Euler angles or quaternion format.",
-    },
-
-    repeat: {
-        color: "orange-500",
-        label: "Repeat",
-        fields: [
-            {
-                type: "number",
-                bind: "times",
-                placeholder: "times",
-                icon: Hash,
-            },
-        ],
-        info: "Repeats the contained blocks a specified number of times",
-    },
 };
 
 export function generateAvailableBlocks() {
-    return Object.keys(blockConfig).map(type => ({
+    return Object.keys(blockConfig).map((type) => ({
         id: type,
         type,
+        color: blockConfig[type].color,
+        info: blockConfig[type].info,
         ...Object.fromEntries(
-            blockConfig[type].fields.map(field => [field.bind, ""])
+            blockConfig[type].fields.map((field) => [field.bind, ""])
         ),
-        ...(blockConfig[type].fields.some(f => f.bind === "children") || type === "if" || type === "repeat" ? { children: [] } : {}),
-        fields: blockConfig[type].fields.map(field => ({
+        ...(blockConfig[type].children ? { children: [] } : {}),
+        fields: blockConfig[type].fields.map((field) => ({
             ...field,
             inputs: [],
         })),

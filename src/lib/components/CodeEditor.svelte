@@ -3,13 +3,9 @@
     import { dndzone, dragHandleZone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
-    import { GripVertical, Edit3, Trash2, X } from "lucide-svelte";
+    import { GripVertical, Edit3 } from "lucide-svelte";
 
     import { compileScript } from "$lib/compiler.js";
-    import * as Dialog from "./ui/dialog";
-    import Button from "./ui/button/button.svelte";
-    import Input from "./ui/input/input.svelte";
-
 
     let {
         items = $bindable([]),
@@ -22,12 +18,8 @@
         selectedScript = $bindable(null),
     } = $props();
 
-
-
     let codeListTitle = $state("Code List");
     let isEditingTitle = $state(false);
-
-
 
     // Camera state for panning and zooming
     let camera = $state({
@@ -65,25 +57,37 @@
     });
 
     // DND functions for code blocks using svelte-dnd-action
-    function handleDndConsider(e: CustomEvent<DndEvent<any>>) {
+    function handleDndConsider(e) {
         items = e.detail.items;
     }
 
-    function handleDndFinalize(e: CustomEvent<DndEvent<any>>) {
+    function handleDndFinalize(e) {
         items = e.detail.items;
+    }
+
+    // DND functions for nested children in code blocks
+    function handleChildDndConsider(e, itemId) {
+        const item = items.find((i) => i.id === itemId);
+        if (item) {
+            item.children = e.detail.items;
+            items = [...items];
+        }
+    }
+
+    function handleChildDndFinalize(e, itemId) {
+        const item = items.find((i) => i.id === itemId);
+        if (item) {
+            item.children = e.detail.items;
+            items = [...items];
+        }
     }
 
     // Keep HTML drag for triggers since they need different behavior
-    let draggedItem: any = null;
-    let dragSource: string | null = null;
+    let draggedItem = null;
+    let dragSource = null;
     let validDropOccurred = false;
 
-    function handleDragStart(
-        e: DragEvent,
-        item: any,
-        index: number,
-        source = "items"
-    ) {
+    function handleDragStart(e, item, index, source = "items") {
         draggedItem = { item, index, source };
         dragSource = source;
         validDropOccurred = false;
@@ -93,7 +97,7 @@
         e.dataTransfer!.setData("application/x-index", index.toString());
     }
 
-    function handleDragEnd(e: DragEvent) {
+    function handleDragEnd(e) {
         // Clean up any item that was dragged but not dropped in a valid zone
         if (draggedItem && !validDropOccurred) {
             if (draggedItem.source === "triggers") {
@@ -166,8 +170,6 @@
         }
     }
 
-
-
     // Active triggers that have been dragged into the code list
     let activeTriggers = $state([]);
 
@@ -199,8 +201,6 @@
             activeTriggers = newTriggers;
         }
     }
-
-
 </script>
 
 <div
@@ -225,7 +225,6 @@
         style="transform: translate({camera.x}px, {camera.y}px) scale({camera.zoom}); transform-origin: 0 0;"
     >
         <div class="flex justify-center p-6">
-
             <!-- Code List Panel -->
             <div
                 class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg min-w-96 w-fit relative z-10"
@@ -357,7 +356,6 @@
                         dragDisabled: false,
                         morphDisabled: true,
                         dropFromOthersDisabled: false,
-                        dragHandleSelector: ".dnd-drag-handle",
                     }}
                     onconsider={handleDndConsider}
                     onfinalize={handleDndFinalize}
@@ -415,6 +413,8 @@
                     {#each items as item (item.id)}
                         <CodeBlock
                             {item}
+                            onChildDndConsider={handleChildDndConsider}
+                            onChildDndFinalize={handleChildDndFinalize}
                             onUpdate={(updatedItem) => {
                                 const mainIndex = items.findIndex(
                                     (i) => i.id === updatedItem.id
@@ -446,6 +446,4 @@
             ></div>
         </div>
     </div>
-
-
 </div>

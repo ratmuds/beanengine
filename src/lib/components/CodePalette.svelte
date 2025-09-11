@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Plus } from "lucide-svelte";
+    import * as Tooltip from "$lib/components/ui/tooltip/index.js";
+    import { Plus, Info } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
     import * as Dialog from "./ui/dialog";
@@ -145,7 +146,7 @@
     <h2 class="text-foreground font-semibold text-lg">Code Palette</h2>
 
     <!-- Sticky Search Bar -->
-    <div class="w-full sticky top-0 z-20 bg-[#181818] pb-2">
+    <div class="w-full sticky top-0 z-20 pb-2">
         <input
             type="text"
             bind:value={searchQuery}
@@ -167,7 +168,8 @@
             {#each filteredBlocks as block (block.id)}
                 <div
                     transition:slide={{ duration: 200 }}
-                    class="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-3 py-2 rounded text-sm font-medium cursor-grab hover:from-blue-600 hover:to-blue-700 transition-all shadow-sm"
+                    style="border-color: {block?.color};"
+                    class="text-white bg-muted border-l-6 px-3 py-2 rounded text-sm font-medium cursor-grab hover:opacity-80 transition-all shadow-sm"
                     draggable="true"
                     ondragstart={(e) => {
                         e.dataTransfer.setData(
@@ -177,6 +179,21 @@
                     }}
                 >
                     {block.type}
+
+                    <div class="float-right">
+                        <Tooltip.Provider>
+                            <Tooltip.Root>
+                                <Tooltip.Trigger>
+                                    <Info
+                                        class="w-5 h-5 text-muted-foreground"
+                                    />
+                                </Tooltip.Trigger>
+                                <Tooltip.Content>
+                                    <p>{block.info}</p>
+                                </Tooltip.Content>
+                            </Tooltip.Root>
+                        </Tooltip.Provider>
+                    </div>
                 </div>
             {/each}
             {#if filteredBlocks.length === 0}

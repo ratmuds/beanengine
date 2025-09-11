@@ -8,8 +8,8 @@
 
     let {
         item,
-        onIfDndConsider = null,
-        onIfDndFinalize = null,
+        onChildDndConsider = null,
+        onChildDndFinalize = null,
         onUpdate = null,
     } = $props();
 
@@ -17,9 +17,8 @@
 </script>
 
 <div
-    class="bg-muted relative m-2 p-2 pl-0 border-l-4 border-l-{config
-        ? config.color
-        : 'gray-500'} hover:bg-muted transition-colors spacemono w-fit"
+    style="border-color: {config?.color};"
+    class="bg-muted relative m-2 p-2 pl-0 border-l-4 hover:bg-muted transition-colors spacemono w-fit"
 >
     {#if config}
         <div
@@ -56,34 +55,31 @@
             {#if config.end}<p class="ml-1">{config.end}</p>{/if}
         </div>
 
-        {#if item.type === "if" && onIfDndConsider && onIfDndFinalize}
+        {#if item.children && onChildDndConsider && onChildDndFinalize}
             <div
                 use:dndzone={{
                     items: item.children,
                     flipDurationMs: 300,
                     dropTargetStyle: {
-                        outline: "1px solid #3b82f6",
-                        "outline-offset": "1px",
-                        "border-radius": "4px",
-                        "transition-duration": "1s",
+                        outline: "2px solid #3b82f6",
+                        "outline-offset": "2px",
                     },
-                    morphDisabled: true,
                 }}
-                onconsider={(e) => onIfDndConsider(e, item.id)}
-                onfinalize={(e) => onIfDndFinalize(e, item.id)}
-                class="min-h-16 bg-[#1e1e1e] rounded-l-lg m-2 p-2 z-10 w-full"
+                on:consider={(e) => onChildDndConsider?.(e, item.id)}
+                on:finalize={(e) => onChildDndFinalize?.(e, item.id)}
+                class="min-h-32 bg-[#1e1e1e] rounded-l-lg m-2 ml-6 p-2 z-10 w-full"
             >
                 {#each item.children as child (child.id)}
                     <Self
                         item={child}
-                        {onIfDndConsider}
-                        {onIfDndFinalize}
+                        {onChildDndConsider}
+                        {onChildDndFinalize}
                         {onUpdate}
                     />
                 {/each}
                 {#if item.children.length === 0}
                     <div
-                        class="text-muted-foreground text-sm text-center py-2 h-16 border-dotted border-border hover:border-blue-500 duration-300 border-2 rounded flex items-center justify-center"
+                        class="text-muted-foreground text-sm text-center py-2 mr-4 h-32 border-dotted border-border hover:border-blue-500 duration-300 border-2 rounded flex items-center justify-center"
                     >
                         Drop blocks here
                     </div>
