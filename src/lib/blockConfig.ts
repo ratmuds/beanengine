@@ -1,4 +1,12 @@
-import { Type, Hash, GitBranch, Move3D, User, Variable } from "lucide-svelte";
+import {
+    Type,
+    Hash,
+    GitBranch,
+    Move3D,
+    User,
+    Variable,
+    Info,
+} from "lucide-svelte";
 
 export interface BlockField {
     type: string;
@@ -98,6 +106,26 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Sets the variable provided to 'true' or 'false' if the mouse button is pressed.",
+    },
+
+    log: {
+        color: colorMap.gray,
+        label: "Log",
+        fields: [
+            {
+                type: "text",
+                bind: "message",
+                placeholder: "message",
+                icon: Type,
+            },
+            {
+                type: "text",
+                bind: "level",
+                placeholder: "info, warn, error",
+                icon: Info,
+            },
+        ],
+        info: "Logs a message to the console",
     },
 };
 

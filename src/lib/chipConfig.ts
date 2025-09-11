@@ -16,6 +16,7 @@ export interface RuntimeContext {
     // Game context
     gameObject?: any;
     scene?: any;
+    script?: Types.BScript;
 }
 
 export interface ChipField {
@@ -128,7 +129,10 @@ export function generateAvailableChips() {
 }
 
 // Generate a specific chip with optional pre-filled values
-export function generateChip(chipType: string, prefilledValues: Record<string, any> = {}) {
+export function generateChip(
+    chipType: string,
+    prefilledValues: Record<string, any> = {}
+) {
     const config = chipConfig[chipType];
     if (!config) {
         throw new Error(`Unknown chip type: ${chipType}`);

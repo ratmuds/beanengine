@@ -32,24 +32,17 @@ export class ScriptComponent extends Component {
      */
     private initializeInterpreter(): void {
         try {
-            // Get parent object for the script
-            const targetObject = this.script.parent;
-            if (!targetObject) {
-                throw new Error(
-                    `Script ${this.script.id} has no parent object`
-                );
-            }
-
             // Create interpreter
             this.interpreter = new CodeInterpreter(
                 this.script.code,
-                targetObject
+                this.gameObject
             );
 
             // Create runtime context
             const context = createRuntimeContext(this.variablesMap);
-            context.gameObject = targetObject;
+            context.gameObject = this.gameObject;
             context.scene = this.scene;
+            context.script = this.script;
 
             // Run the script
             this.interpreter.run(context);
@@ -73,7 +66,6 @@ export class ScriptComponent extends Component {
                 const context = createRuntimeContext(this.variablesMap);
                 context.gameObject = this.script.parent;
                 context.scene = this.scene;
-                context.deltaTime = delta;
 
                 // Some interpreters might have update methods for continuous execution
                 // This would depend on the interpreter implementation

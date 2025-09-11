@@ -4,6 +4,7 @@
     import * as THREE from "three";
     import { GameObjectManager } from "$lib/runtime";
     import { sceneStore } from "$lib/sceneStore";
+    import { runtimeStore } from "$lib/runtimeStore";
 
     const { renderer } = useThrelte();
     let gameScene: THREE.Scene;
@@ -34,17 +35,21 @@
 
     onMount(() => {
         // Create a separate scene for game runtime
+        runtimeStore.info("Starting ThreeJS scene...", "GameRuntime");
         gameScene = new THREE.Scene();
 
         // Create GameObjectManager
+        runtimeStore.info("Starting GameObjectManager...", "GameRuntime");
         gameObjectManager = new GameObjectManager(gameScene);
 
         // Initialize from scene store
+        runtimeStore.info("Initializing scene...", "GameRuntime");
         const sceneCamera = gameObjectManager.initializeFromScene(sceneStore);
 
         // Use scene camera if available, otherwise create default
         if (sceneCamera) {
             gameCamera = sceneCamera as THREE.PerspectiveCamera;
+            runtimeStore.info("Using scene camera...", "GameRuntime");
             console.log("Using scene camera:", gameCamera.position);
         } else {
             gameCamera = new THREE.PerspectiveCamera(
@@ -58,9 +63,11 @@
         }
 
         // Setup default lighting
+        runtimeStore.info("Setting up default lighting...", "GameRuntime");
         gameObjectManager.setupDefaultLighting();
 
         // Start custom render loop
+        runtimeStore.info("Starting custom render loop...", "GameRuntime");
         startRenderLoop();
     });
 

@@ -94,6 +94,7 @@ export class GameObjectManager {
                     }
                 } else {
                     console.warn(`Script ${obj.id} has no parent object`);
+                    // TODO: support scripts with no parent
                 }
             }
         }
@@ -150,8 +151,6 @@ export class GameObjectManager {
             gameObject.update(delta);
         }
     }
-
-
 
     /**
      * Get a GameObject by its ID
@@ -251,7 +250,7 @@ export class GameObjectManager {
      */
     destroy(): void {
         this.clear();
-        
+
         // Reset physics world after all GameObjects are destroyed
         // This ensures no double-removal of physics bodies/colliders
         sceneStore.resetPhysicsWorld();

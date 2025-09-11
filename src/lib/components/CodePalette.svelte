@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Plus, Info, Search } from "lucide-svelte";
+    import { Plus, Info, Search, Diamond } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
     import * as Dialog from "./ui/dialog";
@@ -171,7 +171,7 @@
                 <div
                     transition:slide={{ duration: 200 }}
                     style="border-color: {block?.color};"
-                    class="text-white bg-muted border-l-6 px-3 py-2 rounded text-sm font-medium cursor-grab hover:opacity-80 transition-all shadow-sm"
+                    class="text-white bg-muted border-l-6 hover:border-l-12 px-3 py-2 rounded text-sm font-medium cursor-grab hover:opacity-80 transition-all shadow-sm"
                     draggable="true"
                     ondragstart={(e) => {
                         e.dataTransfer?.setData(
@@ -220,7 +220,7 @@
             {#each filteredTriggers as trigger (trigger.id)}
                 <div
                     transition:slide={{ duration: 200 }}
-                    class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-3 py-2 rounded text-sm font-medium cursor-grab hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-sm"
+                    class="border-l-6 hover:border-l-12 border-yellow-500 bg-muted text-white px-3 py-2 rounded text-sm font-medium cursor-grab transition-all shadow-sm"
                     draggable="true"
                     ondragstart={(e) => {
                         e.dataTransfer?.setData(
@@ -230,6 +230,9 @@
                         e.dataTransfer.effectAllowed = "copy";
                     }}
                 >
+                    <Diamond
+                        class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5"
+                    />
                     {trigger.name}
                 </div>
             {/each}

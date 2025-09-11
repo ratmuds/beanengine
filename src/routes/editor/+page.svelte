@@ -50,6 +50,7 @@
     import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
     import CodePalette from "$lib/components/CodePalette.svelte";
     import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
+    import DevToolsPanel from "$lib/components/DevToolsPanel.svelte";
     import ViewportLoader from "$lib/components/ViewportLoader.svelte";
 
     import * as Types from "$lib/types";
@@ -59,6 +60,7 @@
     import MaterialBrowser from "$lib/components/MaterialBrowser.svelte";
     import { materialStore } from "$lib/materialStore";
     import { assetStore } from "$lib/assetStore";
+    import { runtimeStore } from "$lib/runtimeStore";
     import type { BAsset } from "$lib/types";
 
     function handleAddObject(
@@ -315,7 +317,7 @@
         centerPanelSize = 60;
     }
 
-    // play mode mock code
+    // play mode
 
     let play = $state(false);
 
@@ -324,6 +326,10 @@
         console.log("Play mode:", play);
 
         if (play) {
+            runtimeStore.clearLogs();
+        }
+
+        /*if (play) {
             leftPanelSize = 0;
             rightPanelSize = 0;
             centerPanelSize = 100;
@@ -333,7 +339,7 @@
             centerPanelSize = 60;
 
             // TODO: make this remember previous size
-        }
+        }*/
     }
 
     // Asset browser handlers
@@ -380,12 +386,6 @@
         <div
             class="absolute top-32 -left-16 w-40 h-40 bg-gradient-to-r from-orange-400/15 via-amber-400/10 to-yellow-400/8 rounded-full blur-2xl animate-pulse"
             style="animation-duration: 3s; animation-delay: 0.5s;"
-        ></div>
-
-        <!-- Additional elements-->
-        <div
-            class="absolute top-1/4 right-1/4 w-32 h-32 bg-gradient-to-br from-rose-400/10 to-pink-400/6 rounded-full blur-xl animate-pulse"
-            style="animation-duration: 4.5s; animation-delay: 1.5s;"
         ></div>
     </div>
 
@@ -985,7 +985,7 @@
 
             <ResizableHandle />
 
-            <!-- Right Panel - Properties -->
+            <!-- Right Panel - Properties / DevTools -->
             <ResizablePane
                 defaultSize={rightPanelSize}
                 size={rightPanelSize}
@@ -995,10 +995,14 @@
                 collapsedSize={0}
                 class="transition-all duration-700 ease-out"
             >
-                <PropertiesPanel
-                    {selectedObject}
-                    onPropertyChange={handlePropertyChange}
-                />
+                {#if play}
+                    <DevToolsPanel />
+                {:else}
+                    <PropertiesPanel
+                        {selectedObject}
+                        onPropertyChange={handlePropertyChange}
+                    />
+                {/if}
             </ResizablePane>
         </ResizablePaneGroup>
     </div>
