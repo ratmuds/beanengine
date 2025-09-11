@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Button } from "$lib/components/ui/button";
+    import * as Alert from "$lib/components/ui/alert/index.js";
     import Input from "$lib/components/ui/input/input.svelte";
     import Vector3Input from "./properties/Vector3Input.svelte";
 
@@ -233,6 +234,21 @@
                             Transform
                         </h3>
                     </div>
+
+                    <Alert.Root>
+                        <Alert.Title class="font-semibold">Warning</Alert.Title>
+                        <Alert.Description>
+                            Due to limitations, these values will not update in
+                            realtime. You need to reselect it to view new
+                            values.
+
+                            <br class="my-2" />
+
+                            Changing the values in these will also break the
+                            transform gizmos in the viewport, so you will need
+                            to reselect it to fix it again.
+                        </Alert.Description>
+                    </Alert.Root>
 
                     <Vector3Input
                         label="Position"

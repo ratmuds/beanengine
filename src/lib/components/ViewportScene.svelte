@@ -26,10 +26,21 @@
 
     // Store group references for each object
     let groupRefs = $state({});
+    let showTransformControls = $state(true);
+
+    // Workaround because Svelte reactivity breaks the transform controls so we have to recreate it everytime
+    function resetTransformControlsState() {
+        showTransformControls = false;
+
+        setTimeout(() => {
+            showTransformControls = true;
+        }, 10);
+    }
 
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
+    console.warn("TODO: handle objects having children (local position)");
 </script>
 
 <T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
@@ -204,7 +215,7 @@
         {/if}
     </T.Group>
 
-    {#if activeTool !== "select" && selectedObject === object.id}
+    {#if activeTool !== "select" && selectedObject === object.id && showTransformControls}
         <TransformControls
             object={groupRefs[object.id]}
             mode={transformMode}
@@ -227,6 +238,9 @@
 
                     // Update the object in the store to trigger reactivity
                     sceneStore.updateObject(object);
+
+                    // Reset transform controls state by recreating it due to reactivity breaking it
+                    resetTransformControlsState();
                 }
             }}
         />

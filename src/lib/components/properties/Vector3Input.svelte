@@ -4,11 +4,13 @@
     import { Copy, Clipboard } from "lucide-svelte";
     import { BVector3 } from "$lib/types";
 
-    export let value = new BVector3(0, 0, 0);
-    export let label = "";
-    export let precision = 3;
-    export let step = 0.1;
-    export let disabled = false;
+    let {
+        value = $bindable(new BVector3(0, 0, 0)),
+        label = "",
+        precision = 3,
+        step = 0.1,
+        disabled = false,
+    } = $props();
 
     const dispatch = createEventDispatcher();
 
