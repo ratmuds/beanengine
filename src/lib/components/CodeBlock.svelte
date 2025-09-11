@@ -14,6 +14,26 @@
     } = $props();
 
     let config = $derived(blockConfig[item.type]);
+
+    function updateChild(child: any) {
+        if (onUpdate) {
+            const updatedItem = { ...item };
+
+            updatedItem.children[
+                updatedItem.children.findIndex((c) => c.id === child.id)
+            ] = {
+                ...child,
+            };
+
+            console.log("updated child");
+            console.log(updatedItem);
+            console.log(child);
+
+            onUpdate(updatedItem);
+        } else {
+            console.warn("onUpdate is not defined");
+        }
+    }
 </script>
 
 <div
@@ -74,7 +94,7 @@
                         item={child}
                         {onChildDndConsider}
                         {onChildDndFinalize}
-                        {onUpdate}
+                        onUpdate={updateChild}
                     />
                 {/each}
                 {#if item.children.length === 0}

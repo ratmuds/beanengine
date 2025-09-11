@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Plus, Info } from "lucide-svelte";
+    import { Plus, Info, Search } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
     import * as Dialog from "./ui/dialog";
@@ -37,7 +37,6 @@
 
     // Drag state for disintegration effect
     let draggedChipId = $state(null);
-    let dragStartTime = $state(0);
 
     // Filter functions
     let filteredBlocks = $derived(
@@ -145,13 +144,16 @@
 <div class="w-full p-5 relative z-10 flex flex-col gap-4 h-full">
     <h2 class="text-foreground font-semibold text-lg">Code Palette</h2>
 
-    <!-- Sticky Search Bar -->
-    <div class="w-full sticky top-0 z-20 pb-2">
-        <input
+    <!-- Search -->
+    <div class="relative">
+        <div class="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+            <Search class="w-4 h-4 text-muted-foreground" />
+        </div>
+        <Input
             type="text"
             bind:value={searchQuery}
             placeholder="Search blocks, triggers, chips..."
-            class="w-full px-3 py-2 bg-[#1e1e1e] border border-[#2e2e2e] rounded-md text-[#ccc] text-sm placeholder-[#666] focus:outline-none focus:border-blue-500 transition-colors"
+            class="pl-12 pr-4 py-3 bg-muted/40 border-border/40 text-foreground text-sm rounded-xl h-11 focus:border-blue-400/60 focus:bg-muted/60 focus:outline-none transition-all duration-200 shadow-sm"
         />
     </div>
 
@@ -164,7 +166,7 @@
         >
             <span class="text-[#ccc] text-sm font-medium">Code Blocks</span>
         </div>
-        <div class="p-3 space-y-2 max-h-[calc(25vh-50px)] overflow-y-auto">
+        <div class="p-3 space-y-2 max-h-64 overflow-y-auto">
             {#each filteredBlocks as block (block.id)}
                 <div
                     transition:slide={{ duration: 200 }}
@@ -172,10 +174,11 @@
                     class="text-white bg-muted border-l-6 px-3 py-2 rounded text-sm font-medium cursor-grab hover:opacity-80 transition-all shadow-sm"
                     draggable="true"
                     ondragstart={(e) => {
-                        e.dataTransfer.setData(
+                        e.dataTransfer?.setData(
                             "text/plain",
                             JSON.stringify(block)
                         );
+                        e.dataTransfer.effectAllowed = "copy";
                     }}
                 >
                     {block.type}
@@ -185,7 +188,7 @@
                             <Tooltip.Root>
                                 <Tooltip.Trigger>
                                     <Info
-                                        class="w-5 h-5 text-muted-foreground"
+                                        class="w-4 h-4 mt-0.5 text-zinc-600"
                                     />
                                 </Tooltip.Trigger>
                                 <Tooltip.Content>
@@ -205,7 +208,9 @@
     </div>
 
     <!-- Triggers Palette -->
-    <div class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg">
+    <div
+        class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg flex-1"
+    >
         <div
             class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-2 rounded-t-md"
         >
@@ -218,10 +223,11 @@
                     class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-3 py-2 rounded text-sm font-medium cursor-grab hover:from-yellow-600 hover:to-yellow-700 transition-all shadow-sm"
                     draggable="true"
                     ondragstart={(e) => {
-                        e.dataTransfer.setData(
+                        e.dataTransfer?.setData(
                             "text/plain",
                             JSON.stringify(trigger)
                         );
+                        e.dataTransfer.effectAllowed = "copy";
                     }}
                 >
                     {trigger.name}
@@ -236,13 +242,15 @@
     </div>
 
     <!-- Chips Panel -->
-    <div class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg h-32">
+    <div
+        class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg flex-1"
+    >
         <div
             class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
         >
             <span class="text-[#ccc] text-xs font-medium">Chips</span>
         </div>
-        <div class="p-2 space-y-1 h-20 overflow-y-auto">
+        <div class="p-2 space-y-1 max-h-32 overflow-y-auto">
             {#each filteredChips as chip (chip.id)}
                 <div
                     transition:fade={{ duration: 200 }}
@@ -253,29 +261,15 @@
                     draggable="true"
                     ondragstart={(e) => {
                         draggedChipId = chip.id;
-                        dragStartTime = Date.now();
                         e.dataTransfer.setData(
                             "application/json",
                             JSON.stringify(chip)
                         );
-                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.effectAllowed = "copy";
                     }}
-                    ondragend={(e) => {
-                        // Use a small delay to check if the chip was successfully dropped
-                        // If the drag was very short or the drop effect is "none", it likely failed
-                        const dragDuration = Date.now() - dragStartTime;
-                        const wasSuccessful =
-                            e.dataTransfer.dropEffect !== "none" &&
-                            dragDuration > 100;
-
-                        if (!wasSuccessful && draggedChipId === chip.id) {
-                            // Add a small animation delay before removing
-                            setTimeout(() => {
-                                availableChips = availableChips.filter(
-                                    (c) => c.id !== chip.id
-                                );
-                            }, 150);
-                        }
+                    ondragend={() => {
+                        // Chips from palette should never disappear when dragged
+                        // Only chips dragged from blocks should disappear on failed drops
                         draggedChipId = null;
                     }}
                 >
@@ -291,7 +285,9 @@
     </div>
 
     <!-- Variables Panel -->
-    <div class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg">
+    <div
+        class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg flex-1"
+    >
         <div
             class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-1.5 rounded-t-md"
         >
@@ -309,7 +305,7 @@
                                 const variableChip = generateChip("variable", {
                                     name: variable.name,
                                 });
-                                e.dataTransfer.setData(
+                                e.dataTransfer?.setData(
                                     "application/json",
                                     JSON.stringify(variableChip)
                                 );
