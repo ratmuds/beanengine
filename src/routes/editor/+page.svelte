@@ -807,20 +807,6 @@
                                                     {/each}
                                                 {/if}
                                             </select>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                class="h-7 px-3 text-xs text-green-400 hover:bg-green-500/20"
-                                                onclick={() =>
-                                                    console.log(
-                                                        "Run script:",
-                                                        selectedScriptObject?.name ||
-                                                            "No script selected"
-                                                    )}
-                                            >
-                                                <Play class="w-3 h-3 mr-1" />
-                                                Run
-                                            </Button>
                                         </div>
                                     </div>
 
@@ -852,7 +838,7 @@
                                                         );
                                                         createScript(-1);
                                                     }}
-                                                    class="bg-blue-600 hover:bg-blue-700"
+                                                    class="bg-blue-500 hover:bg-blue-400"
                                                 >
                                                     <Plus
                                                         class="w-4 h-4 mr-2"
