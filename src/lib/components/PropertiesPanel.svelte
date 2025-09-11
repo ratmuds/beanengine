@@ -24,8 +24,6 @@
 
     let { selectedObject, onPropertyChange } = $props();
 
-    let refreshCounter = $state(0);
-
     const object = $derived(
         $sceneStore.getScene().objects.find((obj) => obj.id === selectedObject)
     );
