@@ -215,7 +215,7 @@
                         />
                     </div>
 
-                    <div class="flex items-center gap-1">
+                    <div class="flex items-center gap-1 overflow-y-scroll">
                         {#each ["info", "warn", "error"] as level}
                             <Button
                                 variant={selectedLogLevels.has(level)

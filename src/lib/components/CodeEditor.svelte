@@ -184,7 +184,7 @@
     // Active triggers that have been dragged into the code list
     let activeTriggers = $state([]);
 
-    let triggerDragOverIndex = -1;
+    let triggerDragOverIndex = $state(-1);
 
     function handleTriggerDragOver(e, index) {
         e.preventDefault();
@@ -221,6 +221,7 @@
     onmouseup={handleMouseUp}
     onwheel={handleWheel}
     style="cursor: {isDragging ? 'grabbing' : 'grab'}"
+    role="application"
 >
     <!-- Grid background -->
     <div
@@ -252,12 +253,14 @@
                             class="bg-transparent text-[#ccc] text-sm font-medium outline-none border-none"
                             onkeydown={finishEditingTitle}
                             onblur={finishEditingTitle}
-                            autofocus
                         />
                     {:else}
                         <span
                             class="text-[#ccc] text-sm font-medium cursor-pointer hover:text-white transition-colors"
                             onclick={startEditingTitle}
+                            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditingTitle(); } }}
+                            role="button"
+                            tabindex="0"
                         >
                             {codeListTitle}
                         </span>
@@ -320,6 +323,7 @@
                         ondragleave={(e) => {
                             triggerDragOverIndex = -1;
                         }}
+                        role="region"
                     >
                         {#if activeTriggers.length === 0}
                             <div class="text-[#666] text-xs text-center py-2">

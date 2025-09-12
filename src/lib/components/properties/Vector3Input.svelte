@@ -14,7 +14,7 @@
 
     const dispatch = createEventDispatcher();
 
-    let showCopied = false;
+    let showCopied = $state(false);
 
     function formatNumber(num) {
         return Number(num.toFixed(precision)).toString();
@@ -79,7 +79,7 @@
                         {step}
                         {disabled}
                         class="w-full text-center text-sm font-mono text-foreground bg-transparent border-0 p-0 focus:outline-none transition-all duration-200 group-hover:font-bold [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        on:input={(e) => handleInputChange("x", e.target.value)}
+                        oninput={(e) => handleInputChange("x", e.target.value)}
                     />
                 </div>
 
@@ -93,7 +93,7 @@
                         {step}
                         {disabled}
                         class="w-full text-center text-sm font-mono text-foreground bg-transparent border-0 p-0 focus:outline-none transition-all duration-200 group-hover:font-bold [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        on:input={(e) => handleInputChange("y", e.target.value)}
+                        oninput={(e) => handleInputChange("y", e.target.value)}
                     />
                 </div>
 
@@ -107,7 +107,7 @@
                         {step}
                         {disabled}
                         class="w-full text-center text-sm font-mono text-foreground bg-transparent border-0 p-0 focus:outline-none transition-all duration-200 group-hover:font-bold [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        on:input={(e) => handleInputChange("z", e.target.value)}
+                        oninput={(e) => handleInputChange("z", e.target.value)}
                     />
                 </div>
 

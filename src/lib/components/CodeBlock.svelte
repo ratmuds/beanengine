@@ -66,8 +66,7 @@
             {#each config.fields as field}
                 {#if field.label}<p class="mx-1">{field.label}</p>{/if}
                 <FieldInput {field} {item} {onUpdate} />
-                <svelte:component
-                    this={field.icon}
+                <field.icon
                     class="w-8 h-8 p-2 rounded-full outline"
                 />
             {/each}
@@ -85,8 +84,8 @@
                         "outline-offset": "2px",
                     },
                 }}
-                on:consider={(e) => onChildDndConsider?.(e, item.id)}
-                on:finalize={(e) => onChildDndFinalize?.(e, item.id)}
+                onconsider={(e) => onChildDndConsider?.(e, item.id)}
+                onfinalize={(e) => onChildDndFinalize?.(e, item.id)}
                 class="min-h-32 bg-[#1e1e1e] rounded-l-lg m-2 ml-6 p-2 z-10 w-full"
             >
                 {#each item.children as child (child.id)}

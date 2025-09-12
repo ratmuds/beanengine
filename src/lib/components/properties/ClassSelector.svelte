@@ -133,7 +133,7 @@
             variant="ghost"
             size="sm"
             class="absolute right-1 top-1 h-6 w-6 p-0 text-gray-400 hover:text-blue-400"
-            on:click={() => inputValue.trim() && addClass(inputValue.trim())}
+            onclick={() => inputValue.trim() && addClass(inputValue.trim())}
             disabled={!inputValue.trim()}
         >
             <Plus class="w-3 h-3" />
@@ -151,7 +151,7 @@
                         index
                             ? 'bg-blue-600/20 text-blue-300'
                             : 'text-gray-300 hover:bg-gray-700/60'}"
-                        on:click={() => selectSuggestion(suggestion)}
+                        onclick={() => selectSuggestion(suggestion)}
                     >
                         {#if isCreateNew}
                             <Plus class="w-3 h-3 text-green-400" />
@@ -180,7 +180,7 @@
                         <span>{className}</span>
                         <button
                             class="hover:text-red-400 transition-colors"
-                            on:click={() => removeClass(className)}
+                            onclick={() => removeClass(className)}
                         >
                             <X class="w-3 h-3" />
                         </button>
@@ -206,7 +206,7 @@
                     variant="outline"
                     size="sm"
                     class="h-6 px-2 text-xs bg-gray-800/20 border-gray-700/30 text-gray-400 hover:text-gray-200 hover:bg-gray-700/40"
-                    on:click={() => addClass(suggestion)}
+                    onclick={() => addClass(suggestion)}
                 >
                     {suggestion}
                 </Button>

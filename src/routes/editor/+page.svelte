@@ -90,7 +90,7 @@
     }
 
     let selectedObject = $state(-1);
-    let objectExplorerRef: any;
+    let objectExplorerRef = $state<any>();
 
     // Keyboard shortcuts
     function handleKeydown(event: KeyboardEvent) {
@@ -672,8 +672,7 @@
                                             value={tab.id}
                                             class="h-8 px-4 text-sm rounded-lg border-0 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 font-medium"
                                         >
-                                            <svelte:component
-                                                this={tab.icon}
+                                            <tab.icon
                                                 class="w-4 h-4 mr-2"
                                             />
                                             {tab.label}
@@ -719,8 +718,7 @@
                                                 }
                                             }}
                                         >
-                                            <svelte:component
-                                                this={tab.icon}
+                                            <tab.icon
                                                 class="w-4 h-4 mr-3"
                                             />
                                             {tab.label}
