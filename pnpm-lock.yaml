@@ -14,6 +14,9 @@ importers:
       '@neodrag/svelte':
         specifier: ^2.3.3
         version: 2.3.3(svelte@5.36.15)
+      '@newkrok/three-particles':
+        specifier: ^2.1.0
+        version: 2.1.0(three@0.178.0)
       '@threlte/core':
         specifier: ^8.1.3
         version: 8.1.3(svelte@5.36.15)(three@0.178.0)
@@ -394,6 +397,14 @@ packages:
     resolution: {integrity: sha512-avXzhrilsBsnMFljhVAQ7h+6hbSIrvRCJ61GCiGbGISkC1QOhjDCNvPZo2+7KVwiYrnUBx4NRH0kTIqrcxv9Lg==}
     peerDependencies:
       svelte: ^3.0.0 || ^4.0.0 || ^5.0.0
+
+  '@newkrok/three-particles@2.1.0':
+    resolution: {integrity: sha512-wPGHj3fcjAXvwlqdYrd8rWr2qSc/+thR26NBJOkp0fbjbKx3sfSmXf51wvjMk16/QocU1I2rWXJga//NvGC9dg==}
+    peerDependencies:
+      three: ^0.177.0
+
+  '@newkrok/three-utils@1.1.0':
+    resolution: {integrity: sha512-6pdYMADQJiNExiQRwe6s9KW9GSZ0XMaBvZfWtNXSXaFhlqGjCXFOjKQ/SEiSV1G6B6rRp7VqdukxhqZJnhuJMA==}
 
   '@noble/ciphers@0.6.0':
     resolution: {integrity: sha512-mIbq/R9QXk5/cTfESb1OKtyFnk7oc1Om/8onA1158K9/OZUQFDEVy55jVTato+xmp3XX6F6Qh0zz0Nc1AxAlRQ==}
@@ -1004,6 +1015,9 @@ packages:
 
   earcut@2.2.4:
     resolution: {integrity: sha512-/pjZsA1b4RPHbeWZQn66SWS8nZZWLQQ23oE3Eam7aroEFGEvwKAsJfZ9ytiEMycfzXWpca4FA9QIOehf7PocBQ==}
+
+  easing-functions@1.3.0:
+    resolution: {integrity: sha512-uA6jSE900PXdjQ5TYOcHgqS26lbe7kr5gUQvufQ5clmjqQN5GiSIzK9bbL0kT18iWw7ymHEVXiUkmIe1Shb2bA==}
 
   enhanced-resolve@5.18.2:
     resolution: {integrity: sha512-6Jw4sE1maoRJo3q8MsSIn2onJFbLTOjY9hlx4DZXmOKvLRd1Ok2kXmAGXaafL2+ijsJZ1ClYbl/pmqr9+k4iUQ==}
@@ -1658,6 +1672,9 @@ packages:
     peerDependencies:
       three: '>= 0.159.0'
 
+  three-noise@1.1.2:
+    resolution: {integrity: sha512-8RPBvmPhyMscyoCdFd9zBhpmedPXnjMU+fbP+QDnDAmrqqt5tWPJfv/B7RZoK7DUp04MYrkudp5Na7xmhW7Z4A==}
+
   three-perf@1.0.11:
     resolution: {integrity: sha512-OgBpZjwL+csQKGKZjpkH/QHdbGFMxqngMbSEJeSnVNfXDYd6On7WHNv/GhUZH4YxIpNMwMahBWrNnsJvnbSJHQ==}
     peerDependencies:
@@ -1667,6 +1684,12 @@ packages:
     resolution: {integrity: sha512-Jo9Liur1rUmdKk75FZumLU/+hbF+RtJHi1qsKZpntjKlCYScK6tjbYoqvJ9M+IJphrlQJF5oReFW7Sambh0N4Q==}
     peerDependencies:
       three: '>=0.162.0 <1.0.0'
+
+  three@0.128.0:
+    resolution: {integrity: sha512-i0ap/E+OaSfzw7bD1TtYnPo3VEplkl70WX5fZqZnfZsE3k3aSFudqrrC9ldFZfYFkn1zwDmBcdGfiIm/hnbyZA==}
+
+  three@0.141.0:
+    resolution: {integrity: sha512-JaSDAPWuk4RTzG5BYRQm8YZbERUxTfTDVouWgHMisS2to4E5fotMS9F2zPFNOIJyEFTTQDDKPpsgZVThKU3pXA==}
 
   three@0.178.0:
     resolution: {integrity: sha512-ybFIB0+x8mz0wnZgSGy2MO/WCO6xZhQSZnmfytSPyNpM0sBafGRVhdaj+erYh5U+RhQOAg/eXqw5uVDiM2BjhQ==}
@@ -2007,6 +2030,17 @@ snapshots:
   '@neodrag/svelte@2.3.3(svelte@5.36.15)':
     dependencies:
       svelte: 5.36.15
+
+  '@newkrok/three-particles@2.1.0(three@0.178.0)':
+    dependencies:
+      '@newkrok/three-utils': 1.1.0
+      easing-functions: 1.3.0
+      three: 0.178.0
+      three-noise: 1.1.2
+
+  '@newkrok/three-utils@1.1.0':
+    dependencies:
+      three: 0.141.0
 
   '@noble/ciphers@0.6.0': {}
 
@@ -2605,6 +2639,8 @@ snapshots:
   diet-sprite@0.0.1: {}
 
   earcut@2.2.4: {}
+
+  easing-functions@1.3.0: {}
 
   enhanced-resolve@5.18.2:
     dependencies:
@@ -3253,6 +3289,10 @@ snapshots:
     dependencies:
       three: 0.178.0
 
+  three-noise@1.1.2:
+    dependencies:
+      three: 0.128.0
+
   three-perf@1.0.11(three@0.178.0):
     dependencies:
       three: 0.178.0
@@ -3262,6 +3302,10 @@ snapshots:
   three-viewport-gizmo@2.2.0(three@0.178.0):
     dependencies:
       three: 0.178.0
+
+  three@0.128.0: {}
+
+  three@0.141.0: {}
 
   three@0.178.0: {}
 

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { T } from "@threlte/core";
     import {
         Grid,
         OrbitControls,
@@ -11,6 +10,9 @@
     } from "@threlte/extras";
     import * as Types from "$lib/types";
     import { sceneStore } from "$lib/sceneStore";
+    import { T, useTask } from "@threlte/core";
+    import { onMount } from "svelte";
+    import * as THREE from "three";
 
     let {
         selectedObject = $bindable(-1),
@@ -25,8 +27,13 @@
     interactivity();
 
     // Store group references for each object
-    let groupRefs = $state({});
+    let groupRefs: Record<string, any> = $state({});
     let showTransformControls = $state(true);
+
+    // Particle system state
+    let particlePositions = $state<Float32Array>(new Float32Array(0));
+    let particleCount = 1000;
+    let time = $state(0);
 
     // Workaround because Svelte reactivity breaks the transform controls so we have to recreate it everytime
     function resetTransformControlsState() {
@@ -50,6 +57,38 @@
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
     console.warn("TODO: handle objects having children (local position)");
+
+    // Initialize particle positions
+    onMount(() => {
+        const positions = new Float32Array(particleCount * 3);
+        
+        for (let i = 0; i < particleCount; i++) {
+            const i3 = i * 3;
+            positions[i3] = (Math.random() - 0.5) * 20; // x
+            positions[i3 + 1] = (Math.random() - 0.5) * 20; // y
+            positions[i3 + 2] = (Math.random() - 0.5) * 20; // z
+        }
+        
+        particlePositions = positions;
+    });
+
+    // Animate particles
+    useTask((delta) => {
+        time += delta;
+        
+        if (particlePositions.length > 0) {
+            for (let i = 0; i < particleCount; i++) {
+                const i3 = i * 3;
+                // Simple floating animation
+                particlePositions[i3 + 1] += Math.sin(time * 2 + i * 0.1) * 0.01;
+                
+                // Reset particles that fall too low
+                if (particlePositions[i3 + 1] < -10) {
+                    particlePositions[i3 + 1] = 10;
+                }
+            }
+        }
+    });
 </script>
 
 <T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
@@ -60,6 +99,27 @@
 
 <T.AmbientLight intensity={0.3} />
 
+<!-- Particle System -->
+{#if particlePositions.length > 0}
+    <T.Points>
+        <T.BufferGeometry>
+            <T.BufferAttribute
+                attach="attributes.position"
+                array={particlePositions}
+                count={particleCount}
+                itemSize={3}
+            />
+        </T.BufferGeometry>
+        <T.PointsMaterial
+            color="#ffffff"
+            size={0.1}
+            sizeAttenuation={true}
+            transparent={true}
+            opacity={0.8}
+        />
+    </T.Points>
+{/if}
+
 <!-- Scene Rendering -->
 {#each $sceneStore
     .getScene()
@@ -68,13 +128,13 @@
         object.position.x,
         object.position.y,
         object.position.z,
-    ]}
+    ] as [number, number, number]}
     {@const rotation = [
         object.rotation.x,
         object.rotation.y,
         object.rotation.z,
-    ]}
-    {@const scale = [object.scale.x, object.scale.y, object.scale.z]}
+    ] as [number, number, number]}
+    {@const scale = [object.scale.x, object.scale.y, object.scale.z] as [number, number, number]}
     <T.Group bind:ref={groupRefs[object.id]} {position} {rotation} {scale}>
         {#if object instanceof Types.BPart}
             <!-- Render Parts with meshes -->
@@ -106,9 +166,12 @@
                         <T.PlaneGeometry args={[2, 2]} />
                     {/if}
                 {:else if object.meshSource.value && assetStore.getAsset(object.meshSource.value)?.url}
-                    {#await useGltf(assetStore.getAsset(object.meshSource.value).url) then gltf}
-                        <T is={gltf.scene} />
-                    {/await}
+                    {@const asset = assetStore.getAsset(object.meshSource.value)}
+                    {#if asset?.url}
+                        {#await useGltf(asset.url) then gltf}
+                            <T is={gltf.scene} />
+                        {/await}
+                    {/if}
                 {/if}
 
                 <!-- Material Rendering -->
@@ -116,7 +179,7 @@
                     {@const material = $materialStore.getMaterial(
                         object.material
                     )}
-                    {#if material.type === "basic"}
+                    {#if material && material.type === "basic"}
                         <!-- Basic Material -->
                         {#if material.textures.albedo && $assetStore.getAsset(material.textures.albedo)}
                             <T.MeshStandardMaterial
@@ -128,7 +191,7 @@
                         {:else}
                             <T.MeshStandardMaterial color={material.color} />
                         {/if}
-                    {:else if material.type === "pbr"}
+                    {:else if material && material.type === "pbr"}
                         <!-- PBR Material -->
                         <T.MeshStandardMaterial
                             color={material.color}

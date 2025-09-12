@@ -41,6 +41,7 @@
         Gamepad2,
         Clapperboard,
         Plus,
+        Sparkles,
     } from "lucide-svelte";
 
     import { Canvas } from "@threlte/core";
@@ -58,8 +59,10 @@
 
     import AssetBrowser from "$lib/components/AssetBrowser.svelte";
     import MaterialBrowser from "$lib/components/MaterialBrowser.svelte";
+    import ParticleBrowser from "$lib/components/ParticleBrowser.svelte";
     import { materialStore } from "$lib/materialStore";
     import { assetStore } from "$lib/assetStore";
+    import { particleStore } from "$lib/particleStore";
     import { runtimeStore } from "$lib/runtimeStore";
     import type { BAsset } from "$lib/types";
 
@@ -175,6 +178,13 @@
             id: "materials",
             label: "Materials",
             icon: Palette,
+            closeable: true,
+            visible: false,
+        },
+        {
+            id: "particles",
+            label: "Particles",
+            icon: Sparkles,
             closeable: true,
             visible: false,
         },
@@ -876,6 +886,13 @@
                                 class="h-full m-0 p-0"
                             >
                                 <MaterialBrowser />
+                            </Tabs.Content>
+
+                            <Tabs.Content
+                                value="particles"
+                                class="h-full m-0 p-0"
+                            >
+                                <ParticleBrowser />
                             </Tabs.Content>
 
                             <Tabs.Content value="assets" class="h-full m-0 p-0">

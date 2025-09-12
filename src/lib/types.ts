@@ -584,6 +584,69 @@ class BMaterial {
     }
 }
 
+// Range (for particles - min, max)
+class BRange {
+    min: any;
+    max: any;
+
+    constructor(min: any, max: any) {
+        this.min = min;
+        this.max = max;
+    }
+}
+
+// Range squared (for particles - min, max on the start and end)
+class BRange2 {
+    minStart: any;
+    maxStart: any;
+    minEnd: any;
+    maxEnd: any;
+
+    constructor(minStart: any, maxStart: any, minEnd: any, maxEnd: any) {
+        this.minStart = minStart;
+        this.maxStart = maxStart;
+        this.minEnd = minEnd;
+        this.maxEnd = maxEnd;
+    }
+}
+
+class BParticle {
+    id: string;
+    name: string;
+
+    // Particle properties
+    rotation: BVector3;
+    scale: BVector3;
+    lifetime: BRange; // Lifetime in seconds
+    duration: number; // Duration in seconds
+    looping: boolean; // Whether the particles should loop
+    speed: BRange2; // Particle speed
+    color: BRange2; // Particle color
+    size: BRange2; // Particle size
+    opacity: BRange2; // Particle opacity (0-1)
+    gravity: number; // Gravity effect on particles
+    rate: BRange2; // Particle emission rate
+    emitter: "sphere" | "cone" | "circle"; //
+
+    constructor(name: string) {
+        this.id = nanoid();
+        this.name = name;
+
+        this.rotation = new BVector3(0, 0, 0);
+        this.scale = new BVector3(1, 1, 1);
+        this.lifetime = new BRange(1, 1);
+        this.duration = 1;
+        this.looping = false;
+        this.speed = new BRange2(1, 1, 1, 1);
+        this.color = new BRange2("#ffffff", "#ffffff", "#ffffff", "#ffffff");
+        this.size = new BRange2(1, 1, 1, 1);
+        this.opacity = new BRange2(1, 1, 1, 1);
+        this.gravity = 0;
+        this.rate = new BRange2(1, 1, 1, 1);
+        this.emitter = "sphere";
+    }
+}
+
 // Export all classes
 export {
     BScene,
@@ -598,6 +661,7 @@ export {
     BAsset,
     BAssetCollection,
     BMaterial,
+    BParticle,
     type AssetType,
     type BAssetMetadata,
     type PrimitiveMeshType,
