@@ -65,19 +65,30 @@
         items = e.detail.items;
     }
 
-    // DND functions for nested children in code blocks
+    // --- recursive helpers for deep nesting ---
+    function updateChildrenById(list: any[], id: any, newChildren: any[]): boolean {
+        for (const node of list) {
+            if (node.id === id) {
+                node.children = newChildren;
+                return true;
+            }
+            if (node.children && node.children.length) {
+                if (updateChildrenById(node.children, id, newChildren)) return true;
+            }
+        }
+        return false;
+    }
+
+    // DND functions for nested children in code blocks (recursive to handle nesting)
     function handleChildDndConsider(e, itemId) {
-        const item = items.find((i) => i.id === itemId);
-        if (item) {
-            item.children = e.detail.items;
+        if (updateChildrenById(items, itemId, e.detail.items)) {
+            // trigger reactivity at top level
             items = [...items];
         }
     }
 
     function handleChildDndFinalize(e, itemId) {
-        const item = items.find((i) => i.id === itemId);
-        if (item) {
-            item.children = e.detail.items;
+        if (updateChildrenById(items, itemId, e.detail.items)) {
             items = [...items];
         }
     }

@@ -28,16 +28,38 @@ export interface RunningScript {
     lastUpdate: Date;
 }
 
+export interface InputState {
+    mouseButtons: {
+        left: boolean;
+        right: boolean;
+        middle: boolean;
+    };
+    keys: Map<string, boolean>;
+    mousePosition: { x: number; y: number };
+    mouseDelta: { x: number; y: number };
+}
+
 class RuntimeManager {
     public logs: RuntimeLog[];
     public variables: Map<string, RuntimeVariable>;
     public runningScripts: Map<string, RunningScript>;
+    public inputState: InputState;
     public maxLogs: number;
 
     constructor() {
         this.logs = [];
         this.variables = new Map();
         this.runningScripts = new Map();
+        this.inputState = {
+            mouseButtons: {
+                left: false,
+                right: false,
+                middle: false,
+            },
+            keys: new Map(),
+            mousePosition: { x: 0, y: 0 },
+            mouseDelta: { x: 0, y: 0 },
+        };
         this.maxLogs = 1000; // Limit logs to prevent memory issues
     }
 
@@ -71,9 +93,6 @@ class RuntimeManager {
                 break;
             case "warn":
                 console.warn(consoleMessage, data);
-                break;
-            case "debug":
-                console.debug(consoleMessage, data);
                 break;
             default:
                 console.log(consoleMessage, data);
@@ -140,6 +159,54 @@ class RuntimeManager {
 
     getAllRunningScripts(): RunningScript[] {
         return Array.from(this.runningScripts.values());
+    }
+
+    // Input state management
+    setMouseButton(button: 'left' | 'right' | 'middle', pressed: boolean): void {
+        this.inputState.mouseButtons[button] = pressed;
+    }
+
+    getMouseButton(button: 'left' | 'right' | 'middle'): boolean {
+        return this.inputState.mouseButtons[button];
+    }
+
+    setKey(key: string, pressed: boolean): void {
+        this.inputState.keys.set(key.toLowerCase(), pressed);
+    }
+
+    getKey(key: string): boolean {
+        return this.inputState.keys.get(key.toLowerCase()) || false;
+    }
+
+    setMousePosition(x: number, y: number): void {
+        const oldX = this.inputState.mousePosition.x;
+        const oldY = this.inputState.mousePosition.y;
+        this.inputState.mousePosition = { x, y };
+        this.inputState.mouseDelta = { 
+            x: x - oldX, 
+            y: y - oldY 
+        };
+    }
+
+    getMousePosition(): { x: number; y: number } {
+        return { ...this.inputState.mousePosition };
+    }
+
+    getMouseDelta(): { x: number; y: number } {
+        return { ...this.inputState.mouseDelta };
+    }
+
+    resetInputState(): void {
+        this.inputState = {
+            mouseButtons: {
+                left: false,
+                right: false,
+                middle: false,
+            },
+            keys: new Map(),
+            mousePosition: { x: 0, y: 0 },
+            mouseDelta: { x: 0, y: 0 },
+        };
     }
 }
 
@@ -219,6 +286,43 @@ function createRuntimeStore() {
 
         getAllRunningScripts: () => {
             return manager.getAllRunningScripts();
+        },
+
+        // Input state management
+        setMouseButton: (button: 'left' | 'right' | 'middle', pressed: boolean) => {
+            manager.setMouseButton(button, pressed);
+            update((m) => m);
+        },
+
+        getMouseButton: (button: 'left' | 'right' | 'middle') => {
+            return manager.getMouseButton(button);
+        },
+
+        setKey: (key: string, pressed: boolean) => {
+            manager.setKey(key, pressed);
+            update((m) => m);
+        },
+
+        getKey: (key: string) => {
+            return manager.getKey(key);
+        },
+
+        setMousePosition: (x: number, y: number) => {
+            manager.setMousePosition(x, y);
+            update((m) => m);
+        },
+
+        getMousePosition: () => {
+            return manager.getMousePosition();
+        },
+
+        getMouseDelta: () => {
+            return manager.getMouseDelta();
+        },
+
+        resetInputState: () => {
+            manager.resetInputState();
+            update((m) => m);
         },
     };
 }

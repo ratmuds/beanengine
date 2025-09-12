@@ -486,13 +486,13 @@
                 {@const Icon = getObjectIcon(obj)}
                 {@const hasChildren = obj.hasChildren}
                 <div
-                    class="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-all duration-200 {selectedObject ===
+                    class="group relative flex items-center gap-2 px-2 py-2.5 rounded-xl text-sm text-foreground hover:bg-muted/60 cursor-pointer transition-all duration-200 {selectedObject ===
                     obj.id
                         ? 'bg-blue-500/15 text-blue-300 shadow-sm border border-blue-400/30'
                         : dragOverObject === obj.id
                           ? 'bg-green-500/20 border border-green-400/50'
                           : 'hover:shadow-sm'} min-h-[44px]"
-                    style="margin-left: {obj.depth * 20}px"
+                    style="margin-left: {obj.depth * 16}px"
                     onclick={() => handleObjectClick(obj.id)}
                     oncontextmenu={(e) => handleRightClick(e, obj.id)}
                     draggable="true"
@@ -508,7 +508,7 @@
                     {#if obj.depth > 0}
                         <div class="absolute left-0 top-0 bottom-0 flex">
                             {#each Array(obj.depth) as _}
-                                <div class="w-5 flex justify-center">
+                                <div class="w-4 flex justify-center">
                                     <div class="w-px bg-border/40 h-full"></div>
                                 </div>
                             {/each}

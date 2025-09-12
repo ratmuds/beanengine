@@ -53,6 +53,15 @@ export const blockConfig: Record<string, BlockConfig> = {
         children: true,
     },
 
+    forever: {
+        color: colorMap.blue,
+        label: "Forever",
+        fields: [],
+        info: "Continuously runs the code inside it",
+        end: "do",
+        children: true,
+    },
+
     wait: {
         color: colorMap.blue,
         label: "Wait",
@@ -106,6 +115,46 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Sets the variable provided to 'true' or 'false' if the mouse button is pressed.",
+    },
+
+    keypress: {
+        color: colorMap.purple,
+        label: "Key Press",
+        fields: [
+            {
+                type: "text",
+                bind: "key",
+                placeholder: "key name (a, w, s, d, Space, etc.)",
+                icon: Type,
+            },
+            {
+                type: "text",
+                bind: "variable",
+                placeholder: "variable name",
+                icon: Variable,
+            },
+        ],
+        info: "Sets the variable provided to 'true' or 'false' if the specified key is pressed.",
+    },
+
+    mouseposition: {
+        color: colorMap.purple,
+        label: "Mouse Position",
+        fields: [
+            {
+                type: "text",
+                bind: "variableX",
+                placeholder: "x variable name",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "variableY",
+                placeholder: "y variable name",
+                icon: Variable,
+            },
+        ],
+        info: "Sets the X and Y variables to the current mouse position on the canvas.",
     },
 
     log: {

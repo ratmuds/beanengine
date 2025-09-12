@@ -11,6 +11,39 @@
     let gameCamera: THREE.PerspectiveCamera;
     let gameObjectManager: GameObjectManager;
     let physicsInitialized = false;
+    let canvasElement: HTMLCanvasElement;
+
+    // Input handling
+    function handleMouseDown(event: MouseEvent) {
+        const button = event.button === 0 ? 'left' : event.button === 1 ? 'middle' : 'right';
+        runtimeStore.setMouseButton(button, true);
+    }
+
+    function handleMouseUp(event: MouseEvent) {
+        const button = event.button === 0 ? 'left' : event.button === 1 ? 'middle' : 'right';
+        runtimeStore.setMouseButton(button, false);
+    }
+
+    function handleMouseMove(event: MouseEvent) {
+        if (canvasElement) {
+            const rect = canvasElement.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            runtimeStore.setMousePosition(x, y);
+        }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+        runtimeStore.setKey(event.key, true);
+    }
+
+    function handleKeyUp(event: KeyboardEvent) {
+        runtimeStore.setKey(event.key, false);
+    }
+
+    function handleContextMenu(event: MouseEvent) {
+        event.preventDefault(); // Prevent right-click context menu
+    }
 
     // 60fps animation using useTask
     useTask((delta) => {
@@ -66,6 +99,26 @@
         runtimeStore.info("Setting up default lighting...", "GameRuntime");
         gameObjectManager.setupDefaultLighting();
 
+        // Get the canvas element and attach event listeners
+        canvasElement = renderer.domElement;
+        canvasElement.tabIndex = 0; // Make canvas focusable for keyboard events
+        
+        // Mouse events
+        canvasElement.addEventListener('mousedown', handleMouseDown);
+        canvasElement.addEventListener('mouseup', handleMouseUp);
+        canvasElement.addEventListener('mousemove', handleMouseMove);
+        canvasElement.addEventListener('contextmenu', handleContextMenu);
+        
+        // Keyboard events - attach to window for global capture
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        // Focus canvas to ensure it receives events
+        canvasElement.focus();
+
+        // Reset input state when starting
+        runtimeStore.resetInputState();
+
         // Start custom render loop
         runtimeStore.info("Starting custom render loop...", "GameRuntime");
         startRenderLoop();
@@ -88,6 +141,20 @@
         if (animationId) {
             cancelAnimationFrame(animationId);
         }
+
+        // Clean up event listeners
+        if (canvasElement) {
+            canvasElement.removeEventListener('mousedown', handleMouseDown);
+            canvasElement.removeEventListener('mouseup', handleMouseUp);
+            canvasElement.removeEventListener('mousemove', handleMouseMove);
+            canvasElement.removeEventListener('contextmenu', handleContextMenu);
+        }
+        
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+
+        // Reset input state when stopping
+        runtimeStore.resetInputState();
 
         // Clean up GameObjects and their physics components
         if (gameObjectManager) {
