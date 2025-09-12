@@ -1,5 +1,6 @@
 import * as Types from "$lib/types";
 import type { CompiledItem } from "./compiler.js";
+import { runtimeStore } from "$lib/runtimeStore";
 
 export interface RuntimeContext {
     variables: Record<
@@ -11,7 +12,10 @@ export interface RuntimeContext {
     >;
 
     // Recursive evaluation function for nested chips
-    evaluateChip: (compiledChip: CompiledItem | any) => Promise<any>;
+    evaluateChip: (
+        compiledChip: CompiledItem | any,
+        context: RuntimeContext
+    ) => Promise<any>;
 
     // Game context
     gameObject?: any;
@@ -59,7 +63,8 @@ export const chipConfig: Record<string, ChipConfig> = {
         evaluate: (compiled, context) => {
             // compiled.name should be a string in the new flattened structure
             const variableName = compiled.name;
-            return context.variables[variableName]?.value ?? variableName;
+
+            return runtimeStore.getVariable(variableName)?.value ?? "null";
         },
     },
 

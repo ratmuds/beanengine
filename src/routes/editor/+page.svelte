@@ -810,7 +810,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Blockly Workspace -->
+                                    <!-- Code Workspace -->
                                     {#if scripts.length === 0}
                                         <div
                                             class="flex-1 flex items-center justify-center bg-background/20"

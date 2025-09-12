@@ -257,10 +257,10 @@
                     {/if}
                 </div>
 
-                <!-- Active Triggers Drop Zone -->
+                <!-- Triggers Drop Zone -->
                 <div class="p-3">
                     <div class="text-[#ccc] text-sm font-medium mb-2">
-                        Active Triggers
+                        Triggers
                     </div>
                     <div
                         class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30 {triggerDragOverIndex >=
@@ -318,7 +318,7 @@
                             <div class="flex flex-wrap gap-1">
                                 {#each activeTriggers as trigger, i (trigger.id)}
                                     <div
-                                        class="bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-2 py-1 rounded text-xs font-medium shadow-sm cursor-move"
+                                        class="w-full border-l-6 border-yellow-500 bg-muted text-white p-3 rounded text-sm font-semibold shadow-sm cursor-move"
                                         draggable="true"
                                         ondragstart={(e) =>
                                             handleDragStart(

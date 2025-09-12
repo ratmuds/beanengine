@@ -22,6 +22,7 @@ export class CodeInterpreter {
     }
 
     async run(context: RuntimeContext) {
+        // TODO: uhh this doesnt take into account of like if statements, loops, etc
         for (const item of this.code) {
             await this.executeItem(item, context);
         }
@@ -42,15 +43,50 @@ export class CodeInterpreter {
             console.log(`Evaluated ${item.type}:`, result);
         }*/
 
-        if (item.type === "log") {
-            const message = await context.evaluateChip(item.message);
-            const level = await context.evaluateChip(item.level);
+        console.log("INTERPRETING", item);
+
+        if (item.type === "if") {
+            const condition = await context.evaluateChip(
+                item.condition,
+                context
+            );
+            console.log("IF CONDITION:", condition);
+
+            // Evaluate condition - treat empty string, null, undefined, false, 0 as false
+            const shouldExecute =
+                condition &&
+                condition !== "" &&
+                condition !== "0" &&
+                condition !== "false";
+
+            if (
+                shouldExecute &&
+                item.children &&
+                Array.isArray(item.children)
+            ) {
+                console.log("EXECUTING IF CHILDREN", item.children);
+                for (const child of item.children) {
+                    await this.executeItem(child, context);
+                }
+            }
+        } else if (item.type === "log") {
+            console.log("LOGGING", item);
+            const message = await context.evaluateChip(item.message, context);
+            const level = await context.evaluateChip(item.level, context);
+
+            console.log(message, level);
 
             runtimeStore.log(
-                level,
+                level ? level : "info",
                 message,
                 `Interpreter / ${context.script?.name}`
             );
+        }
+
+        if (item.type === "mousebutton") {
+            const variable = await context.evaluateChip(item.variable, context);
+
+            runtimeStore.setVariable(variable, "false");
         }
     }
 }

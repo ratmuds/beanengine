@@ -37,7 +37,7 @@
 
         setTimeout(() => {
             selectedObject = tempSelectedObject;
-        }, 0);
+        }, 100);
     }
 
     // Mesh selector reactive variables

@@ -101,6 +101,9 @@ class RuntimeManager {
             type: typeof value,
             scope,
         };
+
+        console.log("SETTING VARIABLE", name, value);
+
         this.variables.set(name, variable);
     }
 

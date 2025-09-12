@@ -3,7 +3,7 @@ import * as Types from "$lib/types";
 import { Component } from "./Component";
 import type { GameObject } from "./GameObject";
 import { CodeInterpreter } from "$lib/interpreter";
-import { createRuntimeContext } from "$lib/compiler";
+import { compileScript, createRuntimeContext } from "$lib/compiler";
 
 /**
  * ScriptComponent handles code execution for GameObjects with BScript nodes
@@ -34,7 +34,7 @@ export class ScriptComponent extends Component {
         try {
             // Create interpreter
             this.interpreter = new CodeInterpreter(
-                this.script.code,
+                compileScript(this.script.code),
                 this.gameObject
             );
 

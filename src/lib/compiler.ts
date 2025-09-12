@@ -17,7 +17,8 @@ export interface CompiledItem {
 /**
  * Compiles a chip instance to runtime format, stripping UI metadata and flattening structure
  */
-export function compileItem(chip: any): CompiledItem {
+export function compileItem(chip: any): CompiledItem | null {
+    console.log("COMPILING", chip);
     if (!chip) return null;
 
     // Start with base chip data
@@ -25,21 +26,22 @@ export function compileItem(chip: any): CompiledItem {
         type: chip.type,
     };
 
-    // Handle blocks and chips - blocks have params, chips have fields
+    // Handle blocks and chips - blocks can have params or fields, chips have fields
     if (chip.params) {
-        // Code block, compile the parameters
+        // Code block with params, compile the parameters
         for (const [paramName, paramValue] of Object.entries(chip.params)) {
             compiled[paramName] = compileValue(paramValue);
         }
 
         // Recursively compile children
         if (chip.children && Array.isArray(chip.children)) {
+            console.log("COMPILING CHILDREN", chip.children);
             compiled.children = chip.children
                 .map((child) => compileItem(child))
                 .filter(Boolean);
         }
     } else if (chip.fields) {
-        // Chip with fields
+        // Chip with fields (or block with fields like if statements)
         for (const field of chip.fields) {
             const fieldName = field.bind;
 
@@ -57,6 +59,14 @@ export function compileItem(chip: any): CompiledItem {
                     compiled[fieldName] = getDefaultValueForField(field);
                 }
             }
+        }
+
+        // Handle children for blocks with fields (like if statements)
+        if (chip.children && Array.isArray(chip.children)) {
+            console.log("COMPILING CHILDREN FOR BLOCK WITH FIELDS", chip.children);
+            compiled.children = chip.children
+                .map((child: any) => compileItem(child))
+                .filter(Boolean);
         }
     }
 
@@ -121,10 +131,12 @@ function getDefaultValueForField(field: any): any {
  * Creates the evaluateChip function for runtime context
  */
 export function createEvaluateChip(): (
-    compiledChip: CompiledItem | any
+    compiledChip: CompiledItem | any,
+    context: RuntimeContext
 ) => Promise<any> {
     return async function evaluateChip(
-        compiledChip: CompiledItem | any
+        compiledChip: CompiledItem | any,
+        context: RuntimeContext
     ): Promise<any> {
         // Handle literal values (numbers, strings, etc.)
         if (typeof compiledChip !== "object" || compiledChip === null) {
@@ -136,10 +148,7 @@ export function createEvaluateChip(): (
             // This will be handled by the variable chip's evaluate function
             const config = chipConfig["variable"];
             if (config?.evaluate) {
-                return await config.evaluate(
-                    compiledChip,
-                    this as RuntimeContext
-                );
+                return await config.evaluate(compiledChip, context);
             }
             // Fallback: return the variable name if no context
             return compiledChip.name;
@@ -151,7 +160,7 @@ export function createEvaluateChip(): (
             if (config.evaluate) {
                 return await config.evaluate(
                     compiledChip,
-                    this as RuntimeContext
+                    context
                 );
             }
         }
@@ -165,15 +174,15 @@ export function createEvaluateChip(): (
  * Creates a runtime context with variables and evaluation capability
  */
 export function createRuntimeContext(
-    variables: Record<string, { value: any; type: string }>
+    variables: Record<string, { value: any; type: "number" | "string" | "boolean" | "object" }>
 ): RuntimeContext {
     const context: RuntimeContext = {
         variables,
         evaluateChip: null as any, // Will be set below
     };
 
-    // Bind the evaluateChip function to the context
-    context.evaluateChip = createEvaluateChip().bind(context);
+    // Create the evaluateChip function for the context
+    context.evaluateChip = createEvaluateChip();
 
     return context;
 }
