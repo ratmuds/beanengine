@@ -1,6 +1,7 @@
 import * as Types from "$lib/types";
 import type { CompiledItem } from "./compiler.js";
 import { runtimeStore } from "$lib/runtimeStore";
+import { resolveTargetGameObject, getTargetResolutionError } from "$lib/services/targetResolver.js";
 
 export interface RuntimeContext {
     variables: Record<
@@ -106,6 +107,72 @@ export const chipConfig: Record<string, ChipConfig> = {
                 parseFloat(y) || 0,
                 parseFloat(z) || 0
             );
+        },
+    },
+
+    randomInt: {
+        color: "purple-500",
+        label: "Random Int",
+        fields: [
+            {
+                type: "number",
+                bind: "min",
+                label: "Min",
+                placeholder: "Min",
+                defaultValue: 0,
+            },
+            {
+                type: "number",
+                bind: "max",
+                label: "Max",
+                placeholder: "Max",
+                defaultValue: 100,
+            },
+        ],
+        info: "Generates a random integer between min and max",
+        evaluate: (compiled, context) => {
+            const min = parseInt(compiled.min);
+            const max = parseInt(compiled.max);
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        },
+    },
+
+    position: {
+        color: "blue-500",
+        label: "Position",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                label: "Target",
+                placeholder: "(self)",
+                defaultValue: "",
+            },
+        ],
+        info: "Gets the position of a target object",
+        evaluate: async (compiled, context) => {
+            const targetRef = await context.evaluateChip(compiled.target, context);
+
+            // Resolve target object
+            let targetGameObject = context.gameObject; // Default to current object
+            if (targetRef) {
+                const resolvedTarget = resolveTargetGameObject(targetRef, context);
+                if (resolvedTarget) {
+                    targetGameObject = resolvedTarget;
+                } else {
+                    const error = getTargetResolutionError(targetRef, context);
+                    runtimeStore.warn(`Position chip target resolution failed: ${error}`, "Chip");
+                    return null;
+                }
+            }
+
+            if (!targetGameObject) {
+                runtimeStore.warn("Position chip: no target object available", "Chip");
+                return null;
+            }
+
+            // Return the position of the target game object
+            return targetGameObject.transform.position;
         },
     },
 };

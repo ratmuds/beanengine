@@ -1,9 +1,9 @@
 <script lang="ts">
     import { draggable } from "@neodrag/svelte";
-    import { dndzone, dragHandleZone } from "svelte-dnd-action";
+    import { dragHandleZone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/CodeBlock.svelte";
-    import { GripVertical, Edit3 } from "lucide-svelte";
+    import { GripVertical, Edit3, Plus, HelpCircle } from "lucide-svelte";
 
     import { compileScript } from "$lib/compiler.js";
 
@@ -66,14 +66,19 @@
     }
 
     // --- recursive helpers for deep nesting ---
-    function updateChildrenById(list: any[], id: any, newChildren: any[]): boolean {
+    function updateChildrenById(
+        list: any[],
+        id: any,
+        newChildren: any[]
+    ): boolean {
         for (const node of list) {
             if (node.id === id) {
                 node.children = newChildren;
                 return true;
             }
             if (node.children && node.children.length) {
-                if (updateChildrenById(node.children, id, newChildren)) return true;
+                if (updateChildrenById(node.children, id, newChildren))
+                    return true;
             }
         }
         return false;
@@ -231,6 +236,21 @@
             camera.zoom}px; opacity: 0.4; transform: translate({camera.x}px, {camera.y}px);"
     ></div>
 
+    <!-- Floating buttons -->
+    <div class="absolute bottom-4 right-4 flex flex-col gap-2 z-10">
+        <button
+            class="bg-[#252525] text-[#ccc] p-2 rounded-md hover:bg-[#2e2e2e] transition-colors"
+        >
+            <HelpCircle class="w-6 h-6 text-gray-500" />
+        </button>
+
+        <button
+            class="bg-[#252525] text-[#ccc] p-2 rounded-md hover:bg-[#2e2e2e] transition-colors"
+        >
+            <Plus class="w-6 h-6" />
+        </button>
+    </div>
+
     <!-- Viewport container with camera transform -->
     <div
         class="absolute inset-0"
@@ -258,7 +278,12 @@
                         <span
                             class="text-[#ccc] text-sm font-medium cursor-pointer hover:text-white transition-colors"
                             onclick={startEditingTitle}
-                            onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); startEditingTitle(); } }}
+                            onkeydown={(e) => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    startEditingTitle();
+                                }
+                            }}
                             role="button"
                             tabindex="0"
                         >

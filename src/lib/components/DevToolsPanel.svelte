@@ -50,11 +50,13 @@
     });
 
     // Auto-scroll to bottom when new logs arrive
-    $: if (autoScroll && consoleContainer && logs.length > 0) {
+    /*$: if (autoScroll && consoleContainer && logs.length > 0) {
         setTimeout(() => {
-            consoleContainer.scrollTop = consoleContainer.scrollHeight;
+            if (consoleContainer && consoleContainer.scrollHeight) {
+                consoleContainer.scrollTop = consoleContainer.scrollHeight;
+            }
         }, 0);
-    }
+    }*/
 
     function toggleLogLevel(level: LogLevel) {
         if (selectedLogLevels.has(level)) {

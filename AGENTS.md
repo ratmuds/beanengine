@@ -38,6 +38,7 @@ The entire scene is built upon a hierarchy of classes.
 -   `BObject`: The base class for everything in the scene. Provides `id`, `name`, `type`, and parent/child relationships.
 -   `BNode3D`: Extends `BObject`. Adds a 3D transform (`position`, `rotation`, `scale`). This is the base for all objects that exist in the 3D world.
 -   `BPart`: Extends `BNode3D`. A renderable object with a mesh, material, and physical properties. Its mesh can be a primitive (`block`, `sphere`) or a custom model from the asset store.
+-   `BPlayerController`: Extends `BPart`. A specialized part that handles player input for movement and camera control. Contains settings for movement speed, mouse sensitivity, and camera clamp angles.
 -   `BCamera`: Extends `BNode3D`. Represents a camera in the scene.
 -   `BLight`: Extends `BNode3D`. Represents a light source.
 -   `BScript`: Extends `BObject`. A container for visual scripting blocks. It is parented to a `BNode3D` to attach logic to an object.
@@ -77,6 +78,7 @@ When the user enters "play mode", the scene is handed over to the runtime engine
 -   **Core Components**:
     -   `VisualComponent.ts`: Creates and manages the `THREE.Mesh` or `THREE.Light` for a `GameObject`. Uses quaternions for mesh rotation. Creates unit-sized geometries and applies scaling via mesh.scale to avoid double scaling.
     -   `PhysicsComponent.ts`: Manages the `RAPIER.RigidBody` for a `GameObject`, syncing the physics simulation with the object's quaternion-based transform. **Important**: RAPIER's `ColliderDesc.cuboid()` expects half-extents, so scale values are divided by 2. Safely cleans up physics bodies and colliders when destroyed, checking handle validity to prevent double-removal errors.
+    -   `PlayerControllerComponent.ts`: Handles player input for `BPlayerController` objects. Processes WASD keys for movement, applies forces through the `PhysicsComponent`, handles mouse look for rotation, and manages camera rotation with vertical clamping if a `BCamera` is parented to the controller.
     -   `ScriptComponent.ts`: Attaches a `BScript` to a `GameObject` and uses the `CodeInterpreter` to execute its logic.
 
 ---
@@ -96,6 +98,58 @@ The visual scripting system has three main parts: configuration, compilation, an
     -   The interpreter is instantiated and run by the `ScriptComponent` in the runtime engine.
 
 ---
+
+### Transform Hierarchy (Local vs. World)
+
+The runtime engine now uses a parent-child transform hierarchy.
+
+-   **`GameObject.ts`**:
+    -   `localTransform`: Stores the position, rotation, and scale relative to the parent `GameObject`. This is what you modify directly in components like `PlayerControllerComponent`.
+    -   `worldTransform`: Stores the calculated, absolute position, rotation, and scale in world space. This is read-only for most components and is used for rendering.
+    -   `worldMatrix`: The final `THREE.Matrix4` representing the world transform.
+    -   `isPhysicsDriven`: A boolean flag. If `true`, the `GameObject`'s transform is controlled by the physics simulation (`PhysicsComponent`) and not by the parent's transform.
+
+-   **`GameObjectManager.ts`**:
+    -   In its `update` loop, it first calls `updateWorldMatrix()` on all root-level `GameObject`s.
+    -   `GameObject.updateWorldMatrix()`: This method recursively calculates the `worldTransform` for itself and all its children.
+        -   If `isPhysicsDriven` is `true`, it skips the parent-based calculation and uses its own transform as the world transform, but still updates its children.
+        -   Otherwise, it combines its `localTransform` with its parent's `worldTransform`.
+
+-   **Component Interactions**:
+    -   `VisualComponent.ts`: Now reads from `gameObject.worldTransform` to position and orient meshes and lights in the scene, ensuring they render in the correct world-space location. It also calls `mesh.updateMatrix()` and `mesh.updateMatrixWorld(true)` (or the light equivalents) after copying transforms.
+    -   `PhysicsComponent.ts`:
+        -   On initialization, it uses the `gameObject.worldTransform` to create the physics body at the correct initial position and rotation.
+        -   It sets `gameObject.isPhysicsDriven = true`.
+        -   In its `update` loop, it syncs the `GameObject`'s `worldTransform` and `worldMatrix` from the physics simulation's result. It then calculates the correct `localTransform` by comparing the new world transform to the parent's world transform.
+    -   `PlayerControllerComponent.ts`:
+        -   Modifies `gameObject.localTransform` for player rotation (yaw).
+        -   Modifies the child camera's `localTransform` for camera pitch, creating the standard FPS camera behavior where the camera's final orientation is a combination of the player's body rotation and its own local pitch.
+
+---
+
+### Runtime Context and Transform Mutation Rules
+
+- RuntimeContext.gameObject is a direct reference to the live runtime GameObject created by GameObjectManager at Play Mode start. Scripts must mutate its transform vectors (THREE.Vector3/Quaternion) in place rather than replacing them to ensure VisualComponent and Three.js see the change.
+- Do this: `context.gameObject.transform.position.set(x, y, z)` or `add(...)`; avoid `context.gameObject.transform.position = new Vector3(...)`.
+- VisualComponent reads the transform each frame and pushes it to the underlying THREE.Mesh, calling updateMatrix/updateMatrixWorld as needed. If you replace the vector instance, downstream references won’t update.
+- PhysicsComponent similarly expects in-place mutation to keep RAPIER bodies in sync.
+- The interpreter normalize-and-apply pattern should parse inputs to numbers/vectors and then call `.set(...)` on existing transform vectors. This is now implemented in interpreter executeMove.
+
+
+
+### Runtime Transform Source of Truth and Cameras
+
+- Runtime uses GameObjects only; BNode3D (editor types like BPart/BCamera/BPlayerController) are converted at Play start into GameObject instances with Components. Do NOT mutate Types.B* rotations/positions at runtime; those are editor-side and Euler-based.
+- Rotation model: editor-side BNode3D.rotation is Euler; at runtime we convert to a Quaternion on GameObject.transform. All runtime rotation changes must set/modify GameObject.transform.rotation (Quaternion). Avoid assigning new Quaternion objects; mutate existing with setFromEuler/set(...) and then normalize.
+- Cameras: We now create a GameObject for each BCamera and attach a CameraComponent that owns a THREE.PerspectiveCamera. GameObjectManager.initializeFromScene selects the active camera from the BCamera.isActive flag and returns the CameraComponent's THREE camera to GameRuntime.svelte. VisualComponent draws only a helper mesh for BCamera and no longer creates/owns the THREE camera.
+- PlayerController: Mouse look and movement apply to the runtime GameObject(s). Yaw is applied to the PlayerController's GameObject.transform.rotation; pitch is applied to the child Camera GameObject (if present) with clamping. No direct mutation of Types.BCamera or Types.BPlayerController rotations at runtime.
+
+#### Camera Aspect & Render Loop
+
+- GameRuntime computes the aspect from the actual canvas size and propagates it to cameras: it reads `renderer.domElement.getBoundingClientRect()`, computes `width/height`, calls `GameObjectManager.updateCameraAspect(aspect)`, and also applies it to the fallback default camera. It updates this on `window.resize`.
+- GameObjectManager exposes `updateCameraAspect(aspect)` which iterates all runtime `GameObject`s, finds `CameraComponent`s, and calls `setAspect(aspect)` so each camera updates its projection matrix.
+- CameraComponent owns a `THREE.PerspectiveCamera`, syncs from the GameObject's `worldTransform` each frame, and provides `setAspect(aspect)` to safely update projection.
+- The runtime render loop renders with the active camera from `GameObjectManager.getCamera()` if present, otherwise falls back to the default camera created by `GameRuntime`.
 
 ## 7. Editor UI
 

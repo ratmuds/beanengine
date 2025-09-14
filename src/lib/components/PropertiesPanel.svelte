@@ -174,7 +174,12 @@
     <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">
-            <h2 class="text-foreground font-semibold text-lg">Properties</h2>
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-purple-500/10 rounded-lg">
+                    <Settings class="w-5 h-5 text-purple-400" />
+                </div>
+                <h2 class="text-foreground font-semibold text-lg">Properties</h2>
+            </div>
             <Button
                 variant="ghost"
                 size="sm"
@@ -530,7 +535,16 @@
                 <pre
                     class="text-xs text-muted-foreground overflow-auto max-h-48 bg-muted/20 p-3 rounded-lg font-mono">{JSON.stringify(
                         object,
-                        null,
+                        (key, value) => {
+                            // Handle circular references by excluding parent and replacing children with IDs
+                            if (key === 'parent') {
+                                return value ? { id: value.id, name: value.name, type: value.type } : null;
+                            }
+                            if (key === 'children') {
+                                return value.map(child => ({ id: child.id, name: child.name, type: child.type }));
+                            }
+                            return value;
+                        },
                         2
                     )}</pre>
             </div>

@@ -12,13 +12,13 @@ export class ScriptComponent extends Component {
     private interpreter: CodeInterpreter | null = null;
     private script: Types.BScript;
     private scene: THREE.Scene;
-    private variablesMap: Record<string, { value: any; type: string }>;
+    private variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }>;
 
     constructor(
         gameObject: GameObject,
         script: Types.BScript,
         scene: THREE.Scene,
-        variablesMap: Record<string, { value: any; type: string }> = {}
+        variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }> = {}
     ) {
         super(gameObject);
         this.script = script;
@@ -32,9 +32,15 @@ export class ScriptComponent extends Component {
      */
     private initializeInterpreter(): void {
         try {
+            // Stop any existing interpreter before creating a new one
+            if (this.interpreter) {
+                this.interpreter.stop();
+                this.interpreter = null;
+            }
+
             // Create interpreter
             this.interpreter = new CodeInterpreter(
-                compileScript(this.script.code),
+                compileScript(this.script.code as any[]),
                 this.gameObject
             );
 
@@ -82,7 +88,7 @@ export class ScriptComponent extends Component {
      * Update the variables map (useful when scene variables change)
      */
     updateVariables(
-        variablesMap: Record<string, { value: any; type: string }>
+        variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }>
     ): void {
         this.variablesMap = variablesMap;
     }
@@ -90,9 +96,15 @@ export class ScriptComponent extends Component {
     /**
      * Restart the script with new code or variables
      */
-    restartScript(newCode?: string): void {
+    restartScript(newCode?: any[]): void {
+        // Ensure previous interpreter is stopped
+        if (this.interpreter) {
+            this.interpreter.stop();
+            this.interpreter = null;
+        }
         if (newCode) {
-            this.script.code = newCode;
+            // Script.code appears to be an array of items per CodeEditor
+            this.script.code = newCode as any;
         }
         this.initializeInterpreter();
     }
@@ -116,7 +128,10 @@ export class ScriptComponent extends Component {
      */
     destroy(): void {
         // Clean up interpreter if it has cleanup methods
-        this.interpreter = null;
+        if (this.interpreter) {
+            this.interpreter.stop();
+            this.interpreter = null;
+        }
         super.destroy();
     }
 }

@@ -337,19 +337,17 @@
 
         if (play) {
             runtimeStore.clearLogs();
-        }
-
-        /*if (play) {
-            leftPanelSize = 0;
+            // Store current panel sizes before entering play mode
+            // Then hide panels for full-screen game view
+            /*leftPanelSize = 0;
             rightPanelSize = 0;
-            centerPanelSize = 100;
+            centerPanelSize = 100;*/
         } else {
-            leftPanelSize = 20;
+            // Restore panels when exiting play mode
+            /*leftPanelSize = 20;
             rightPanelSize = 20;
-            centerPanelSize = 60;
-
-            // TODO: make this remember previous size
-        }*/
+            centerPanelSize = 60;*/
+        }
     }
 
     // Asset browser handlers
@@ -368,6 +366,74 @@
             // newPart.mesh = asset.metadata.id; // Reference to the asset
             console.log("Created part with mesh:", asset.metadata.name);
         }
+    }
+
+    // ObjectExplorer event handlers
+    function handleCopyObject(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        console.log("Object copied:", id);
+        // The actual copying is handled in ObjectExplorer component
+    }
+
+    function handlePasteObject(event: CustomEvent<{ copiedObject: any; parentId: string | number }>) {
+        const { copiedObject, parentId } = event.detail;
+        console.log("Pasting object:", copiedObject.name, "to parent:", parentId);
+        
+        // Create a new object based on the copied object
+        const newObject = structuredClone(copiedObject);
+        // Generate a new unique ID
+        newObject.id = crypto.randomUUID();
+        // Update the name to indicate it's a copy
+        newObject.name = `${copiedObject.name} Copy`;
+        // Set the parent
+        newObject.parentId = parentId === -1 ? null : parentId;
+        
+        // Add to scene
+        sceneStore.addObject(newObject);
+        console.log("Object pasted with new ID:", newObject.id);
+    }
+
+    function handleDuplicateObject(event: CustomEvent<{ originalId: string; duplicatedObject: any }>) {
+        const { originalId, duplicatedObject } = event.detail;
+        console.log("Duplicating object:", originalId);
+        
+        // Create a new object based on the duplicated object
+        const newObject = structuredClone(duplicatedObject);
+        // Generate a new unique ID
+        newObject.id = crypto.randomUUID();
+        // Update the name to indicate it's a duplicate
+        newObject.name = `${duplicatedObject.name} Copy`;
+        
+        // Add to scene with same parent as original
+        sceneStore.addObject(newObject);
+        console.log("Object duplicated with new ID:", newObject.id);
+    }
+
+    function handleDeleteObject(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        console.log("Deleting object:", id);
+        
+        // Find the object first
+        const objectToDelete = sceneStore.getObjectById(id);
+        if (objectToDelete) {
+            // Remove from scene
+            sceneStore.removeObject(objectToDelete);
+            
+            // If the deleted object was selected, clear selection
+            if (selectedObject === id) {
+                selectedObject = -1;
+            }
+        } else {
+            console.warn("Object not found for deletion:", id);
+        }
+    }
+
+    function handleGotoObject(event: CustomEvent<{ id: string }>) {
+        const { id } = event.detail;
+        console.log("Going to object:", id);
+        // This could focus the camera on the object or highlight it in the viewport
+        // For now, just select it
+        selectedObject = id;
     }
 </script>
 
@@ -641,6 +707,11 @@
                         bind:selectedObject
                         on:addObject={handleAddObject}
                         on:reparentObject={handleReparentObject}
+                        on:copyObject={handleCopyObject}
+                        on:pasteObject={handlePasteObject}
+                        on:duplicateObject={handleDuplicateObject}
+                        on:deleteObject={handleDeleteObject}
+                        on:gotoObject={handleGotoObject}
                     />
                 {:else if activeTab === "script"}
                     <CodePalette selectedScript={selectedScriptObject} />
@@ -651,6 +722,11 @@
                         bind:selectedObject
                         on:addObject={handleAddObject}
                         on:reparentObject={handleReparentObject}
+                        on:copyObject={handleCopyObject}
+                        on:pasteObject={handlePasteObject}
+                        on:duplicateObject={handleDuplicateObject}
+                        on:deleteObject={handleDeleteObject}
+                        on:gotoObject={handleGotoObject}
                     />
                 {/if}
             </ResizablePane>
@@ -682,9 +758,7 @@
                                             value={tab.id}
                                             class="h-8 px-4 text-sm rounded-lg border-0 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-foreground text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 font-medium"
                                         >
-                                            <tab.icon
-                                                class="w-4 h-4 mr-2"
-                                            />
+                                            <tab.icon class="w-4 h-4 mr-2" />
                                             {tab.label}
                                         </Tabs.Trigger>
                                         {#if tab.closeable}
@@ -728,9 +802,7 @@
                                                 }
                                             }}
                                         >
-                                            <tab.icon
-                                                class="w-4 h-4 mr-3"
-                                            />
+                                            <tab.icon class="w-4 h-4 mr-3" />
                                             {tab.label}
                                         </DropdownMenuCheckboxItem>
                                     {/each}
@@ -996,6 +1068,9 @@
                 collapsedSize={0}
                 class="transition-all duration-700 ease-out"
             >
+                <!-- this p is for helping svelte realize to switch the panels, idk why this fixes it but yeah -->
+                <p class="hidden">{play}</p>
+
                 {#if play}
                     <DevToolsPanel />
                 {:else}

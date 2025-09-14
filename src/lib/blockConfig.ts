@@ -76,9 +76,30 @@ export const blockConfig: Record<string, BlockConfig> = {
         info: "Pauses execution for a duration",
     },
 
-    moveto: {
+    move: {
         color: colorMap.green,
         label: "Move",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "position",
+                label: "by",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Moves the target object by the specified position. If no target is provided, it moves the object this script is on.",
+    },
+
+    moveto: {
+        color: colorMap.green,
+        label: "Move To",
         fields: [
             {
                 type: "text",
@@ -95,6 +116,46 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Moves the target object to a specific position. If no target is provided, it moves the object this script is on.",
+    },
+
+    directionalforce: {
+        color: colorMap.green,
+        label: "Directional Force",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "direction",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Sets the directional force in the specified direction to the object this script is on. If no target is provided, it applies the force to the object this script is on.",
+    },
+
+    directionalimpulse: {
+        color: colorMap.green,
+        label: "Directional Impulse",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "direction",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Applies a directional impulse in the specified direction to the object this script is on. If no target is provided, it applies the force to the object this script is on.",
     },
 
     mousebutton: {

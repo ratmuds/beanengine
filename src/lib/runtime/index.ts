@@ -6,3 +6,4 @@ export { VisualComponent } from "./VisualComponent";
 export { ScriptComponent } from "./ScriptComponent";
 export { PhysicsComponent } from "./PhysicsComponent";
 export { GameObjectManager } from "./GameObjectManager";
+export { CameraComponent } from "./CameraComponent";

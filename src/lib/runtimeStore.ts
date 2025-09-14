@@ -1,5 +1,6 @@
 // src/lib/runtimeStore.ts
 import { writable } from "svelte/store";
+import type { GameObjectManager } from "$lib/runtime/GameObjectManager";
 import { nanoid } from "nanoid";
 
 export type LogLevel = "info" | "warn" | "error";
@@ -37,6 +38,17 @@ export interface InputState {
     keys: Map<string, boolean>;
     mousePosition: { x: number; y: number };
     mouseDelta: { x: number; y: number };
+    mouseCaptured: boolean;
+    canvasCenter: { x: number; y: number };
+    canvasElement: HTMLCanvasElement | null;
+}
+
+export interface ScriptEvent {
+    name: string;
+    params: {
+        name: string;
+        type: string;
+    }[];
 }
 
 class RuntimeManager {
@@ -45,6 +57,9 @@ class RuntimeManager {
     public runningScripts: Map<string, RunningScript>;
     public inputState: InputState;
     public maxLogs: number;
+    public gameObjectManager: GameObjectManager | null = null;
+    public scriptEvents: Map<string, ScriptEvent>;
+    public scriptEventListeners: Map<string, Set<(args: any[]) => void>>;
 
     constructor() {
         this.logs = [];
@@ -59,8 +74,88 @@ class RuntimeManager {
             keys: new Map(),
             mousePosition: { x: 0, y: 0 },
             mouseDelta: { x: 0, y: 0 },
+            mouseCaptured: false,
+            canvasCenter: { x: 0, y: 0 },
+            canvasElement: null,
         };
         this.maxLogs = 1000; // Limit logs to prevent memory issues
+        this.scriptEvents = new Map();
+        this.scriptEventListeners = new Map();
+
+        // Register events
+        this.scriptEvents.set("update", {
+            name: "update",
+            params: [
+                {
+                    name: "deltatime",
+                    type: "number",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("mouseclick", {
+            name: "mouseclick",
+            params: [
+                {
+                    name: "button",
+                    type: "string",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("mousedown", {
+            name: "mousedown",
+            params: [
+                {
+                    name: "button",
+                    type: "string",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("mouseup", {
+            name: "mouseup",
+            params: [
+                {
+                    name: "button",
+                    type: "string",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("mousemove", {
+            name: "mousemove",
+            params: [
+                {
+                    name: "x",
+                    type: "number",
+                },
+                {
+                    name: "y",
+                    type: "number",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("keydown", {
+            name: "keydown",
+            params: [
+                {
+                    name: "key",
+                    type: "string",
+                },
+            ],
+        });
+
+        this.scriptEvents.set("keyup", {
+            name: "keyup",
+            params: [
+                {
+                    name: "key",
+                    type: "string",
+                },
+            ],
+        });
     }
 
     addLog(
@@ -162,11 +257,14 @@ class RuntimeManager {
     }
 
     // Input state management
-    setMouseButton(button: 'left' | 'right' | 'middle', pressed: boolean): void {
+    setMouseButton(
+        button: "left" | "right" | "middle",
+        pressed: boolean
+    ): void {
         this.inputState.mouseButtons[button] = pressed;
     }
 
-    getMouseButton(button: 'left' | 'right' | 'middle'): boolean {
+    getMouseButton(button: "left" | "right" | "middle"): boolean {
         return this.inputState.mouseButtons[button];
     }
 
@@ -182,9 +280,16 @@ class RuntimeManager {
         const oldX = this.inputState.mousePosition.x;
         const oldY = this.inputState.mousePosition.y;
         this.inputState.mousePosition = { x, y };
-        this.inputState.mouseDelta = { 
-            x: x - oldX, 
-            y: y - oldY 
+        this.inputState.mouseDelta = {
+            x: x - oldX,
+            y: y - oldY,
+        };
+    }
+
+    setMouseDelta(deltaX: number, deltaY: number): void {
+        this.inputState.mouseDelta = {
+            x: deltaX,
+            y: deltaY,
         };
     }
 
@@ -206,7 +311,58 @@ class RuntimeManager {
             keys: new Map(),
             mousePosition: { x: 0, y: 0 },
             mouseDelta: { x: 0, y: 0 },
+            mouseCaptured: false,
+            canvasCenter: { x: 0, y: 0 },
+            canvasElement: null,
         };
+    }
+
+    resetMouseDelta(): void {
+        this.inputState.mouseDelta = { x: 0, y: 0 };
+    }
+
+    setCanvasElement(canvas: HTMLCanvasElement | null): void {
+        this.inputState.canvasElement = canvas;
+        if (canvas) {
+            const rect = canvas.getBoundingClientRect();
+            this.inputState.canvasCenter = {
+                x: rect.width / 2,
+                y: rect.height / 2,
+            };
+        }
+    }
+
+    captureMouse(): void {
+        if (this.inputState.canvasElement && !this.inputState.mouseCaptured) {
+            this.inputState.canvasElement.requestPointerLock();
+            this.inputState.mouseCaptured = true;
+        }
+    }
+
+    uncaptureMouse(): void {
+        if (this.inputState.mouseCaptured) {
+            document.exitPointerLock();
+            this.inputState.mouseCaptured = false;
+        }
+    }
+
+    isMouseCaptured(): boolean {
+        return this.inputState.mouseCaptured;
+    }
+
+    getMousePositionFromCenter(): { x: number; y: number } {
+        return {
+            x: this.inputState.mousePosition.x - this.inputState.canvasCenter.x,
+            y: this.inputState.mousePosition.y - this.inputState.canvasCenter.y,
+        };
+    }
+
+    setGameObjectManager(gameObjectManager: GameObjectManager | null): void {
+        this.gameObjectManager = gameObjectManager;
+    }
+
+    getGameObjectManager(): GameObjectManager | null {
+        return this.gameObjectManager;
     }
 }
 
@@ -289,12 +445,15 @@ function createRuntimeStore() {
         },
 
         // Input state management
-        setMouseButton: (button: 'left' | 'right' | 'middle', pressed: boolean) => {
+        setMouseButton: (
+            button: "left" | "right" | "middle",
+            pressed: boolean
+        ) => {
             manager.setMouseButton(button, pressed);
             update((m) => m);
         },
 
-        getMouseButton: (button: 'left' | 'right' | 'middle') => {
+        getMouseButton: (button: "left" | "right" | "middle") => {
             return manager.getMouseButton(button);
         },
 
@@ -312,6 +471,11 @@ function createRuntimeStore() {
             update((m) => m);
         },
 
+        setMouseDelta: (deltaX: number, deltaY: number) => {
+            manager.setMouseDelta(deltaX, deltaY);
+            update((m) => m);
+        },
+
         getMousePosition: () => {
             return manager.getMousePosition();
         },
@@ -323,6 +487,44 @@ function createRuntimeStore() {
         resetInputState: () => {
             manager.resetInputState();
             update((m) => m);
+        },
+
+        resetMouseDelta: () => {
+            manager.resetMouseDelta();
+            update((m) => m);
+        },
+
+        setCanvasElement: (canvas: HTMLCanvasElement | null) => {
+            manager.setCanvasElement(canvas);
+            update((m) => m);
+        },
+
+        captureMouse: () => {
+            manager.captureMouse();
+            update((m) => m);
+        },
+
+        uncaptureMouse: () => {
+            manager.uncaptureMouse();
+            update((m) => m);
+        },
+
+        isMouseCaptured: () => {
+            return manager.isMouseCaptured();
+        },
+
+        getMousePositionFromCenter: () => {
+            return manager.getMousePositionFromCenter();
+        },
+
+        // GameObjectManager management
+        setGameObjectManager: (gameObjectManager: GameObjectManager | null) => {
+            manager.setGameObjectManager(gameObjectManager);
+            update((m) => m);
+        },
+
+        getGameObjectManager: () => {
+            return manager.getGameObjectManager();
         },
     };
 }

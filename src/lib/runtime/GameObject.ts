@@ -51,21 +51,141 @@ export interface Transform {
 export class GameObject {
     public readonly id: string;
     public readonly bNode: Types.BNode3D;
-    public transform: Transform;
+    public readonly name: string;
+    /**
+     * Type name derived from the source BNode (e.g. BPart, BCamera, BLight)
+     */
+    public readonly nodeType: string;
+
+    public localTransform: Transform;
+    public worldTransform: Transform;
+    public worldMatrix: THREE.Matrix4;
+
     private components: Component[] = [];
     private componentMap: Map<string, Component> = new Map();
+
+    private parent: GameObject | null = null;
+    private children: GameObject[] = [];
+
+    /**
+     * When true, this GameObject’s worldTransform is set by the PhysicsComponent.
+     * When false, this GameObject’s worldTransform is set by the parent GameObject.
+     */
+    public isPhysicsDriven = false;
 
     constructor(bNode: Types.BNode3D) {
         this.id = bNode.id;
         this.bNode = bNode;
+        this.name = (bNode as any)?.name ?? "";
+        this.nodeType = (bNode as any)?.constructor?.name ?? "BNode3D";
 
-        // Initialize transform from BNode3D
+        // Initialize local transform from BNode3D
         // Convert Euler angles from BNode3D to quaternions for runtime
-        this.transform = {
+        this.localTransform = {
             position: new THREE.Vector3().copy(bNode.position),
             rotation: RotationUtils.eulerToNormalizedQuaternion(bNode.rotation),
             scale: new THREE.Vector3().copy(bNode.scale),
         };
+
+        // Initialize world transform properties
+        this.worldTransform = {
+            position: this.localTransform.position.clone(),
+            rotation: this.localTransform.rotation.clone(),
+            scale: this.localTransform.scale.clone(),
+        };
+        this.worldMatrix = new THREE.Matrix4();
+        // Compose initial world matrix from the initial world transform so visuals are valid before first update
+        this.worldMatrix.compose(
+            this.worldTransform.position,
+            this.worldTransform.rotation,
+            this.worldTransform.scale
+        );
+    }
+
+    /**
+     * Updates the world matrix of this GameObject and all its children.
+     * If a parent matrix is provided, it's used as the base.
+     * Otherwise, the object's local transform is used as the world transform.
+     */
+    updateWorldMatrix(parentWorldMatrix?: THREE.Matrix4): void {
+        // If this object is driven directly by physics we should *not* derive its
+        // world transform from parent/local — the PhysicsComponent has already
+        // written authoritative worldTransform values this frame. We still need
+        // to re-compose our worldMatrix from those values and propagate the
+        // matrix down to children so they can build their world matrices.
+        if (this.isPhysicsDriven) {
+            this.worldMatrix.compose(
+                this.worldTransform.position,
+                this.worldTransform.rotation,
+                this.worldTransform.scale
+            );
+
+            for (const child of this.children) {
+                child.updateWorldMatrix(this.worldMatrix);
+            }
+            return;
+        }
+
+        const localMatrix = new THREE.Matrix4();
+        localMatrix.compose(
+            this.localTransform.position,
+            this.localTransform.rotation,
+            this.localTransform.scale
+        );
+
+        if (parentWorldMatrix) {
+            this.worldMatrix.multiplyMatrices(parentWorldMatrix, localMatrix);
+        } else {
+            this.worldMatrix.copy(localMatrix);
+        }
+
+        // Decompose the world matrix back into position, quaternion, and scale
+        this.worldMatrix.decompose(
+            this.worldTransform.position,
+            this.worldTransform.rotation,
+            this.worldTransform.scale
+        );
+
+        // Recursively update children
+        for (const child of this.children) {
+            child.updateWorldMatrix(this.worldMatrix);
+        }
+    }
+
+    /**
+     * Runtime hierarchy helpers (do not rely on editor BNode tree)
+     */
+    setParent(parent: GameObject | null): void {
+        this.parent = parent;
+    }
+
+    getParent(): GameObject | null {
+        return this.parent;
+    }
+
+    addChild(child: GameObject): void {
+        if (!this.children.includes(child)) {
+            this.children.push(child);
+            child.setParent(this);
+        }
+    }
+
+    removeChild(child: GameObject): void {
+        const idx = this.children.indexOf(child);
+        if (idx !== -1) {
+            this.children.splice(idx, 1);
+            if (child.getParent() === this) {
+                child.setParent(null);
+            }
+        }
+    }
+
+    getChildren(): GameObject[] {
+        return [...this.children];
+    }
+
+    findChildByName(name: string): GameObject | null {
+        return this.children.find((c) => c.name === name) ?? null;
     }
 
     /**
@@ -115,8 +235,6 @@ export class GameObject {
         return this.componentMap.has(componentClass.name);
     }
 
-
-
     /**
      * Update all components
      */
@@ -144,5 +262,11 @@ export class GameObject {
         }
         this.components.length = 0;
         this.componentMap.clear();
+        // detach children
+        for (const child of this.children) {
+            child.setParent(null);
+        }
+        this.children.length = 0;
+        this.parent = null;
     }
 }

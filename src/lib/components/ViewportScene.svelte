@@ -59,7 +59,7 @@
     console.warn("TODO: handle objects having children (local position)");
 
     // Initialize particle positions
-    onMount(() => {
+    /*onMount(() => {
         const positions = new Float32Array(particleCount * 3);
         
         for (let i = 0; i < particleCount; i++) {
@@ -88,7 +88,7 @@
                 }
             }
         }
-    });
+    });*/
 </script>
 
 <T.PerspectiveCamera makeDefault position={[10, 10, 5]}>
@@ -100,7 +100,7 @@
 <T.AmbientLight intensity={0.3} />
 
 <!-- Particle System -->
-{#if particlePositions.length > 0}
+<!--{#if particlePositions.length > 0}
     <T.Points>
         <T.BufferGeometry>
             <T.BufferAttribute
@@ -118,7 +118,7 @@
             opacity={0.8}
         />
     </T.Points>
-{/if}
+{/if}-->
 
 <!-- Scene Rendering -->
 {#each $sceneStore
@@ -134,7 +134,11 @@
         object.rotation.y,
         object.rotation.z,
     ] as [number, number, number]}
-    {@const scale = [object.scale.x, object.scale.y, object.scale.z] as [number, number, number]}
+    {@const scale = [object.scale.x, object.scale.y, object.scale.z] as [
+        number,
+        number,
+        number,
+    ]}
     <T.Group bind:ref={groupRefs[object.id]} {position} {rotation} {scale}>
         {#if object instanceof Types.BPart}
             <!-- Render Parts with meshes -->
@@ -166,7 +170,9 @@
                         <T.PlaneGeometry args={[2, 2]} />
                     {/if}
                 {:else if object.meshSource.value && assetStore.getAsset(object.meshSource.value)?.url}
-                    {@const asset = assetStore.getAsset(object.meshSource.value)}
+                    {@const asset = assetStore.getAsset(
+                        object.meshSource.value
+                    )}
                     {#if asset?.url}
                         {#await useGltf(asset.url) then gltf}
                             <T is={gltf.scene} />

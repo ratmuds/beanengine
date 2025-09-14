@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Tooltip from "$lib/components/ui/tooltip/index.js";
-    import { Plus, Info, Search, Diamond } from "lucide-svelte";
+    import { Plus, Info, Search, Diamond, Code } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
     import * as Dialog from "./ui/dialog";
@@ -142,7 +142,12 @@
 </script>
 
 <div class="w-full p-5 relative z-10 flex flex-col gap-4 h-full">
-    <h2 class="text-foreground font-semibold text-lg">Code Palette</h2>
+    <div class="flex items-center gap-3">
+        <div class="p-2 bg-blue-500/10 rounded-lg">
+            <Code class="w-5 h-5 text-blue-400" />
+        </div>
+        <h2 class="text-foreground font-semibold text-lg">Code Palette</h2>
+    </div>
 
     <!-- Search -->
     <div class="relative">

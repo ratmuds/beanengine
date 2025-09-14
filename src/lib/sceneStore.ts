@@ -145,6 +145,21 @@ class SceneManager {
             case "script":
                 newObject = new Types.BScript(name, null, null);
                 break;
+            case "playercontroller":
+                newObject = new Types.BPlayerController(name, null, null);
+                if (newObject instanceof Types.BPlayerController) {
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.scale = new Types.BVector3(1, 1, 1);
+                    // Set default movement settings if provided
+                    if (options?.movementSpeed)
+                        newObject.moveSpeed = options.movementSpeed;
+                    if (options?.mouseSensitivity)
+                        newObject.mouseSensitivity = options.mouseSensitivity;
+                    if (options?.cameraClampAngle)
+                        newObject.maxLookAngle = options.cameraClampAngle;
+                }
+                break;
             default:
                 console.warn(`Unknown object type: ${objectType}`);
                 newObject = new Types.BObject(name, null, null);

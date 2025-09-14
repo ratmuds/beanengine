@@ -13,23 +13,55 @@
     let physicsInitialized = false;
     let canvasElement: HTMLCanvasElement;
 
+    // Compute aspect from canvas and propagate it to cameras
+    function updateAspectFromCanvas() {
+        if (!canvasElement) return;
+        const rect = canvasElement.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0) {
+            const aspect = rect.width / rect.height;
+            // Update all scene cameras via manager
+            gameObjectManager?.updateCameraAspect(aspect);
+            // Also update default camera if used
+            if (gameCamera && gameCamera.isPerspectiveCamera) {
+                gameCamera.aspect = aspect;
+                gameCamera.updateProjectionMatrix();
+            }
+        }
+    }
+
     // Input handling
     function handleMouseDown(event: MouseEvent) {
-        const button = event.button === 0 ? 'left' : event.button === 1 ? 'middle' : 'right';
+        const button =
+            event.button === 0
+                ? "left"
+                : event.button === 1
+                  ? "middle"
+                  : "right";
         runtimeStore.setMouseButton(button, true);
     }
 
     function handleMouseUp(event: MouseEvent) {
-        const button = event.button === 0 ? 'left' : event.button === 1 ? 'middle' : 'right';
+        const button =
+            event.button === 0
+                ? "left"
+                : event.button === 1
+                  ? "middle"
+                  : "right";
         runtimeStore.setMouseButton(button, false);
     }
 
     function handleMouseMove(event: MouseEvent) {
         if (canvasElement) {
-            const rect = canvasElement.getBoundingClientRect();
-            const x = event.clientX - rect.left;
-            const y = event.clientY - rect.top;
-            runtimeStore.setMousePosition(x, y);
+            if (runtimeStore.isMouseCaptured()) {
+                // Use movementX/Y for captured mouse (pointer lock)
+                runtimeStore.setMouseDelta(event.movementX, event.movementY);
+            } else {
+                // Use regular mouse position for uncaptured mouse
+                const rect = canvasElement.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                runtimeStore.setMousePosition(x, y);
+            }
         }
     }
 
@@ -43,6 +75,19 @@
 
     function handleContextMenu(event: MouseEvent) {
         event.preventDefault(); // Prevent right-click context menu
+    }
+
+    function handlePointerLockChange() {
+        const isLocked = document.pointerLockElement === canvasElement;
+        if (!isLocked && runtimeStore.isMouseCaptured()) {
+            // Pointer lock was lost, update our state
+            runtimeStore.uncaptureMouse();
+        }
+    }
+
+    function handlePointerLockError() {
+        console.warn("Pointer lock failed");
+        runtimeStore.uncaptureMouse();
     }
 
     // 60fps animation using useTask
@@ -61,10 +106,10 @@
         if (gameObjectManager) {
             gameObjectManager.update(delta);
         }
-    });
 
-    // Script handling is now managed by GameObjectManager and ScriptComponent
-    // No need for separate startScript function
+        // Reset mouse delta after each frame to prevent it from staying high
+        runtimeStore.resetMouseDelta();
+    });
 
     onMount(() => {
         // Create a separate scene for game runtime
@@ -75,9 +120,13 @@
         runtimeStore.info("Starting GameObjectManager...", "GameRuntime");
         gameObjectManager = new GameObjectManager(gameScene);
 
+        // Register GameObjectManager with runtimeStore for global access
+        runtimeStore.setGameObjectManager(gameObjectManager);
+
         // Initialize from scene store
         runtimeStore.info("Initializing scene...", "GameRuntime");
         const sceneCamera = gameObjectManager.initializeFromScene(sceneStore);
+        console.warn("THE SCENE CAMERA:", sceneCamera);
 
         // Use scene camera if available, otherwise create default
         if (sceneCamera) {
@@ -102,16 +151,29 @@
         // Get the canvas element and attach event listeners
         canvasElement = renderer.domElement;
         canvasElement.tabIndex = 0; // Make canvas focusable for keyboard events
-        
+
+        // Set canvas element in runtime store for mouse capture functionality
+        runtimeStore.setCanvasElement(canvasElement);
+
+        // Initialize camera aspect from canvas
+        updateAspectFromCanvas();
+
         // Mouse events
-        canvasElement.addEventListener('mousedown', handleMouseDown);
-        canvasElement.addEventListener('mouseup', handleMouseUp);
-        canvasElement.addEventListener('mousemove', handleMouseMove);
-        canvasElement.addEventListener('contextmenu', handleContextMenu);
-        
+        canvasElement.addEventListener("mousedown", handleMouseDown);
+        canvasElement.addEventListener("mouseup", handleMouseUp);
+        canvasElement.addEventListener("mousemove", handleMouseMove);
+        canvasElement.addEventListener("contextmenu", handleContextMenu);
+
+        // Pointer lock events
+        document.addEventListener("pointerlockchange", handlePointerLockChange);
+        document.addEventListener("pointerlockerror", handlePointerLockError);
+
         // Keyboard events - attach to window for global capture
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
+        window.addEventListener("keydown", handleKeyDown);
+        window.addEventListener("keyup", handleKeyUp);
+
+        // Resize event to keep camera aspect in sync with canvas
+        window.addEventListener("resize", updateAspectFromCanvas);
 
         // Focus canvas to ensure it receives events
         canvasElement.focus();
@@ -129,8 +191,11 @@
 
     function startRenderLoop() {
         function render() {
-            if (gameScene && renderer && gameCamera) {
-                renderer.render(gameScene, gameCamera);
+            if (gameScene && renderer) {
+                const activeCamera = gameObjectManager?.getCamera() ?? gameCamera;
+                if (activeCamera) {
+                    renderer.render(gameScene, activeCamera);
+                }
             }
             animationId = requestAnimationFrame(render);
         }
@@ -144,14 +209,28 @@
 
         // Clean up event listeners
         if (canvasElement) {
-            canvasElement.removeEventListener('mousedown', handleMouseDown);
-            canvasElement.removeEventListener('mouseup', handleMouseUp);
-            canvasElement.removeEventListener('mousemove', handleMouseMove);
-            canvasElement.removeEventListener('contextmenu', handleContextMenu);
+            canvasElement.removeEventListener("mousedown", handleMouseDown);
+            canvasElement.removeEventListener("mouseup", handleMouseUp);
+            canvasElement.removeEventListener("mousemove", handleMouseMove);
+            canvasElement.removeEventListener("contextmenu", handleContextMenu);
         }
-        
-        window.removeEventListener('keydown', handleKeyDown);
-        window.removeEventListener('keyup', handleKeyUp);
+
+        // Clean up pointer lock events
+        document.removeEventListener(
+            "pointerlockchange",
+            handlePointerLockChange
+        );
+        document.removeEventListener(
+            "pointerlockerror",
+            handlePointerLockError
+        );
+
+        window.removeEventListener("keydown", handleKeyDown);
+        window.removeEventListener("keyup", handleKeyUp);
+        window.removeEventListener("resize", updateAspectFromCanvas);
+
+        // Clean up canvas element in runtime store
+        runtimeStore.setCanvasElement(null);
 
         // Reset input state when stopping
         runtimeStore.resetInputState();
@@ -159,10 +238,10 @@
         // Clean up GameObjects and their physics components
         if (gameObjectManager) {
             gameObjectManager.destroy();
+            // Unregister from runtimeStore
+            runtimeStore.setGameObjectManager(null);
         }
     });
-
-    // Script execution is now handled by ScriptComponent within GameObjectManager
 </script>
 
 <!-- GameRuntime uses a separate Three.js scene with custom render loop -->

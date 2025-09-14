@@ -4,7 +4,9 @@ import { VisualComponent } from "./VisualComponent";
 import { ScriptComponent } from "./ScriptComponent";
 import * as Types from "$lib/types";
 import { PhysicsComponent } from "./PhysicsComponent";
+import { PlayerControllerComponent } from "./PlayerControllerComponent";
 import { sceneStore } from "$lib/sceneStore";
+import { CameraComponent } from "./CameraComponent";
 
 /**
  * GameObjectManager handles the lifecycle of all GameObjects in the scene
@@ -30,6 +32,7 @@ export class GameObjectManager {
         // Get scene objects
         const sceneObjects = sceneStore.getScene().objects;
         let sceneCamera: Types.BCamera | null = null;
+        let activeCameraSet = false;
 
         // Create variables map from scene store
         const variables = sceneStore.getVariables();
@@ -41,7 +44,7 @@ export class GameObjectManager {
             {}
         );
 
-        // Process all scene objects
+        // First pass: create GameObjects for all scene BNode3D objects
         for (const obj of sceneObjects) {
             if (obj instanceof Types.BNode3D) {
                 console.warn(
@@ -54,19 +57,34 @@ export class GameObjectManager {
                 this.gameObjects.set(obj.id, gameObject);
 
                 // Add VisualComponent for renderable objects
-                if (
-                    obj instanceof Types.BPart ||
-                    obj instanceof Types.BCamera ||
-                    obj instanceof Types.BLight
-                ) {
+                if (obj instanceof Types.BPart || obj instanceof Types.BLight) {
                     gameObject.addComponent(
                         new VisualComponent(gameObject, this.scene)
                     );
                 }
 
+                // Attach CameraComponent to cameras and select active camera
+                if (obj instanceof Types.BCamera) {
+                    gameObject.addComponent(new CameraComponent(gameObject));
+                    const camComp = gameObject.getComponent(
+                        CameraComponent
+                    ) as CameraComponent | null;
+                    if (obj.isActive && !activeCameraSet && camComp) {
+                        this.camera = camComp.getCamera();
+                        activeCameraSet = true;
+                    }
+                }
+
                 // Add PhysicsComponent for physical objects
                 if (obj instanceof Types.BPart) {
                     gameObject.addComponent(new PhysicsComponent(gameObject));
+                }
+
+                // Add PlayerControllerComponent for player controllers
+                if (obj instanceof Types.BPlayerController) {
+                    gameObject.addComponent(
+                        new PlayerControllerComponent(gameObject)
+                    );
                 }
 
                 // Store camera reference for later use
@@ -99,15 +117,57 @@ export class GameObjectManager {
             }
         }
 
-        // Setup camera if found
-        if (sceneCamera) {
-            this.camera = this.createCameraFromBCamera(sceneCamera);
+        // Second pass: build GameObject parent/child hierarchy from BNode3D relationships
+        for (const obj of sceneObjects) {
+            if (obj instanceof Types.BNode3D) {
+                const childGO = this.gameObjects.get(obj.id);
+                if (!childGO) continue;
+
+                const parentRef: any = (obj as any).parent;
+                if (!parentRef) continue;
+
+                // parentRef may be a BObject or an ID string
+                const parentId: string | null =
+                    typeof parentRef === "string"
+                        ? parentRef
+                        : (parentRef && parentRef.id) || null;
+
+                if (!parentId) continue;
+
+                const parentGO = this.gameObjects.get(parentId);
+                if (parentGO) {
+                    parentGO.addChild(childGO);
+                }
+            }
+        }
+
+        // Setup camera if found (fallback to first camera if no active marked)
+        if (!this.camera && sceneCamera) {
+            const go = this.gameObjects.get(sceneCamera.id);
+            const camComp = go?.getComponent(
+                CameraComponent
+            ) as CameraComponent | null;
+            if (camComp) {
+                this.camera = camComp.getCamera();
+            }
         }
 
         console.log(
             `GameObjectManager initialized with ${this.gameObjects.size} objects`
         );
         return this.camera;
+    }
+
+    /**
+     * Update the aspect ratio on all camera components
+     */
+    updateCameraAspect(aspect: number): void {
+        for (const go of this.gameObjects.values()) {
+            const cam = go.getComponent(CameraComponent);
+            if (cam) {
+                cam.setAspect(aspect);
+            }
+        }
     }
 
     /**
@@ -147,6 +207,14 @@ export class GameObjectManager {
      * Update all GameObjects
      */
     update(delta: number): void {
+        // First, update all world matrices from the root objects down
+        for (const gameObject of this.gameObjects.values()) {
+            if (!gameObject.getParent()) {
+                gameObject.updateWorldMatrix();
+            }
+        }
+
+        // Then, update all components
         for (const gameObject of this.gameObjects.values()) {
             gameObject.update(delta);
         }

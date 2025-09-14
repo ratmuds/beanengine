@@ -23,6 +23,8 @@
         Unlock,
         Navigation,
         FileCode,
+        FolderTree,
+        Clipboard,
     } from "lucide-svelte";
     import { sceneStore } from "$lib/sceneStore";
 
@@ -42,12 +44,18 @@
     const dispatch = createEventDispatcher();
 
     let searchQuery = $state("");
-    let contextMenu: { x: number; y: number; objectId: string } | null =
-        $state(null);
+    let contextMenu = $state<{
+        x: number;
+        y: number;
+        objectId: string | null;
+    } | null>(null);
     let draggedObject: string | null = $state(null);
     let dragOverObject: string | null = $state(null);
     let addDialogOpen = $state(false);
     let addDialogParentId: string | number = $state(-1);
+
+    // Clipboard state for copy/paste functionality
+    let copiedObject: any = $state(null);
 
     // Track expanded state of objects
     let expandedObjects = $state(new Set<string>());
@@ -142,7 +150,10 @@
         }
     }
 
-    function handleRightClick(event: MouseEvent, objectId: string) {
+    function handleRightClick(
+        event: MouseEvent,
+        objectId: string | null = null
+    ) {
         event.preventDefault();
         contextMenu = {
             x: event.clientX,
@@ -179,18 +190,65 @@
 
         switch (action) {
             case "copy":
-                dispatch("copyObject", { id: objectId });
+                if (objectId) {
+                    handleCopyObject(objectId);
+                }
+                break;
+            case "paste":
+                handlePasteObject(objectId || -1);
                 break;
             case "duplicate":
-                dispatch("duplicateObject", { id: objectId });
+                if (objectId) {
+                    handleDuplicateObject(objectId);
+                }
                 break;
             case "delete":
-                dispatch("deleteObject", { id: objectId });
+                if (objectId) {
+                    handleDeleteObject(objectId);
+                }
                 break;
             case "goto":
-                dispatch("gotoObject", { id: objectId });
+                if (objectId) {
+                    dispatch("gotoObject", { id: objectId });
+                }
                 break;
         }
+    }
+
+    function handleCopyObject(objectId: string) {
+        const allObjects = $sceneStore.getScene().objects;
+        const objectToCopy = allObjects.find((obj: any) => obj.id === objectId);
+        if (objectToCopy) {
+            copiedObject = structuredClone(objectToCopy);
+            dispatch("copyObject", { id: objectId });
+        }
+    }
+
+    function handlePasteObject(parentId: string | number) {
+        if (copiedObject) {
+            dispatch("pasteObject", {
+                copiedObject: structuredClone(copiedObject),
+                parentId,
+            });
+        }
+    }
+
+    function handleDuplicateObject(objectId: string) {
+        const allObjects = $sceneStore.getScene().objects;
+        const objectToDuplicate = allObjects.find(
+            (obj: any) => obj.id === objectId
+        );
+        if (objectToDuplicate) {
+            const duplicatedObject = structuredClone(objectToDuplicate);
+            dispatch("duplicateObject", {
+                originalId: objectId,
+                duplicatedObject,
+            });
+        }
+    }
+
+    function handleDeleteObject(objectId: string) {
+        dispatch("deleteObject", { id: objectId });
     }
 
     function handleToggleVisibility(event: MouseEvent, objectId: string) {
@@ -348,9 +406,14 @@
     <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">
-            <h2 class="text-foreground font-semibold text-lg">
-                Object Explorer
-            </h2>
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-green-500/10 rounded-lg">
+                    <FolderTree class="w-5 h-5 text-green-400" />
+                </div>
+                <h2 class="text-foreground font-semibold text-lg">
+                    Object Explorer
+                </h2>
+            </div>
 
             <Popover.Root bind:open={addDialogOpen}>
                 <Popover.Trigger
@@ -386,12 +449,18 @@
                                         handleAddObjectType("Script")}
                                     class="rounded-lg m-1">Script</Command.Item
                                 >
-
                                 <Command.Item
                                     value="camera"
                                     onSelect={() =>
                                         handleAddObjectType("Camera")}
                                     class="rounded-lg m-1">Camera</Command.Item
+                                >
+                                <Command.Item
+                                    value="playercontroller"
+                                    onSelect={() =>
+                                        handleAddObjectType("PlayerController")}
+                                    class="rounded-lg m-1"
+                                    >Player Controller</Command.Item
                                 >
                                 <Command.Item class="rounded-lg m-1"
                                     >Light</Command.Item
@@ -471,6 +540,12 @@
                 dispatch("selectObject", { id: -1 });
             }
         }}
+        oncontextmenu={(e) => {
+            // Right click on empty space shows paste option
+            if (e.target === e.currentTarget) {
+                handleRightClick(e, null);
+            }
+        }}
     >
         <div
             class="space-y-1"
@@ -479,6 +554,12 @@
                 if (e.target === e.currentTarget) {
                     selectedObject = -1;
                     dispatch("selectObject", { id: -1 });
+                }
+            }}
+            oncontextmenu={(e) => {
+                // Right click on empty space within the list shows paste option
+                if (e.target === e.currentTarget) {
+                    handleRightClick(e, null);
                 }
             }}
         >
@@ -607,35 +688,62 @@
         class="fixed bg-card/95 backdrop-blur-md border border-border/60 rounded-xl shadow-xl p-2 z-50 min-w-48"
         style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
     >
-        <button
-            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            onclick={() => handleContextAction("copy")}
-        >
-            <Copy class="w-4 h-4 text-blue-400" />
-            Copy
-        </button>
-        <button
-            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            onclick={() => handleContextAction("duplicate")}
-        >
-            <FileImage class="w-4 h-4 text-green-400" />
-            Duplicate
-        </button>
-        <div class="h-px bg-border/30 my-2 mx-2"></div>
-        <button
-            class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            onclick={() => handleContextAction("goto")}
-        >
-            <Navigation class="w-4 h-4 text-purple-400" />
-            Go to Object
-        </button>
-        <div class="h-px bg-border/30 my-2 mx-2"></div>
-        <button
-            class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-            onclick={() => handleContextAction("delete")}
-        >
-            <Trash2 class="w-4 h-4" />
-            Delete
-        </button>
+        {#if contextMenu.objectId}
+            <!-- Object-specific context menu -->
+            <button
+                class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                onclick={() => handleContextAction("copy")}
+            >
+                <Copy class="w-4 h-4 text-blue-400" />
+                Copy
+            </button>
+            {#if copiedObject}
+                <button
+                    class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                    onclick={() => handleContextAction("paste")}
+                >
+                    <Clipboard class="w-4 h-4 text-orange-400" />
+                    Paste as Child
+                </button>
+            {/if}
+            <button
+                class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                onclick={() => handleContextAction("duplicate")}
+            >
+                <FileImage class="w-4 h-4 text-green-400" />
+                Duplicate
+            </button>
+            <div class="h-px bg-border/30 my-2 mx-2"></div>
+            <button
+                class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                onclick={() => handleContextAction("goto")}
+            >
+                <Navigation class="w-4 h-4 text-purple-400" />
+                Go to Object
+            </button>
+            <div class="h-px bg-border/30 my-2 mx-2"></div>
+            <button
+                class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                onclick={() => handleContextAction("delete")}
+            >
+                <Trash2 class="w-4 h-4" />
+                Delete
+            </button>
+        {:else}
+            <!-- Empty space context menu -->
+            {#if copiedObject}
+                <button
+                    class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                    onclick={() => handleContextAction("paste")}
+                >
+                    <Clipboard class="w-4 h-4 text-orange-400" />
+                    Paste
+                </button>
+            {:else}
+                <div class="px-4 py-3 text-sm text-muted-foreground">
+                    No items to paste
+                </div>
+            {/if}
+        {/if}
     </div>
 {/if}

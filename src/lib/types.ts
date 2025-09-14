@@ -523,6 +523,51 @@ class BAsset {
     }
 }
 
+// Represents a player controller that extends BPart with movement capabilities
+class BPlayerController extends BPart {
+    // Movement settings
+    moveSpeed: number;
+    jumpForce: number;
+    mouseSensitivity: number;
+
+    // Camera control settings
+    maxLookAngle: number; // Maximum up/down look angle in degrees
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name ? name : "PlayerController", id, parent);
+        this.type = "playercontroller";
+
+        // Default movement settings
+        this.moveSpeed = 10;
+        this.jumpForce = 15;
+        this.mouseSensitivity = 0.2; //0.002;
+        this.maxLookAngle = 80; // degrees
+    }
+
+    clone(): BPlayerController {
+        const cloned = new BPlayerController(this.name, null, null);
+
+        // Copy all BPart properties
+        Object.assign(cloned, this);
+
+        // Deep-clone transform-related value objects
+        cloned.position = this.position.clone();
+        cloned.rotation = this.rotation.clone();
+        cloned.scale = this.scale.clone();
+        cloned.positionOffset = this.positionOffset.clone();
+        cloned.rotationOffset = this.rotationOffset.clone();
+
+        // Clone meshSource
+        cloned.meshSource = { ...this.meshSource };
+
+        return cloned;
+    }
+}
+
 // Asset collection for organizing assets
 class BAssetCollection {
     id: string;
@@ -565,6 +610,7 @@ class BMaterial {
         ao: string; // Ambient occlusion texture
         emission: string; // Emission texture
     };
+    threeTexture: any; // THREE.js texture reference
 
     constructor(name: string, type: "basic" | "pbr") {
         this.id = nanoid();
@@ -647,6 +693,17 @@ class BParticle {
     }
 }
 
+// Error for the user's code causing an error in the interpreter
+class InterpreterScriptError extends Error {
+    constructor(message: string) {
+        // Call the parent Error constructor
+        super(message);
+
+        // Set the name of the custom error
+        this.name = "InterpreterScriptError";
+    }
+}
+
 // Export all classes
 export {
     BScene,
@@ -654,6 +711,7 @@ export {
     BVector3,
     BNode3D,
     BPart,
+    BPlayerController,
     BCamera,
     BLight,
     BConstraint,
@@ -662,6 +720,7 @@ export {
     BAssetCollection,
     BMaterial,
     BParticle,
+    InterpreterScriptError,
     type AssetType,
     type BAssetMetadata,
     type PrimitiveMeshType,
