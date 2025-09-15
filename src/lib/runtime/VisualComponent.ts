@@ -136,7 +136,7 @@ export class VisualComponent extends Component {
      */
     private updateMeshTransform(): void {
         if (this.mesh) {
-            const transform = this.gameObject.worldTransform;
+            const transform = this.gameObject.transform;
             this.mesh.position.set(
                 transform.position.x,
                 transform.position.y,
@@ -156,7 +156,7 @@ export class VisualComponent extends Component {
      */
     private updateLightTransform(): void {
         if (this.light) {
-            const transform = this.gameObject.worldTransform;
+            const transform = this.gameObject.transform;
             this.light.position.copy(transform.position);
 
             // Force THREE.js to update the transformation matrices
