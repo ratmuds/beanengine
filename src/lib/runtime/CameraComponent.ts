@@ -34,7 +34,7 @@ export class CameraComponent extends Component {
     }
 
     private syncFromTransform(): void {
-        const t = this.gameObject.worldTransform;
+        const t = this.gameObject.transform;
         this.camera.position.set(t.position.x, t.position.y, t.position.z);
         this.camera.quaternion.copy(t.rotation);
         this.camera.updateMatrix();
