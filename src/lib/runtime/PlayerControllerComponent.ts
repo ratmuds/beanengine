@@ -146,15 +146,15 @@ export class PlayerControllerComponent extends Component {
 
         // Apply rotation to player controller GameObject (Y-axis only)
         const playerRotation = new THREE.Euler(0, this.cameraRotationY, 0);
-        this.gameObject.worldTransform.rotation.setFromEuler(playerRotation);
-        this.gameObject.worldTransform.rotation.normalize();
+        this.gameObject.transform.rotation.setFromEuler(playerRotation);
+        this.gameObject.transform.rotation.normalize();
 
         // Apply rotation to camera child GameObject if present (X-axis only for pitch)
         if (this.cameraGO) {
             console.log("setting camera rotation", this.cameraRotationX);
             const cameraRotation = new THREE.Euler(this.cameraRotationX, 0, 0);
-            this.cameraGO.worldTransform.rotation.setFromEuler(cameraRotation);
-            this.cameraGO.worldTransform.rotation.normalize();
+            this.cameraGO.transform.rotation.setFromEuler(cameraRotation);
+            this.cameraGO.transform.rotation.normalize();
         }
     }
 

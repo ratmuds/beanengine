@@ -45,9 +45,9 @@ export class PhysicsComponent extends Component {
         this.collider = physicsWorld.createCollider(
             // Divide by two because Rapier expects half-extents
             RAPIER.ColliderDesc.cuboid(
-                gameObject.worldTransform.scale.x / 2,
-                gameObject.worldTransform.scale.y / 2,
-                gameObject.worldTransform.scale.z / 2
+                gameObject.transform.scale.x / 2,
+                gameObject.transform.scale.y / 2,
+                gameObject.transform.scale.z / 2
             ),
             this.body
         );
@@ -55,34 +55,34 @@ export class PhysicsComponent extends Component {
         // Apply initial position and rotation from GameObject
         this.body.setTranslation(
             new RAPIER.Vector3(
-                gameObject.worldTransform.position.x,
-                gameObject.worldTransform.position.y,
-                gameObject.worldTransform.position.z
+                gameObject.transform.position.x,
+                gameObject.transform.position.y,
+                gameObject.transform.position.z
             ),
             true // wake up
         );
 
         this.body.setRotation(
             new RAPIER.Quaternion(
-                gameObject.worldTransform.rotation.x,
-                gameObject.worldTransform.rotation.y,
-                gameObject.worldTransform.rotation.z,
-                gameObject.worldTransform.rotation.w
+                gameObject.transform.rotation.x,
+                gameObject.transform.rotation.y,
+                gameObject.transform.rotation.z,
+                gameObject.transform.rotation.w
             ),
             true // wake up
         );
 
         // Set old position and rotation
         this.oldPosition = new THREE.Vector3(
-            gameObject.worldTransform.position.x,
-            gameObject.worldTransform.position.y,
-            gameObject.worldTransform.position.z
+            gameObject.transform.position.x,
+            gameObject.transform.position.y,
+            gameObject.transform.position.z
         );
         this.oldRotation = new THREE.Quaternion(
-            gameObject.worldTransform.rotation.x,
-            gameObject.worldTransform.rotation.y,
-            gameObject.worldTransform.rotation.z,
-            gameObject.worldTransform.rotation.w
+            gameObject.transform.rotation.x,
+            gameObject.transform.rotation.y,
+            gameObject.transform.rotation.z,
+            gameObject.transform.rotation.w
         );
 
         // Apply locks based on object properties
@@ -125,97 +125,68 @@ export class PhysicsComponent extends Component {
     }
 
     update(_delta: number): void {
-        // Update GameObject's world transform from the physics body
+        // Update GameObject's transform from the physics body
         if (
-            this.oldPosition.x === this.gameObject.worldTransform.position.x &&
-            this.oldPosition.y === this.gameObject.worldTransform.position.y &&
-            this.oldPosition.z === this.gameObject.worldTransform.position.z
+            this.oldPosition.x === this.gameObject.transform.position.x &&
+            this.oldPosition.y === this.gameObject.transform.position.y &&
+            this.oldPosition.z === this.gameObject.transform.position.z
         ) {
             const position = this.body.translation();
-            this.gameObject.worldTransform.position.set(
+            this.gameObject.transform.position.set(
                 position.x,
                 position.y,
                 position.z
             );
-            this.oldPosition.copy(this.gameObject.worldTransform.position);
+            this.oldPosition.copy(this.gameObject.transform.position);
         } else {
             // Moved externally
             this.body.setTranslation(
                 new RAPIER.Vector3(
-                    this.gameObject.worldTransform.position.x,
-                    this.gameObject.worldTransform.position.y,
-                    this.gameObject.worldTransform.position.z
+                    this.gameObject.transform.position.x,
+                    this.gameObject.transform.position.y,
+                    this.gameObject.transform.position.z
                 ),
                 true // wake up
             );
 
-            this.oldPosition.copy(this.gameObject.worldTransform.position);
+            this.oldPosition.copy(this.gameObject.transform.position);
         }
 
         if (
-            this.oldRotation.x === this.gameObject.worldTransform.rotation.x &&
-            this.oldRotation.y === this.gameObject.worldTransform.rotation.y &&
-            this.oldRotation.z === this.gameObject.worldTransform.rotation.z &&
-            this.oldRotation.w === this.gameObject.worldTransform.rotation.w
+            this.oldRotation.x === this.gameObject.transform.rotation.x &&
+            this.oldRotation.y === this.gameObject.transform.rotation.y &&
+            this.oldRotation.z === this.gameObject.transform.rotation.z &&
+            this.oldRotation.w === this.gameObject.transform.rotation.w
         ) {
             const rotation = this.body.rotation();
-            this.gameObject.worldTransform.rotation.set(
+            this.gameObject.transform.rotation.set(
                 rotation.x,
                 rotation.y,
                 rotation.z,
                 rotation.w
             );
-            this.oldRotation.copy(this.gameObject.worldTransform.rotation);
+            this.oldRotation.copy(this.gameObject.transform.rotation);
         } else {
             // Rotated externally
             this.body.setRotation(
                 new RAPIER.Quaternion(
-                    this.gameObject.worldTransform.rotation.x,
-                    this.gameObject.worldTransform.rotation.y,
-                    this.gameObject.worldTransform.rotation.z,
-                    this.gameObject.worldTransform.rotation.w
+                    this.gameObject.transform.rotation.x,
+                    this.gameObject.transform.rotation.y,
+                    this.gameObject.transform.rotation.z,
+                    this.gameObject.transform.rotation.w
                 ),
                 true // wake up
             );
-            this.oldRotation.copy(this.gameObject.worldTransform.rotation);
+            this.oldRotation.copy(this.gameObject.transform.rotation);
         }
 
-        // The scale is not changed by physics, so we keep the initial world scale.
+        // The scale is not changed by physics, so we keep the initial scale.
         // We need to recompose the world matrix from the physics-updated transform.
         this.gameObject.worldMatrix.compose(
-            this.gameObject.worldTransform.position,
-            this.gameObject.worldTransform.rotation,
-            this.gameObject.worldTransform.scale
+            this.gameObject.transform.position,
+            this.gameObject.transform.rotation,
+            this.gameObject.transform.scale
         );
-
-        // Since the physics simulation directly controls the world transform,
-        // we need to calculate the new local transform relative to the parent.
-        const parent = this.gameObject.getParent();
-        if (parent) {
-            const parentInverse = new THREE.Matrix4()
-                .copy(parent.worldMatrix)
-                .invert();
-            const localMatrix = new THREE.Matrix4().multiplyMatrices(
-                parentInverse,
-                this.gameObject.worldMatrix
-            );
-            localMatrix.decompose(
-                this.gameObject.localTransform.position,
-                this.gameObject.localTransform.rotation,
-                this.gameObject.localTransform.scale
-            );
-        } else {
-            // No parent, so world transform is the local transform
-            this.gameObject.localTransform.position.copy(
-                this.gameObject.worldTransform.position
-            );
-            this.gameObject.localTransform.rotation.copy(
-                this.gameObject.worldTransform.rotation
-            );
-            this.gameObject.localTransform.scale.copy(
-                this.gameObject.worldTransform.scale
-            );
-        }
     }
 
     /**

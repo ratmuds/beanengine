@@ -57,8 +57,7 @@ export class GameObject {
      */
     public readonly nodeType: string;
 
-    public localTransform: Transform;
-    public worldTransform: Transform;
+    public transform: Transform;
     public worldMatrix: THREE.Matrix4;
 
     private components: Component[] = [];
@@ -67,9 +66,13 @@ export class GameObject {
     private parent: GameObject | null = null;
     private children: GameObject[] = [];
 
+    // Store the offset relative to parent when hierarchy is established
+    private positionOffset: THREE.Vector3 = new THREE.Vector3();
+    private rotationOffset: THREE.Quaternion = new THREE.Quaternion();
+
     /**
-     * When true, this GameObject’s worldTransform is set by the PhysicsComponent.
-     * When false, this GameObject’s worldTransform is set by the parent GameObject.
+     * When true, this GameObject’s transform is set by the PhysicsComponent.
+     * When false, this GameObject’s transform is set by the parent GameObject.
      */
     public isPhysicsDriven = false;
 
@@ -79,26 +82,20 @@ export class GameObject {
         this.name = (bNode as any)?.name ?? "";
         this.nodeType = (bNode as any)?.constructor?.name ?? "BNode3D";
 
-        // Initialize local transform from BNode3D
+        // Initialize transform from BNode3D
         // Convert Euler angles from BNode3D to quaternions for runtime
-        this.localTransform = {
+        this.transform = {
             position: new THREE.Vector3().copy(bNode.position),
             rotation: RotationUtils.eulerToNormalizedQuaternion(bNode.rotation),
             scale: new THREE.Vector3().copy(bNode.scale),
         };
 
-        // Initialize world transform properties
-        this.worldTransform = {
-            position: this.localTransform.position.clone(),
-            rotation: this.localTransform.rotation.clone(),
-            scale: this.localTransform.scale.clone(),
-        };
         this.worldMatrix = new THREE.Matrix4();
-        // Compose initial world matrix from the initial world transform so visuals are valid before first update
+        // Compose initial world matrix from the initial transform so visuals are valid before first update
         this.worldMatrix.compose(
-            this.worldTransform.position,
-            this.worldTransform.rotation,
-            this.worldTransform.scale
+            this.transform.position,
+            this.transform.rotation,
+            this.transform.scale
         );
 
         // Set up children if provided
@@ -111,20 +108,19 @@ export class GameObject {
 
     /**
      * Updates the world matrix of this GameObject and all its children.
-     * If a parent matrix is provided, it's used as the base.
-     * Otherwise, the object's local transform is used as the world transform.
+     * Uses offset-based calculations instead of local-to-world matrix multiplication.
      */
     updateWorldMatrix(parentWorldMatrix?: THREE.Matrix4): void {
         // If this object is driven directly by physics we should *not* derive its
-        // world transform from parent/local — the PhysicsComponent has already
-        // written authoritative worldTransform values this frame. We still need
+        // transform from parent/offset — the PhysicsComponent has already
+        // written authoritative transform values this frame. We still need
         // to re-compose our worldMatrix from those values and propagate the
         // matrix down to children so they can build their world matrices.
         if (this.isPhysicsDriven) {
             this.worldMatrix.compose(
-                this.worldTransform.position,
-                this.worldTransform.rotation,
-                this.worldTransform.scale
+                this.transform.position,
+                this.transform.rotation,
+                this.transform.scale
             );
 
             for (const child of this.children) {
@@ -133,24 +129,31 @@ export class GameObject {
             return;
         }
 
-        const localMatrix = new THREE.Matrix4();
-        localMatrix.compose(
-            this.localTransform.position,
-            this.localTransform.rotation,
-            this.localTransform.scale
-        );
+        if (parentWorldMatrix && this.parent) {
+            // Get parent's current position and rotation
+            const parentPosition = new THREE.Vector3();
+            const parentRotation = new THREE.Quaternion();
+            const parentScale = new THREE.Vector3();
+            parentWorldMatrix.decompose(parentPosition, parentRotation, parentScale);
 
-        if (parentWorldMatrix) {
-            this.worldMatrix.multiplyMatrices(parentWorldMatrix, localMatrix);
-        } else {
-            this.worldMatrix.copy(localMatrix);
+            // Apply the offset relative to the parent
+            // Position: parent position + (parent rotation * position offset)
+            const rotatedPositionOffset = this.positionOffset.clone().applyQuaternion(parentRotation);
+            this.transform.position.copy(parentPosition).add(rotatedPositionOffset);
+
+            // Rotation: parent rotation * rotation offset
+            this.transform.rotation.multiplyQuaternions(parentRotation, this.rotationOffset);
+            
+            // Scale: multiply with parent scale
+            this.transform.scale.multiplyVectors(parentScale, new THREE.Vector3(1, 1, 1)); // Keep original scale for now
         }
+        // If no parent, transform remains as-is (root object)
 
-        // Decompose the world matrix back into position, quaternion, and scale
-        this.worldMatrix.decompose(
-            this.worldTransform.position,
-            this.worldTransform.rotation,
-            this.worldTransform.scale
+        // Compose world matrix from transform
+        this.worldMatrix.compose(
+            this.transform.position,
+            this.transform.rotation,
+            this.transform.scale
         );
 
         // Recursively update children
@@ -164,6 +167,29 @@ export class GameObject {
      */
     setParent(parent: GameObject | null): void {
         this.parent = parent;
+        this.calculateOffsets();
+    }
+
+    /**
+     * Calculate the position and rotation offset relative to the parent
+     * This is called when the parent-child relationship is established
+     */
+    private calculateOffsets(): void {
+        if (!this.parent) {
+            // No parent, reset offsets
+            this.positionOffset.set(0, 0, 0);
+            this.rotationOffset.set(0, 0, 0, 1);
+            return;
+        }
+
+        // Calculate position offset: child position - parent position (in parent's local space)
+        const parentInverseRotation = this.parent.transform.rotation.clone().invert();
+        this.positionOffset.copy(this.transform.position)
+            .sub(this.parent.transform.position)
+            .applyQuaternion(parentInverseRotation);
+
+        // Calculate rotation offset: parent rotation^-1 * child rotation
+        this.rotationOffset.multiplyQuaternions(parentInverseRotation, this.transform.rotation);
     }
 
     getParent(): GameObject | null {
