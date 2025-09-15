@@ -38,6 +38,18 @@ export class PlayerControllerComponent extends Component {
         // Find parented camera GameObject
         console.log("START finding camera...", this.gameObject);
         this.findParentedCameraGO();
+
+        if (this.cameraGO) {
+            console.log(
+                "Camera found during PlayerController construction:",
+                this.cameraGO.bNode.id
+            );
+        } else {
+            console.warn(
+                "No camera found during PlayerController construction. Children count:",
+                this.gameObject.getChildren().length
+            );
+        }
     }
 
     private findParentedCameraGO(): void {
@@ -139,6 +151,7 @@ export class PlayerControllerComponent extends Component {
 
         // Apply rotation to camera child GameObject if present (X-axis only for pitch)
         if (this.cameraGO) {
+            console.log("setting camera rotation", this.cameraRotationX);
             const cameraRotation = new THREE.Euler(this.cameraRotationX, 0, 0);
             this.cameraGO.worldTransform.rotation.setFromEuler(cameraRotation);
             this.cameraGO.worldTransform.rotation.normalize();

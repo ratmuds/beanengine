@@ -73,7 +73,7 @@ export class GameObject {
      */
     public isPhysicsDriven = false;
 
-    constructor(bNode: Types.BNode3D) {
+    constructor(bNode: Types.BNode3D, children?: GameObject[]) {
         this.id = bNode.id;
         this.bNode = bNode;
         this.name = (bNode as any)?.name ?? "";
@@ -100,6 +100,13 @@ export class GameObject {
             this.worldTransform.rotation,
             this.worldTransform.scale
         );
+
+        // Set up children if provided
+        if (children) {
+            for (const child of children) {
+                this.addChild(child);
+            }
+        }
     }
 
     /**

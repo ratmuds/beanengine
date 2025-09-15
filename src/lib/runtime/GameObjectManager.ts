@@ -44,55 +44,102 @@ export class GameObjectManager {
             {}
         );
 
-        // First pass: create GameObjects for all scene BNode3D objects
-        for (const obj of sceneObjects) {
-            if (obj instanceof Types.BNode3D) {
-                console.warn(
-                    "NOT ALL PROPERTY REPLICATION IMPLEMENTED YET. ADDING",
-                    obj
+        // First pass: build hierarchy map from BNode3D objects
+        const bNode3DObjects = sceneObjects.filter(obj => obj instanceof Types.BNode3D) as Types.BNode3D[];
+        const hierarchyMap = new Map<string, string[]>(); // parentId -> childIds
+        const rootObjects: Types.BNode3D[] = [];
+
+        for (const obj of bNode3DObjects) {
+            const parentRef: any = (obj as any).parent;
+            const parentId: string | null = typeof parentRef === "string" 
+                ? parentRef 
+                : (parentRef && parentRef.id) || null;
+
+            if (parentId) {
+                if (!hierarchyMap.has(parentId)) {
+                    hierarchyMap.set(parentId, []);
+                }
+                hierarchyMap.get(parentId)!.push(obj.id);
+            } else {
+                rootObjects.push(obj);
+            }
+        }
+
+        // Second pass: create GameObjects recursively with complete hierarchy
+        const createGameObjectWithChildren = (bNode: Types.BNode3D): GameObject => {
+            console.warn(
+                "NOT ALL PROPERTY REPLICATION IMPLEMENTED YET. ADDING",
+                bNode
+            );
+
+            // Get children for this node
+            const childIds = hierarchyMap.get(bNode.id) || [];
+            const children: GameObject[] = [];
+
+            // Recursively create child GameObjects first
+            for (const childId of childIds) {
+                const childBNode = bNode3DObjects.find(obj => obj.id === childId);
+                if (childBNode) {
+                    children.push(createGameObjectWithChildren(childBNode));
+                }
+            }
+
+            // Create GameObject with its children
+            const gameObject = new GameObject(bNode, children);
+            this.gameObjects.set(bNode.id, gameObject);
+
+            return gameObject;
+        };
+
+        // Create all root GameObjects (this will recursively create the entire hierarchy)
+        for (const rootObj of rootObjects) {
+            createGameObjectWithChildren(rootObj);
+        }
+
+        // Third pass: add components to all GameObjects now that hierarchy is complete
+        for (const obj of bNode3DObjects) {
+            const gameObject = this.gameObjects.get(obj.id);
+            if (!gameObject) continue;
+
+            // Add VisualComponent for renderable objects
+            if (obj instanceof Types.BPart || obj instanceof Types.BLight) {
+                gameObject.addComponent(
+                    new VisualComponent(gameObject, this.scene)
                 );
+            }
 
-                // Create GameObject wrapper
-                const gameObject = new GameObject(obj);
-                this.gameObjects.set(obj.id, gameObject);
-
-                // Add VisualComponent for renderable objects
-                if (obj instanceof Types.BPart || obj instanceof Types.BLight) {
-                    gameObject.addComponent(
-                        new VisualComponent(gameObject, this.scene)
-                    );
+            // Attach CameraComponent to cameras and select active camera
+            if (obj instanceof Types.BCamera) {
+                gameObject.addComponent(new CameraComponent(gameObject));
+                const camComp = gameObject.getComponent(
+                    CameraComponent
+                ) as CameraComponent | null;
+                if (obj.isActive && !activeCameraSet && camComp) {
+                    this.camera = camComp.getCamera();
+                    activeCameraSet = true;
                 }
-
-                // Attach CameraComponent to cameras and select active camera
-                if (obj instanceof Types.BCamera) {
-                    gameObject.addComponent(new CameraComponent(gameObject));
-                    const camComp = gameObject.getComponent(
-                        CameraComponent
-                    ) as CameraComponent | null;
-                    if (obj.isActive && !activeCameraSet && camComp) {
-                        this.camera = camComp.getCamera();
-                        activeCameraSet = true;
-                    }
-                }
-
-                // Add PhysicsComponent for physical objects
-                if (obj instanceof Types.BPart) {
-                    gameObject.addComponent(new PhysicsComponent(gameObject));
-                }
-
-                // Add PlayerControllerComponent for player controllers
-                if (obj instanceof Types.BPlayerController) {
-                    gameObject.addComponent(
-                        new PlayerControllerComponent(gameObject)
-                    );
-                }
-
                 // Store camera reference for later use
-                if (obj instanceof Types.BCamera && !sceneCamera) {
+                if (!sceneCamera) {
                     sceneCamera = obj;
                 }
-            } else if (obj instanceof Types.BScript) {
-                // Handle scripts - they need to be attached to their parent GameObject
+            }
+
+            // Add PhysicsComponent for physical objects
+            if (obj instanceof Types.BPart) {
+                gameObject.addComponent(new PhysicsComponent(gameObject));
+            }
+
+            // Add PlayerControllerComponent for player controllers
+            if (obj instanceof Types.BPlayerController) {
+                gameObject.addComponent(
+                    new PlayerControllerComponent(gameObject)
+                );
+            }
+        }
+
+        // Fourth pass: handle scripts
+        for (const obj of sceneObjects) {
+            if (obj instanceof Types.BScript) {
                 const parentObject = obj.parent;
                 if (parentObject) {
                     const gameObject = this.gameObjects.get(parentObject.id);
@@ -113,30 +160,6 @@ export class GameObjectManager {
                 } else {
                     console.warn(`Script ${obj.id} has no parent object`);
                     // TODO: support scripts with no parent
-                }
-            }
-        }
-
-        // Second pass: build GameObject parent/child hierarchy from BNode3D relationships
-        for (const obj of sceneObjects) {
-            if (obj instanceof Types.BNode3D) {
-                const childGO = this.gameObjects.get(obj.id);
-                if (!childGO) continue;
-
-                const parentRef: any = (obj as any).parent;
-                if (!parentRef) continue;
-
-                // parentRef may be a BObject or an ID string
-                const parentId: string | null =
-                    typeof parentRef === "string"
-                        ? parentRef
-                        : (parentRef && parentRef.id) || null;
-
-                if (!parentId) continue;
-
-                const parentGO = this.gameObjects.get(parentId);
-                if (parentGO) {
-                    parentGO.addChild(childGO);
                 }
             }
         }
