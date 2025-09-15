@@ -4,7 +4,6 @@ import { Component } from "./Component";
 import type { GameObject } from "./GameObject";
 import { PhysicsComponent } from "./PhysicsComponent";
 import { runtimeStore } from "$lib/runtimeStore";
-import { GameObjectManager } from "./GameObjectManager";
 
 /**
  * PlayerControllerComponent handles player input for movement and camera control
@@ -52,11 +51,11 @@ export class PlayerControllerComponent extends Component {
         }
     }
 
-    update(delta: number): void {
+    update(_delta: number): void {
         if (!this.enabled) return;
 
-        this.handleMovement(delta);
-        this.handleMouseLook(delta);
+        this.handleMovement(_delta);
+        this.handleMouseLook(_delta);
     }
 
     private handleMovement(delta: number): void {
@@ -85,7 +84,7 @@ export class PlayerControllerComponent extends Component {
         }
 
         // Apply movement relative to player rotation
-        if (
+        /*if (
             movementVector.x !== 0 ||
             movementVector.y !== 0 ||
             movementVector.z !== 0
@@ -108,10 +107,12 @@ export class PlayerControllerComponent extends Component {
                     worldMovement.z
                 )
             );
-        }
+        }*/
     }
 
     private handleMouseLook(delta: number): void {
+        if (!runtimeStore.getMouseButton("right")) return;
+
         const mouseDelta = runtimeStore.getMouseDelta();
 
         if (mouseDelta.x === 0 && mouseDelta.y === 0) return;
@@ -133,18 +134,14 @@ export class PlayerControllerComponent extends Component {
 
         // Apply rotation to player controller GameObject (Y-axis only)
         const playerRotation = new THREE.Euler(0, this.cameraRotationY, 0);
-        this.gameObject.localTransform.rotation.setFromEuler(playerRotation);
-        this.gameObject.localTransform.rotation.normalize();
+        this.gameObject.worldTransform.rotation.setFromEuler(playerRotation);
+        this.gameObject.worldTransform.rotation.normalize();
 
         // Apply rotation to camera child GameObject if present (X-axis only for pitch)
         if (this.cameraGO) {
-            const cameraRotation = new THREE.Euler(
-                this.cameraRotationX,
-                0,
-                0
-            );
-            this.cameraGO.localTransform.rotation.setFromEuler(cameraRotation);
-            this.cameraGO.localTransform.rotation.normalize();
+            const cameraRotation = new THREE.Euler(this.cameraRotationX, 0, 0);
+            this.cameraGO.worldTransform.rotation.setFromEuler(cameraRotation);
+            this.cameraGO.worldTransform.rotation.normalize();
         }
     }
 

@@ -77,19 +77,6 @@
         event.preventDefault(); // Prevent right-click context menu
     }
 
-    function handlePointerLockChange() {
-        const isLocked = document.pointerLockElement === canvasElement;
-        if (!isLocked && runtimeStore.isMouseCaptured()) {
-            // Pointer lock was lost, update our state
-            runtimeStore.uncaptureMouse();
-        }
-    }
-
-    function handlePointerLockError() {
-        console.warn("Pointer lock failed");
-        runtimeStore.uncaptureMouse();
-    }
-
     // 60fps animation using useTask
     useTask((delta) => {
         // Check if physics engine working
@@ -111,7 +98,7 @@
         runtimeStore.resetMouseDelta();
     });
 
-    onMount(() => {
+    onMount(async () => {
         // Create a separate scene for game runtime
         runtimeStore.info("Starting ThreeJS scene...", "GameRuntime");
         gameScene = new THREE.Scene();
@@ -153,6 +140,7 @@
         canvasElement.tabIndex = 0; // Make canvas focusable for keyboard events
 
         // Set canvas element in runtime store for mouse capture functionality
+        console.log(canvasElement);
         runtimeStore.setCanvasElement(canvasElement);
 
         // Initialize camera aspect from canvas
@@ -163,10 +151,6 @@
         canvasElement.addEventListener("mouseup", handleMouseUp);
         canvasElement.addEventListener("mousemove", handleMouseMove);
         canvasElement.addEventListener("contextmenu", handleContextMenu);
-
-        // Pointer lock events
-        document.addEventListener("pointerlockchange", handlePointerLockChange);
-        document.addEventListener("pointerlockerror", handlePointerLockError);
 
         // Keyboard events - attach to window for global capture
         window.addEventListener("keydown", handleKeyDown);
@@ -192,7 +176,8 @@
     function startRenderLoop() {
         function render() {
             if (gameScene && renderer) {
-                const activeCamera = gameObjectManager?.getCamera() ?? gameCamera;
+                const activeCamera =
+                    gameObjectManager?.getCamera() ?? gameCamera;
                 if (activeCamera) {
                     renderer.render(gameScene, activeCamera);
                 }
@@ -215,16 +200,6 @@
             canvasElement.removeEventListener("contextmenu", handleContextMenu);
         }
 
-        // Clean up pointer lock events
-        document.removeEventListener(
-            "pointerlockchange",
-            handlePointerLockChange
-        );
-        document.removeEventListener(
-            "pointerlockerror",
-            handlePointerLockError
-        );
-
         window.removeEventListener("keydown", handleKeyDown);
         window.removeEventListener("keyup", handleKeyUp);
         window.removeEventListener("resize", updateAspectFromCanvas);
@@ -243,6 +218,3 @@
         }
     });
 </script>
-
-<!-- GameRuntime uses a separate Three.js scene with custom render loop -->
-<!-- No Threlte components needed here as we render directly -->

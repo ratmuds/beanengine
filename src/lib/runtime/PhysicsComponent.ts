@@ -126,26 +126,20 @@ export class PhysicsComponent extends Component {
 
     update(_delta: number): void {
         // Update GameObject's world transform from the physics body
-        if (this.oldPosition === this.gameObject.worldTransform.position) {
+        if (
+            this.oldPosition.x === this.gameObject.worldTransform.position.x &&
+            this.oldPosition.y === this.gameObject.worldTransform.position.y &&
+            this.oldPosition.z === this.gameObject.worldTransform.position.z
+        ) {
             const position = this.body.translation();
             this.gameObject.worldTransform.position.set(
                 position.x,
                 position.y,
                 position.z
             );
-            this.oldPosition = this.gameObject.worldTransform.position;
-
-            if (!this.gameObject.bNode.positionLocked) {
-                console.log(this.oldPosition);
-            }
+            this.oldPosition.copy(this.gameObject.worldTransform.position);
         } else {
             // Moved externally
-            console.warn(
-                "external moved",
-                this.oldPosition,
-                this.gameObject.worldTransform.position
-            );
-
             this.body.setTranslation(
                 new RAPIER.Vector3(
                     this.gameObject.worldTransform.position.x,
@@ -155,10 +149,15 @@ export class PhysicsComponent extends Component {
                 true // wake up
             );
 
-            this.oldPosition = this.gameObject.worldTransform.position;
+            this.oldPosition.copy(this.gameObject.worldTransform.position);
         }
 
-        if (this.oldRotation === this.gameObject.worldTransform.rotation) {
+        if (
+            this.oldRotation.x === this.gameObject.worldTransform.rotation.x &&
+            this.oldRotation.y === this.gameObject.worldTransform.rotation.y &&
+            this.oldRotation.z === this.gameObject.worldTransform.rotation.z &&
+            this.oldRotation.w === this.gameObject.worldTransform.rotation.w
+        ) {
             const rotation = this.body.rotation();
             this.gameObject.worldTransform.rotation.set(
                 rotation.x,
@@ -166,10 +165,9 @@ export class PhysicsComponent extends Component {
                 rotation.z,
                 rotation.w
             );
-            this.oldRotation = this.gameObject.worldTransform.rotation;
+            this.oldRotation.copy(this.gameObject.worldTransform.rotation);
         } else {
             // Rotated externally
-            console.warn("external rotated");
             this.body.setRotation(
                 new RAPIER.Quaternion(
                     this.gameObject.worldTransform.rotation.x,
@@ -179,7 +177,7 @@ export class PhysicsComponent extends Component {
                 ),
                 true // wake up
             );
-            this.oldRotation = this.gameObject.worldTransform.rotation;
+            this.oldRotation.copy(this.gameObject.worldTransform.rotation);
         }
 
         // The scale is not changed by physics, so we keep the initial world scale.

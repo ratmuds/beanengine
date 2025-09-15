@@ -38,9 +38,10 @@ export interface InputState {
     keys: Map<string, boolean>;
     mousePosition: { x: number; y: number };
     mouseDelta: { x: number; y: number };
-    mouseCaptured: boolean;
     canvasCenter: { x: number; y: number };
     canvasElement: HTMLCanvasElement | null;
+    // Whether the mouse is currently captured via Pointer Lock for the active canvas
+    mouseCaptured: boolean;
 }
 
 export interface ScriptEvent {
@@ -59,7 +60,7 @@ class RuntimeManager {
     public maxLogs: number;
     public gameObjectManager: GameObjectManager | null = null;
     public scriptEvents: Map<string, ScriptEvent>;
-    public scriptEventListeners: Map<string, Set<(args: any[]) => void>>;
+    public scriptEventListeners: Map<string, Set<(..._args: any[]) => void>>;
 
     constructor() {
         this.logs = [];
@@ -74,9 +75,9 @@ class RuntimeManager {
             keys: new Map(),
             mousePosition: { x: 0, y: 0 },
             mouseDelta: { x: 0, y: 0 },
-            mouseCaptured: false,
             canvasCenter: { x: 0, y: 0 },
             canvasElement: null,
+            mouseCaptured: false,
         };
         this.maxLogs = 1000; // Limit logs to prevent memory issues
         this.scriptEvents = new Map();
@@ -256,12 +257,27 @@ class RuntimeManager {
         return Array.from(this.runningScripts.values());
     }
 
+    captureMouseIfNotCaptured(): void {
+        if (typeof document === "undefined") {
+            console.warn("Document is undefined, cannot capture mouse");
+            return;
+        }
+        if (document.pointerLockElement === this.inputState.canvasElement) {
+            return;
+        }
+
+        this.captureMouse();
+    }
+
     // Input state management
     setMouseButton(
         button: "left" | "right" | "middle",
         pressed: boolean
     ): void {
         this.inputState.mouseButtons[button] = pressed;
+
+        // Capture mouse if not already
+        this.captureMouseIfNotCaptured();
     }
 
     getMouseButton(button: "left" | "right" | "middle"): boolean {
@@ -311,9 +327,9 @@ class RuntimeManager {
             keys: new Map(),
             mousePosition: { x: 0, y: 0 },
             mouseDelta: { x: 0, y: 0 },
-            mouseCaptured: false,
             canvasCenter: { x: 0, y: 0 },
             canvasElement: null,
+            mouseCaptured: false,
         };
     }
 
@@ -332,24 +348,6 @@ class RuntimeManager {
         }
     }
 
-    captureMouse(): void {
-        if (this.inputState.canvasElement && !this.inputState.mouseCaptured) {
-            this.inputState.canvasElement.requestPointerLock();
-            this.inputState.mouseCaptured = true;
-        }
-    }
-
-    uncaptureMouse(): void {
-        if (this.inputState.mouseCaptured) {
-            document.exitPointerLock();
-            this.inputState.mouseCaptured = false;
-        }
-    }
-
-    isMouseCaptured(): boolean {
-        return this.inputState.mouseCaptured;
-    }
-
     getMousePositionFromCenter(): { x: number; y: number } {
         return {
             x: this.inputState.mousePosition.x - this.inputState.canvasCenter.x,
@@ -363,6 +361,68 @@ class RuntimeManager {
 
     getGameObjectManager(): GameObjectManager | null {
         return this.gameObjectManager;
+    }
+
+    // Pointer Lock helpers (INTERNAL, use setCaptureMouse to capture mouse)
+    async captureMouse(): Promise<boolean> {
+        if (typeof document === "undefined") return false;
+        const canvas = this.inputState.canvasElement;
+        if (!canvas) {
+            this.addLog(
+                "warn",
+                "captureMouse called without a canvas element set",
+                "runtimeStore"
+            );
+            return false;
+        }
+        try {
+            const anyCanvas = canvas as any;
+            const req = anyCanvas.requestPointerLock?.bind(anyCanvas);
+            if (!req) {
+                this.addLog(
+                    "warn",
+                    "Pointer Lock API not supported on this element",
+                    "runtimeStore"
+                );
+                return false;
+            }
+            // Try unadjustedMovement when supported
+            const ret = req({ unadjustedMovement: true } as any);
+            if (ret && typeof ret.then === "function") {
+                await ret; // await promise in supporting browsers
+            }
+
+            return this.inputState.mouseCaptured;
+        } catch (e) {
+            this.addLog("error", "Failed to capture mouse", "runtimeStore", e);
+            return false;
+        }
+    }
+
+    // INTERNAL
+    uncaptureMouse(): void {
+        if (typeof document === "undefined") return;
+        try {
+            if (document.pointerLockElement) {
+                document.exitPointerLock();
+            }
+        } finally {
+            this.inputState.mouseCaptured = false;
+        }
+    }
+
+    setCaptureMouse(captured: boolean): void {
+        this.inputState.mouseCaptured = captured;
+
+        if (captured) {
+            this.captureMouse();
+        } else {
+            this.uncaptureMouse();
+        }
+    }
+
+    isMouseCaptured(): boolean {
+        return this.inputState.mouseCaptured;
     }
 }
 
@@ -499,20 +559,6 @@ function createRuntimeStore() {
             update((m) => m);
         },
 
-        captureMouse: () => {
-            manager.captureMouse();
-            update((m) => m);
-        },
-
-        uncaptureMouse: () => {
-            manager.uncaptureMouse();
-            update((m) => m);
-        },
-
-        isMouseCaptured: () => {
-            return manager.isMouseCaptured();
-        },
-
         getMousePositionFromCenter: () => {
             return manager.getMousePositionFromCenter();
         },
@@ -525,6 +571,15 @@ function createRuntimeStore() {
 
         getGameObjectManager: () => {
             return manager.getGameObjectManager();
+        },
+
+        // Pointer Lock functions
+        setCaptureMouse: (captured: boolean) => {
+            manager.setCaptureMouse(captured);
+            update((m) => m);
+        },
+        isMouseCaptured: () => {
+            return manager.isMouseCaptured();
         },
     };
 }
@@ -541,8 +596,3 @@ export const runtimeLog = {
     error: (message: string, source?: string, data?: any) =>
         runtimeStore.error(message, source, data),
 };
-
-// Make it available globally for easy access from anywhere
-if (typeof window !== "undefined") {
-    (window as any).runtimeLog = runtimeLog;
-}
