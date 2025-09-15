@@ -132,8 +132,8 @@ export class PlayerControllerComponent extends Component {
         const sensitivity = this.playerController.mouseSensitivity;
 
         // Update rotation based on mouse movement
-        this.cameraRotationY -= mouseDelta.x * sensitivity * delta; // Horizontal (yaw)
-        this.cameraRotationX -= mouseDelta.y * sensitivity * delta; // Vertical (pitch)
+        this.cameraRotationY += mouseDelta.x * sensitivity * delta; // Horizontal (yaw)
+        this.cameraRotationX += mouseDelta.y * sensitivity * delta; // Vertical (pitch)
 
         // Clamp vertical rotation if camera is present
         if (this.cameraGO) {
@@ -146,15 +146,26 @@ export class PlayerControllerComponent extends Component {
 
         // Apply rotation to player controller GameObject (Y-axis only)
         const playerRotation = new THREE.Euler(0, this.cameraRotationY, 0);
-        this.gameObject.transform.rotation.setFromEuler(playerRotation);
-        this.gameObject.transform.rotation.normalize();
+        const newPlayerRotation = new THREE.Quaternion().setFromEuler(
+            playerRotation
+        );
+        if ((this.gameObject as any).setLocalRotation) {
+            (this.gameObject as any).setLocalRotation(newPlayerRotation);
+        } else {
+            this.gameObject.transform.rotation.copy(newPlayerRotation);
+        }
 
         // Apply rotation to camera child GameObject if present (X-axis only for pitch)
         if (this.cameraGO) {
-            console.log("setting camera rotation", this.cameraRotationX);
             const cameraRotation = new THREE.Euler(this.cameraRotationX, 0, 0);
-            this.cameraGO.transform.rotation.setFromEuler(cameraRotation);
-            this.cameraGO.transform.rotation.normalize();
+            const newCameraRotation = new THREE.Quaternion().setFromEuler(
+                cameraRotation
+            );
+            if ((this.cameraGO as any).setLocalRotation) {
+                (this.cameraGO as any).setLocalRotation(newCameraRotation);
+            } else {
+                this.cameraGO.transform.rotation.copy(newCameraRotation);
+            }
         }
     }
 

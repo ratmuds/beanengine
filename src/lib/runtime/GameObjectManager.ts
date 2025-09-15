@@ -230,11 +230,9 @@ export class GameObjectManager {
      * Update all GameObjects
      */
     update(delta: number): void {
-        // First, update all world matrices from the root objects down
+        // Update world matrices for all GameObjects
         for (const gameObject of this.gameObjects.values()) {
-            if (!gameObject.getParent()) {
-                gameObject.updateWorldMatrix();
-            }
+            gameObject.updateWorldMatrix();
         }
 
         // Then, update all components

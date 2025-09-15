@@ -99,31 +99,32 @@ The visual scripting system has three main parts: configuration, compilation, an
 
 ---
 
-### Transform Hierarchy (Local vs. World)
+### Transform System (Roblox Studio Style)
 
-The runtime engine now uses a parent-child transform hierarchy.
+The runtime engine uses a simplified transform system similar to Roblox Studio.
 
 -   **`GameObject.ts`**:
-    -   `localTransform`: Stores the position, rotation, and scale relative to the parent `GameObject`. This is what you modify directly in components like `PlayerControllerComponent`.
-    -   `worldTransform`: Stores the calculated, absolute position, rotation, and scale in world space. This is read-only for most components and is used for rendering.
-    -   `worldMatrix`: The final `THREE.Matrix4` representing the world transform.
-    -   `isPhysicsDriven`: A boolean flag. If `true`, the `GameObject`'s transform is controlled by the physics simulation (`PhysicsComponent`) and not by the parent's transform.
+    -   `transform`: Single transform property containing position, rotation, and scale. This is what you modify directly in all components.
+    -   `offsetFromParent`: Cached offset when parented (automatically managed by the system).
+    -   `worldMatrix`: The final `THREE.Matrix4` representing the world transform for rendering.
+    -   `isPhysicsDriven`: A boolean flag. If `true`, the `GameObject`'s transform is controlled by the physics simulation (`PhysicsComponent`).
 
 -   **`GameObjectManager.ts`**:
-    -   In its `update` loop, it first calls `updateWorldMatrix()` on all root-level `GameObject`s.
-    -   `GameObject.updateWorldMatrix()`: This method recursively calculates the `worldTransform` for itself and all its children.
-        -   If `isPhysicsDriven` is `true`, it skips the parent-based calculation and uses its own transform as the world transform, but still updates its children.
-        -   Otherwise, it combines its `localTransform` with its parent's `worldTransform`.
+    -   In its `update` loop, it calls `updateWorldMatrix()` on all `GameObject`s.
+    -   `GameObject.updateWorldMatrix()`: This method calculates the world matrix for rendering.
+        -   If `isPhysicsDriven` is `true`, it uses the physics-driven transform directly.
+        -   If the object has a parent, it applies the cached `offsetFromParent` to the parent's world transform.
+        -   Otherwise, it uses the object's own transform as the world transform.
 
 -   **Component Interactions**:
-    -   `VisualComponent.ts`: Now reads from `gameObject.worldTransform` to position and orient meshes and lights in the scene, ensuring they render in the correct world-space location. It also calls `mesh.updateMatrix()` and `mesh.updateMatrixWorld(true)` (or the light equivalents) after copying transforms.
+    -   `VisualComponent.ts`: Reads from `gameObject.transform` to position and orient meshes and lights in the scene. It also calls `mesh.updateMatrix()` and `mesh.updateMatrixWorld(true)` after copying transforms.
     -   `PhysicsComponent.ts`:
-        -   On initialization, it uses the `gameObject.worldTransform` to create the physics body at the correct initial position and rotation.
+        -   On initialization, it uses the `gameObject.transform` to create the physics body at the correct initial position and rotation.
         -   It sets `gameObject.isPhysicsDriven = true`.
-        -   In its `update` loop, it syncs the `GameObject`'s `worldTransform` and `worldMatrix` from the physics simulation's result. It then calculates the correct `localTransform` by comparing the new world transform to the parent's world transform.
+        -   In its `update` loop, it syncs the `GameObject`'s `transform` from the physics simulation's result.
     -   `PlayerControllerComponent.ts`:
-        -   Modifies `gameObject.localTransform` for player rotation (yaw).
-        -   Modifies the child camera's `localTransform` for camera pitch, creating the standard FPS camera behavior where the camera's final orientation is a combination of the player's body rotation and its own local pitch.
+        -   Modifies `gameObject.transform.rotation` for player rotation (yaw).
+        -   Modifies the child camera's `transform.rotation` for camera pitch, creating the standard FPS camera behavior.
 
 ---
 
