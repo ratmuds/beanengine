@@ -49,6 +49,21 @@ The entire scene is built upon a hierarchy of classes.
 
 ## 4. State Management (`src/lib/*Store.ts`)
 
+### Recent Updates
+
+#### Player Controller Movement System (Latest)
+- **Issue**: Player movement using `setDirectionalForce()` caused acceleration buildup, making players move faster and faster without stopping
+- **Solution**: Implemented velocity-based movement system
+  - Added `setVelocity()` and `getVelocity()` methods to <mcfile name="PhysicsComponent.ts" path="src/lib/runtime/PhysicsComponent.ts"></mcfile>
+  - Modified <mcfile name="PlayerControllerComponent.ts" path="src/lib/runtime/PlayerControllerComponent.ts"></mcfile> to use direct velocity control instead of forces
+  - Movement now:
+    - Sets velocity directly for immediate, responsive movement
+    - Preserves Y-axis velocity for gravity/jumping
+    - Normalizes diagonal movement to prevent speed advantages
+    - Stops immediately when input stops
+    - Maintains physics collision detection
+- **Result**: Smooth, predictable FPS-style player movement without acceleration issues
+
 The engine uses a consistent pattern for state management: a manager class containing the logic, wrapped in a Svelte writable store to provide reactivity to the UI.
 
 -   **`sceneStore.ts`**: The most critical store. It manages the `BScene` object, which contains all `BObject`s.
@@ -98,6 +113,29 @@ The visual scripting system has three main parts: configuration, compilation, an
     -   The interpreter is instantiated and run by the `ScriptComponent` in the runtime engine.
 
 ---
+
+### Visual Scripting: Chip Evaluation Rules and Recent Fixes
+
+### Scene Serialization & Editor Project Loading (New)
+- SceneManager in <mcfile name="sceneStore.ts" path="src/lib/sceneStore.ts"></mcfile> now exposes:
+  - clearScene(): resets logical scene graph (keeps physics world intact)
+  - serialize(): returns a plain JSON payload of objects and variables (no File/URL blobs)
+  - deserialize(payload): rebuilds a scene from the JSON payload; creates objects first, then wires parent-child by id; restores transforms and type-specific props (Part, Camera, Light, Script, PlayerController).
+- Editor route <mcfile name="+page.svelte" path="src/routes/editor/[id]/+page.svelte"></mcfile> loads project by ID on mount:
+  - Reads id from window.location (/editor/[id])
+  - Looks up localStorage key: beanengine:project:[id]
+  - If found, parses JSON and calls sceneStore.clearScene() then sceneStore.deserialize(payload)
+  - Loading overlay text reflects the loading state during initialization.
+- Notes:
+  - This path intentionally avoids File-based assets for now; asset persistence will be handled separately via assetStore in future work.
+  - Physics world is not torn down by clearScene(); reinit occurs separately via existing physics lifecycle.
+
+
+- RuntimeContext.evaluateChip is the single entry point to evaluate any compiled chip or literal, and must be called recursively by chips when reading their inputs. This returns plain JS primitives or engine types (e.g., Types.BVector3) depending on the chip.
+- Important contract: Block handlers (in interpreter.ts) always call context.evaluateChip on their parameters before use. Chips must also call context.evaluateChip on their own field values before computing results.
+- Fix (2025-09-16): vector3, add, and mul chips now evaluate inputs asynchronously via context.evaluateChip(compiledField, context) rather than directly reading compiled objects. This resolves instanceof/type issues where nested chips previously leaked raw compiled objects (e.g., position vs vector3). Add/mul now support vector-like operations by detecting objects with x,y,z and returning a new Types.BVector3.
+- Impact: Move/MoveTo/DirectionalImpulse blocks now properly accept expressions like Add(Position(self), Vector3(0, 2, 0)). The interpreter’s parseVector3 continues to normalize both plain objects and Types.BVector3.
+
 
 ### Transform System (Roblox Studio Style)
 

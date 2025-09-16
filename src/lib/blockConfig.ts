@@ -158,6 +158,26 @@ export const blockConfig: Record<string, BlockConfig> = {
         info: "Applies a directional impulse in the specified direction to the object this script is on. If no target is provided, it applies the force to the object this script is on.",
     },
 
+    directionalvelocity: {
+        color: colorMap.green,
+        label: "Directional Velocity",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "direction",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Sets the directional velocity in the specified direction to the object this script is on. If no target is provided, it applies the force to the object this script is on.",
+    },
+
     mousebutton: {
         color: colorMap.purple,
         label: "Mouse Button",

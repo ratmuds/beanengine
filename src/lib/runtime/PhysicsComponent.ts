@@ -103,6 +103,18 @@ export class PhysicsComponent extends Component {
         );
     }
 
+    public setVelocity(velocity: Types.BVector3) {
+        this.body.setLinvel(
+            new RAPIER.Vector3(velocity.x, velocity.y, velocity.z),
+            true // wake up
+        );
+    }
+
+    public getVelocity(): Types.BVector3 {
+        const vel = this.body.linvel();
+        return new Types.BVector3(vel.x, vel.y, vel.z);
+    }
+
     private applyLocks(): void {
         // Check if the gameObject's data is a BPart with lock properties
         if (this.gameObject.bNode instanceof Types.BPart) {

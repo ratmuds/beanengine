@@ -108,6 +108,46 @@ class BVector3 {
     clone(): BVector3 {
         return new BVector3(this.x, this.y, this.z);
     }
+
+    // Add method to add two vectors
+    add(vector: BVector3) {
+        this.x = this.x + vector.x;
+        this.y = this.y + vector.y;
+        this.z = this.z + vector.z;
+    }
+
+    // Subtract method to subtract two vectors
+    sub(vector: BVector3) {
+        this.x = this.x - vector.x;
+        this.y = this.y - vector.y;
+        this.z = this.z - vector.z;
+    }
+
+    // Multiply method to multiply two vectors
+    mul(vector: BVector3) {
+        this.x = this.x * vector.x;
+        this.y = this.y * vector.y;
+        this.z = this.z * vector.z;
+    }
+
+    // Divide method to divide two vectors
+    div(vector: BVector3) {
+        this.x = this.x / vector.x;
+        this.y = this.y / vector.y;
+        this.z = this.z / vector.z;
+    }
+
+    // Equals method to check if two vectors are equal
+    equals(vector: BVector3): boolean {
+        return (
+            this.x === vector.x && this.y === vector.y && this.z === vector.z
+        );
+    }
+
+    // Copy method to copy the vector
+    copy(vector: BVector3): BVector3 {
+        return new BVector3(vector.x, vector.y, vector.z);
+    }
 }
 
 // Represents a rotation in 3D space

@@ -70,7 +70,7 @@ export class PlayerControllerComponent extends Component {
         this.handleMouseLook(_delta);
     }
 
-    private handleMovement(delta: number): void {
+    private handleMovement(_delta: number): void {
         if (!this.physicsComponent) return;
 
         const movementVector = new Types.BVector3(0, 0, 0);
@@ -78,48 +78,42 @@ export class PlayerControllerComponent extends Component {
 
         // WASD movement
         if (runtimeStore.getKey("w") || runtimeStore.getKey("W")) {
-            movementVector.z -= speed;
+            movementVector.add(this.gameObject.getLookVector());
         }
         if (runtimeStore.getKey("s") || runtimeStore.getKey("S")) {
-            movementVector.z += speed;
+            movementVector.sub(this.gameObject.getLookVector());
         }
         if (runtimeStore.getKey("a") || runtimeStore.getKey("A")) {
-            movementVector.x -= speed;
+            movementVector.sub(this.gameObject.getRightVector());
         }
         if (runtimeStore.getKey("d") || runtimeStore.getKey("D")) {
-            movementVector.x += speed;
+            movementVector.add(this.gameObject.getRightVector());
         }
 
-        // Space for jump/up movement
+        // Normalize movement vector to prevent faster diagonal movement
+        if (movementVector.x !== 0 || movementVector.z !== 0) {
+            const length = Math.sqrt(movementVector.x * movementVector.x + movementVector.z * movementVector.z);
+            movementVector.x = (movementVector.x / length) * speed;
+            movementVector.z = (movementVector.z / length) * speed;
+        }
+
+        // Get current velocity to preserve Y component (gravity)
+        const currentVelocity = this.physicsComponent.getVelocity();
+        
+        // Set new velocity with desired horizontal movement but preserve vertical velocity
+        const newVelocity = new Types.BVector3(
+            movementVector.x,
+            currentVelocity.y, // Preserve gravity/jumping
+            movementVector.z
+        );
+
+        // Handle jumping - set Y velocity when space is pressed
         if (runtimeStore.getKey(" ")) {
-            movementVector.y += speed;
+            // Simple jump - you might want to add ground detection later
+            newVelocity.y = speed; // Use moveSpeed for jump strength
         }
 
-        // Apply movement relative to player rotation
-        /*if (
-            movementVector.x !== 0 ||
-            movementVector.y !== 0 ||
-            movementVector.z !== 0
-        ) {
-            // Create rotation matrix from current Y rotation (yaw)
-            const rotationMatrix = new THREE.Matrix4().makeRotationY(
-                this.cameraRotationY
-            );
-            const worldMovement = new THREE.Vector3(
-                movementVector.x,
-                movementVector.y,
-                movementVector.z
-            ).applyMatrix4(rotationMatrix);
-
-            // Apply force through physics component
-            this.physicsComponent.setDirectionalForce(
-                new Types.BVector3(
-                    worldMovement.x,
-                    worldMovement.y,
-                    worldMovement.z
-                )
-            );
-        }*/
+        this.physicsComponent.setVelocity(newVelocity);
     }
 
     private handleMouseLook(delta: number): void {

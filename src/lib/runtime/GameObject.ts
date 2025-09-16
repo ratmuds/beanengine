@@ -141,12 +141,6 @@ export class GameObject {
                 this.offsetFromParent.rotation
             );
 
-            // Print rotation change
-            console.log(
-                "rotation change",
-                oldRotation.equals(this.transform.rotation)
-            );
-
             // Update world matrix
             this.worldMatrix.compose(
                 this.transform.position,
@@ -355,5 +349,112 @@ export class GameObject {
         this.transform.rotation.copy(q);
         // Recompute this subtree now so dependents see the change this frame
         this.updateWorldMatrix();
+    }
+
+    /**
+     * Get the forward vector (negative Z axis) in world space.
+     * This is the direction the object is "looking" towards.
+     */
+    public getLookVector(): THREE.Vector3 {
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyQuaternion(this.transform.rotation);
+        return forward;
+    }
+
+    /**
+     * Alias for getLookVector() - returns the forward direction vector.
+     */
+    public getForwardVector(): THREE.Vector3 {
+        return this.getLookVector();
+    }
+
+    /**
+     * Get the right vector (positive X axis) in world space.
+     */
+    public getRightVector(): THREE.Vector3 {
+        const right = new THREE.Vector3(1, 0, 0);
+        right.applyQuaternion(this.transform.rotation);
+        return right;
+    }
+
+    /**
+     * Get the up vector (positive Y axis) in world space.
+     */
+    public getUpVector(): THREE.Vector3 {
+        const up = new THREE.Vector3(0, 1, 0);
+        up.applyQuaternion(this.transform.rotation);
+        return up;
+    }
+
+    /**
+     * Get the backward vector (positive Z axis) in world space.
+     * Opposite of the look/forward vector.
+     */
+    public getBackVector(): THREE.Vector3 {
+        const back = new THREE.Vector3(0, 0, 1);
+        back.applyQuaternion(this.transform.rotation);
+        return back;
+    }
+
+    /**
+     * Get the left vector (negative X axis) in world space.
+     * Opposite of the right vector.
+     */
+    public getLeftVector(): THREE.Vector3 {
+        const left = new THREE.Vector3(-1, 0, 0);
+        left.applyQuaternion(this.transform.rotation);
+        return left;
+    }
+
+    /**
+     * Get the down vector (negative Y axis) in world space.
+     * Opposite of the up vector.
+     */
+    public getDownVector(): THREE.Vector3 {
+        const down = new THREE.Vector3(0, -1, 0);
+        down.applyQuaternion(this.transform.rotation);
+        return down;
+    }
+
+    /**
+     * Make this GameObject look at a target position in world space.
+     * Updates the rotation to face the target.
+     */
+    public lookAt(target: THREE.Vector3): void {
+        // Create a quaternion that rotates from the default forward direction to the target direction
+        const quaternion = new THREE.Quaternion();
+        const matrix = new THREE.Matrix4();
+        matrix.lookAt(
+            this.transform.position,
+            target,
+            new THREE.Vector3(0, 1, 0)
+        );
+        quaternion.setFromRotationMatrix(matrix);
+
+        this.setLocalRotation(quaternion);
+    }
+
+    /**
+     * Rotate this GameObject to face another GameObject.
+     */
+    public lookAtGameObject(target: GameObject): void {
+        this.lookAt(target.transform.position);
+    }
+
+    /**
+     * Get the distance to another GameObject.
+     */
+    public getDistanceTo(other: GameObject): number {
+        return this.transform.position.distanceTo(other.transform.position);
+    }
+
+    /**
+     * Get the direction vector from this GameObject to another GameObject (normalized).
+     */
+    public getDirectionTo(other: GameObject): THREE.Vector3 {
+        return other.transform.position
+            .clone()
+            .sub(this.transform.position)
+            .normalize();
     }
 }

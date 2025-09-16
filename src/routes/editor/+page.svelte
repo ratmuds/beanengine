@@ -293,6 +293,52 @@
     let isViewportLoading = $state(true);
     let loadingText = $state("Starting...");
 
+    // Read project id from route and load if present
+    let projectId: string | null = null;
+
+    async function tryLoadProjectById() {
+        try {
+            // SvelteKit passes [id] as a prop in page-svelte-only routes via url, so read from location
+            const match = window.location.pathname.match(/\/editor\/([^/]+)/);
+            projectId = match?.[1] ?? null;
+            if (!projectId) return;
+
+            loadingText = `Loading project ${projectId}...`;
+            const raw = localStorage.getItem(`beanengine:project:${projectId}`);
+            if (!raw) return;
+
+            const payload = JSON.parse(raw);
+            sceneStore.clearScene();
+            sceneStore.deserialize(payload);
+        } catch (err) {
+            console.error("Failed to load project", err);
+        }
+    }
+
+    async function initializeViewport() {
+        isViewportLoading = true;
+        const steps = [
+            { text: "Initializing viewport...", delay: 150 },
+            { text: "Preparing scene...", delay: 150 },
+            { text: "Loading assets...", delay: 150 },
+        ];
+
+        await tryLoadProjectById();
+
+        for (const step of steps) {
+            loadingText = step.text;
+            await new Promise((r) => setTimeout(r, step.delay));
+        }
+
+        isViewportLoading = false;
+
+        // Expand panels after viewport loads with smooth transition
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        leftPanelSize = 20;
+        rightPanelSize = 20;
+        centerPanelSize = 60;
+    }
+
     // Panel collapse state
     let leftPanelSize = $state(0);
     let rightPanelSize = $state(0);
@@ -307,25 +353,25 @@
     let compiledCode = $state([]);
 
     // Simulate loading process
-    async function initializeViewport() {
-        const loadingSteps = [
-            { text: "Loading components...", delay: 800 },
-            { text: "Finalizing", delay: 400 },
-        ];
-
-        for (const step of loadingSteps) {
-            loadingText = step.text;
-            await new Promise((resolve) => setTimeout(resolve, step.delay));
-        }
-
-        isViewportLoading = false;
-
-        // Expand panels after viewport loads with smooth transition
-        await new Promise((resolve) => setTimeout(resolve, 200)); // Small delay for smooth transition
-        leftPanelSize = 20;
-        rightPanelSize = 20;
-        centerPanelSize = 60;
-    }
+    // async function initializeViewport() {
+    //     const loadingSteps = [
+    //         { text: "Loading components...", delay: 800 },
+    //         { text: "Finalizing", delay: 400 },
+    //     ];
+    //
+    //     for (const step of loadingSteps) {
+    //         loadingText = step.text;
+    //         await new Promise((resolve) => setTimeout(resolve, step.delay));
+    //     }
+    //
+    //     isViewportLoading = false;
+    //
+    //     // Expand panels after viewport loads with smooth transition
+    //     await new Promise((resolve) => setTimeout(resolve, 200)); // Small delay for smooth transition
+    //     leftPanelSize = 20;
+    //     rightPanelSize = 20;
+    //     centerPanelSize = 60;
+    // }
 
     // play mode
 
@@ -375,10 +421,17 @@
         // The actual copying is handled in ObjectExplorer component
     }
 
-    function handlePasteObject(event: CustomEvent<{ copiedObject: any; parentId: string | number }>) {
+    function handlePasteObject(
+        event: CustomEvent<{ copiedObject: any; parentId: string | number }>
+    ) {
         const { copiedObject, parentId } = event.detail;
-        console.log("Pasting object:", copiedObject.name, "to parent:", parentId);
-        
+        console.log(
+            "Pasting object:",
+            copiedObject.name,
+            "to parent:",
+            parentId
+        );
+
         // Create a new object based on the copied object
         const newObject = structuredClone(copiedObject);
         // Generate a new unique ID
@@ -387,23 +440,25 @@
         newObject.name = `${copiedObject.name} Copy`;
         // Set the parent
         newObject.parentId = parentId === -1 ? null : parentId;
-        
+
         // Add to scene
         sceneStore.addObject(newObject);
         console.log("Object pasted with new ID:", newObject.id);
     }
 
-    function handleDuplicateObject(event: CustomEvent<{ originalId: string; duplicatedObject: any }>) {
+    function handleDuplicateObject(
+        event: CustomEvent<{ originalId: string; duplicatedObject: any }>
+    ) {
         const { originalId, duplicatedObject } = event.detail;
         console.log("Duplicating object:", originalId);
-        
+
         // Create a new object based on the duplicated object
         const newObject = structuredClone(duplicatedObject);
         // Generate a new unique ID
         newObject.id = crypto.randomUUID();
         // Update the name to indicate it's a duplicate
         newObject.name = `${duplicatedObject.name} Copy`;
-        
+
         // Add to scene with same parent as original
         sceneStore.addObject(newObject);
         console.log("Object duplicated with new ID:", newObject.id);
@@ -412,13 +467,13 @@
     function handleDeleteObject(event: CustomEvent<{ id: string }>) {
         const { id } = event.detail;
         console.log("Deleting object:", id);
-        
+
         // Find the object first
         const objectToDelete = sceneStore.getObjectById(id);
         if (objectToDelete) {
             // Remove from scene
             sceneStore.removeObject(objectToDelete);
-            
+
             // If the deleted object was selected, clear selection
             if (selectedObject === id) {
                 selectedObject = -1;

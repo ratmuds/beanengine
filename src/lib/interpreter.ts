@@ -158,6 +158,9 @@ export class CodeInterpreter {
                 case "directionalimpulse":
                     await this.executeDirectionalImpulse(item, context);
                     break;
+                case "directionalvelocity":
+                    await this.executeDirectionalVelocity(item, context);
+                    break;
                 default:
                     runtimeStore.warn(
                         `Unknown code block type: ${item.type}`,
@@ -452,5 +455,48 @@ export class CodeInterpreter {
         targetGameObject
             .getComponent(PhysicsComponent)
             .addDirectionalImpulse(dir);
+    }
+
+    private async executeDirectionalVelocity(
+        item: any,
+        context: RuntimeContext
+    ) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const direction = await context.evaluateChip(item.direction, context);
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `DirectionalImpulse target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "DirectionalVelocity block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        if (!direction) {
+            throw new InterpreterScriptError(
+                "Directional velocity block missing direction"
+            );
+        }
+
+        const dir = this.parseVector3(direction);
+        targetGameObject
+            .getComponent(PhysicsComponent)
+            .setDirectionalVelocity(dir);
     }
 }
