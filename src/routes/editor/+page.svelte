@@ -45,21 +45,21 @@
     } from "lucide-svelte";
 
     import { Canvas } from "@threlte/core";
-    import Scene from "$lib/components/ViewportScene.svelte";
+    import Scene from "$lib/components/editor/ViewportScene.svelte";
     import GameRuntime from "$lib/components/GameRuntime.svelte";
     import CustomCodeEditor from "$lib/components/CodeEditor.svelte";
-    import ObjectExplorer from "$lib/components/ObjectExplorer.svelte";
-    import CodePalette from "$lib/components/CodePalette.svelte";
-    import PropertiesPanel from "$lib/components/PropertiesPanel.svelte";
+    import ObjectExplorer from "$lib/components/editor/ObjectExplorer.svelte";
+    import CodePalette from "$lib/components/code/CodePalette.svelte";
+    import PropertiesPanel from "$lib/components/editor/PropertiesPanel.svelte";
     import DevToolsPanel from "$lib/components/DevToolsPanel.svelte";
-    import ViewportLoader from "$lib/components/ViewportLoader.svelte";
+    import ViewportLoader from "$lib/components/editor/ViewportLoader.svelte";
 
     import * as Types from "$lib/types";
     import { sceneStore } from "$lib/sceneStore";
 
-    import AssetBrowser from "$lib/components/AssetBrowser.svelte";
-    import MaterialBrowser from "$lib/components/MaterialBrowser.svelte";
-    import ParticleBrowser from "$lib/components/ParticleBrowser.svelte";
+    import AssetBrowser from "$lib/components/editor/AssetBrowser.svelte";
+    import MaterialBrowser from "$lib/components/editor/MaterialBrowser.svelte";
+    import ParticleBrowser from "$lib/components/editor/ParticleBrowser.svelte";
     import { materialStore } from "$lib/materialStore";
     import { assetStore } from "$lib/assetStore";
     import { particleStore } from "$lib/particleStore";

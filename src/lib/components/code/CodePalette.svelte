@@ -3,10 +3,10 @@
     import { Plus, Info, Search, Diamond, Code } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
-    import * as Dialog from "./ui/dialog";
-    import Button from "./ui/button/button.svelte";
-    import Input from "./ui/input/input.svelte";
-    import * as ContextMenu from "./ui/context-menu";
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import { Button } from "$lib/components/ui/button/index.js";
+    import { Input } from "$lib/components/ui/input/index.js";
+    import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import { sceneStore } from "$lib/sceneStore.js";
     import { slide, fade } from "svelte/transition";
 

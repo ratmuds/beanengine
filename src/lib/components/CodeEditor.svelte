@@ -2,7 +2,7 @@
     import { draggable } from "@neodrag/svelte";
     import { dragHandleZone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
-    import CodeBlock from "$lib/components/CodeBlock.svelte";
+    import CodeBlock from "$lib/components/code/CodeBlock.svelte";
     import { GripVertical, Edit3, Plus, HelpCircle } from "lucide-svelte";
 
     import { compileScript } from "$lib/compiler.js";
