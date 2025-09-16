@@ -57,11 +57,11 @@
     });
 
     // DND functions for code blocks using svelte-dnd-action
-    function handleDndConsider(e) {
+    function handleDndConsider(e: any) {
         items = e.detail.items;
     }
 
-    function handleDndFinalize(e) {
+    function handleDndFinalize(e: any) {
         items = e.detail.items;
     }
 
@@ -85,35 +85,35 @@
     }
 
     // DND functions for nested children in code blocks (recursive to handle nesting)
-    function handleChildDndConsider(e, itemId) {
+    function handleChildDndConsider(e: any, itemId: any) {
         if (updateChildrenById(items, itemId, e.detail.items)) {
-            // trigger reactivity at top level
             items = [...items];
         }
     }
 
-    function handleChildDndFinalize(e, itemId) {
+    function handleChildDndFinalize(e: any, itemId: any) {
         if (updateChildrenById(items, itemId, e.detail.items)) {
             items = [...items];
         }
     }
 
     // Keep HTML drag for triggers since they need different behavior
-    let draggedItem = null;
-    let dragSource = null;
+    let draggedItem: any = null;
+    let dragSource: any = null;
     let validDropOccurred = false;
 
-    function handleDragStart(e, item, index, source = "items") {
+    function handleDragStart(e: DragEvent, item: any, index: number, source = "items") {
         draggedItem = { item, index, source };
         dragSource = source;
         validDropOccurred = false;
-        e.dataTransfer!.effectAllowed = "move";
-        e.dataTransfer!.setData("text/plain", JSON.stringify(item));
-        e.dataTransfer!.setData("application/x-source", source);
-        e.dataTransfer!.setData("application/x-index", index.toString());
+        if (!e.dataTransfer) return;
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", JSON.stringify(item));
+        e.dataTransfer.setData("application/x-source", source);
+        e.dataTransfer.setData("application/x-index", index.toString());
     }
 
-    function handleDragEnd(e) {
+    function handleDragEnd(e: DragEvent) {
         // Clean up any item that was dragged but not dropped in a valid zone
         if (draggedItem && !validDropOccurred) {
             if (draggedItem.source === "triggers") {
@@ -133,14 +133,14 @@
         isEditingTitle = true;
     }
 
-    function finishEditingTitle(event) {
-        if (event.key === "Enter" || event.type === "blur") {
+    function finishEditingTitle(event: KeyboardEvent | FocusEvent) {
+        if ((event as KeyboardEvent).key === "Enter" || event.type === "blur") {
             isEditingTitle = false;
         }
     }
 
     // Camera control functions
-    function handleMouseDown(e) {
+    function handleMouseDown(e: MouseEvent) {
         if (e.button === 1 || (e.button === 0 && e.ctrlKey)) {
             // Middle mouse or Ctrl+left click
             isDragging = true;
@@ -149,7 +149,7 @@
         }
     }
 
-    function handleMouseMove(e) {
+    function handleMouseMove(e: MouseEvent) {
         if (isDragging) {
             const deltaX = e.clientX - lastMousePos.x;
             const deltaY = e.clientY - lastMousePos.y;
@@ -161,13 +161,13 @@
         }
     }
 
-    function handleMouseUp(e) {
+    function handleMouseUp(e: MouseEvent) {
         if (e.button === 1 || e.button === 0) {
             isDragging = false;
         }
     }
 
-    function handleWheel(e) {
+    function handleWheel(e: WheelEvent) {
         if (e.ctrlKey) {
             e.preventDefault();
             const zoomFactor = 0.1;
@@ -175,7 +175,7 @@
             const newZoom = Math.max(0.25, Math.min(3, camera.zoom + delta));
 
             // Zoom towards mouse position
-            const rect = e.currentTarget.getBoundingClientRect();
+            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 
@@ -187,24 +187,25 @@
     }
 
     // Active triggers that have been dragged into the code list
-    let activeTriggers = $state([]);
+    let activeTriggers: any[] = $state([]);
 
     let triggerDragOverIndex = $state(-1);
 
-    function handleTriggerDragOver(e, index) {
+    function handleTriggerDragOver(e: DragEvent, index: number) {
         e.preventDefault();
         triggerDragOverIndex = index;
     }
 
-    function handleTriggerDragLeave(e) {
+    function handleTriggerDragLeave(e: DragEvent) {
         triggerDragOverIndex = -1;
     }
 
-    function handleTriggerDrop(e, dropIndex) {
+    function handleTriggerDrop(e: DragEvent, dropIndex: number) {
         e.preventDefault();
         triggerDragOverIndex = -1;
         validDropOccurred = true;
 
+        if (!e.dataTransfer) return;
         const source = e.dataTransfer.getData("application/x-source");
         const originalIndex = parseInt(
             e.dataTransfer.getData("application/x-index")
@@ -214,19 +215,21 @@
             const newTriggers = [...activeTriggers];
             const [removed] = newTriggers.splice(originalIndex, 1);
             newTriggers.splice(dropIndex, 0, removed);
-            activeTriggers = newTriggers;
+            activeTriggers = newTriggers as any[];
         }
     }
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
     class="h-full bg-[#181818] font-mono relative overflow-hidden"
+    role="application"
+    aria-label="Code editor canvas"
     onmousedown={handleMouseDown}
     onmousemove={handleMouseMove}
     onmouseup={handleMouseUp}
     onwheel={handleWheel}
     style="cursor: {isDragging ? 'grabbing' : 'grab'}"
-    role="application"
 >
     <!-- Grid background -->
     <div
@@ -306,10 +309,13 @@
                         0
                             ? 'outline-2 outline-yellow-500 bg-yellow-500/10'
                             : ''}"
+                        role="listbox"
+                        tabindex="0"
                         ondrop={(e) => {
                             e.preventDefault();
                             triggerDragOverIndex = -1;
                             validDropOccurred = true;
+                            if (!e.dataTransfer) return;
                             const data = e.dataTransfer.getData("text/plain");
                             const source = e.dataTransfer.getData(
                                 "application/x-source"
@@ -327,11 +333,11 @@
                                         const newTrigger = {
                                             ...trigger,
                                             id: Date.now() + Math.random(),
-                                        };
+                                        } as any;
                                         activeTriggers = [
                                             ...activeTriggers,
                                             newTrigger,
-                                        ];
+                                        ] as any[];
                                     }
                                 } catch (err) {
                                     console.error(
@@ -348,7 +354,6 @@
                         ondragleave={(e) => {
                             triggerDragOverIndex = -1;
                         }}
-                        role="region"
                     >
                         {#if activeTriggers.length === 0}
                             <div class="text-[#666] text-xs text-center py-2">
@@ -359,6 +364,8 @@
                                 {#each activeTriggers as trigger, i (trigger.id)}
                                     <div
                                         class="w-full border-l-6 border-yellow-500 bg-muted text-white p-3 rounded text-sm font-semibold shadow-sm cursor-move"
+                                        role="button"
+                                        tabindex="0"
                                         draggable="true"
                                         ondragstart={(e) =>
                                             handleDragStart(
@@ -385,6 +392,8 @@
 
                 <div
                     class="p-3 h-[calc(100vh-220px)] overflow-y-auto"
+                    role="listbox"
+                    tabindex="0"
                     use:dragHandleZone={{
                         items: items,
                         flipDurationMs: 300,
@@ -402,6 +411,7 @@
                     ondrop={(e) => {
                         e.preventDefault();
                         validDropOccurred = true;
+                        if (!e.dataTransfer) return;
                         const data = e.dataTransfer.getData("text/plain");
                         const jsonData =
                             e.dataTransfer.getData("application/json");
@@ -455,9 +465,9 @@
                             {item}
                             onChildDndConsider={handleChildDndConsider}
                             onChildDndFinalize={handleChildDndFinalize}
-                            onUpdate={(updatedItem) => {
+                            onUpdate={(updatedItem: any) => {
                                 const mainIndex = items.findIndex(
-                                    (i) => i.id === updatedItem.id
+                                    (i: any) => i.id === updatedItem.id
                                 );
                                 if (mainIndex !== -1) {
                                     items[mainIndex] = updatedItem;
@@ -471,16 +481,17 @@
             <!-- Delete Zone (invisible overlay) -->
             <div
                 class="fixed inset-0 pointer-events-none z-0"
+                role="region"
                 ondragover={(e) => {
                     e.preventDefault();
-                    e.currentTarget.classList.add("bg-red-500/10");
+                    (e.currentTarget as HTMLElement).classList.add("bg-red-500/10");
                 }}
                 ondragleave={(e) => {
-                    e.currentTarget.classList.remove("bg-red-500/10");
+                    (e.currentTarget as HTMLElement).classList.remove("bg-red-500/10");
                 }}
                 ondrop={(e) => {
                     e.preventDefault();
-                    e.currentTarget.classList.remove("bg-red-500/10");
+                    (e.currentTarget as HTMLElement).classList.remove("bg-red-500/10");
                     // Items dropped here will be deleted (handled by individual dnd zones)
                 }}
             ></div>
