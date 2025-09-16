@@ -2,7 +2,7 @@
     import { Button } from "$lib/components/ui/button";
     import * as Alert from "$lib/components/ui/alert/index.js";
     import Input from "$lib/components/ui/input/input.svelte";
-    import Vector3Input from "./properties/Vector3Input.svelte";
+    import Vector3Input from "$lib/components/properties/Vector3Input.svelte";
 
     import {
         ChevronDown,
@@ -18,8 +18,8 @@
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
     import { materialStore } from "$lib/materialStore";
-    import PropertyDropdown from "./PropertyDropdown.svelte";
-    import AxisLockControls from "./properties/AxisLockControls.svelte";
+    import PropertyDropdown from "$lib/components/properties/PropertyDropdown.svelte";
+    import AxisLockControls from "$lib/components/properties/AxisLockControls.svelte";
     import { sceneStore } from "$lib/sceneStore";
 
     let { selectedObject, onPropertyChange } = $props();

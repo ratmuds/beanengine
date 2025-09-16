@@ -3,10 +3,10 @@
     import { Plus, Info, Search, Diamond, Code } from "lucide-svelte";
     import { generateAvailableBlocks } from "$lib/blockConfig.js";
     import { generateAvailableChips, generateChip } from "$lib/chipConfig.js";
-    import * as Dialog from "./ui/dialog";
-    import Button from "./ui/button/button.svelte";
-    import Input from "./ui/input/input.svelte";
-    import * as ContextMenu from "./ui/context-menu";
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import { Button } from "$lib/components/ui/button/index.js";
+    import { Input } from "$lib/components/ui/input/index.js";
+    import * as ContextMenu from "$lib/components/ui/context-menu/index.js";
     import { sceneStore } from "$lib/sceneStore.js";
     import { slide, fade } from "svelte/transition";
 
@@ -24,35 +24,35 @@
 
     // Variable creation modal state
     let isAddingVariable = $state(false);
-    let newVariableName = $state("");
-    let newVariableType = $state("string");
-    let newVariableValue = $state("");
+    let newVariableName: string = $state("");
+    let newVariableType: string = $state("string");
+    let newVariableValue: string = $state("");
 
     // Variable editing modal state
     let isEditingVariable = $state(false);
-    let editingVariable = $state(null);
+    let editingVariable: null | { name: string; type: string; value: any } = $state(null);
 
     // Search functionality
     let searchQuery = $state("");
 
     // Drag state for disintegration effect
-    let draggedChipId = $state(null);
+    let draggedChipId: string | null = $state(null);
 
     // Filter functions
     let filteredBlocks = $derived(
-        availableBlocks.filter((block) =>
+        availableBlocks.filter((block: any) =>
             block.type.toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
 
     let filteredTriggers = $derived(
-        availableTriggers.filter((trigger) =>
+        availableTriggers.filter((trigger: any) =>
             trigger.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
 
     let filteredChips = $derived(
-        availableChips.filter((chip) =>
+        availableChips.filter((chip: any) =>
             chip.type.toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
@@ -74,38 +74,36 @@
     function addVariable() {
         if (!newVariableName.trim()) return;
 
-        let parsedValue = newVariableValue;
+        let parsedValue: any = newVariableValue;
 
-        // Parse value based on type
         if (newVariableType === "number") {
             parsedValue = parseFloat(newVariableValue) || 0;
         } else if (newVariableType === "boolean") {
             parsedValue = newVariableValue.toLowerCase() === "true";
         }
 
-        // Add to sceneStore immediately
         sceneStore.updateVariable(newVariableName, parsedValue);
 
         closeAddVariableModal();
     }
 
-    function removeVariable(variableName) {
+    function removeVariable(variableName: string) {
         const currentVariables = $sceneStore.variables;
         const filteredVariables = currentVariables.filter(
-            (v) => v.name !== variableName
+            (v: any) => v.name !== variableName
         );
         sceneStore.setVariables(filteredVariables);
     }
 
-    function editVariable(variable) {
+    function editVariable(variable: any) {
         editingVariable = { ...variable };
-        newVariableName = editingVariable.name;
-        newVariableType = editingVariable.type;
-        newVariableValue = editingVariable.value.toString();
+        newVariableName = editingVariable!.name;
+        newVariableType = editingVariable!.type;
+        newVariableValue = String(editingVariable!.value);
         isEditingVariable = true;
     }
 
-    function deleteVariable(variable) {
+    function deleteVariable(variable: any) {
         removeVariable(variable.name);
     }
 
@@ -120,21 +118,18 @@
     function saveEditedVariable() {
         if (!newVariableName.trim() || !editingVariable) return;
 
-        let parsedValue = newVariableValue;
+        let parsedValue: any = newVariableValue;
 
-        // Parse value based on type
         if (newVariableType === "number") {
             parsedValue = parseFloat(newVariableValue) || 0;
         } else if (newVariableType === "boolean") {
             parsedValue = newVariableValue.toLowerCase() === "true";
         }
 
-        // Remove old variable if name changed
         if (editingVariable.name !== newVariableName) {
             removeVariable(editingVariable.name);
         }
 
-        // Update/add variable
         sceneStore.updateVariable(newVariableName, parsedValue);
 
         closeEditVariableModal();
@@ -177,13 +172,14 @@
                     transition:slide={{ duration: 200 }}
                     style="border-color: {block?.color};"
                     class="text-white bg-muted border-l-6 hover:border-l-12 px-3 py-2 rounded text-sm font-medium cursor-grab hover:opacity-80 transition-all shadow-sm"
+                    role="button"
+                    tabindex="0"
                     draggable="true"
                     ondragstart={(e) => {
-                        e.dataTransfer?.setData(
-                            "text/plain",
-                            JSON.stringify(block)
-                        );
-                        e.dataTransfer.effectAllowed = "copy";
+                        const dt = e.dataTransfer;
+                        if (!dt) return;
+                        dt.setData("text/plain", JSON.stringify(block));
+                        dt.effectAllowed = "copy";
                     }}
                 >
                     {block.label}
@@ -226,13 +222,14 @@
                 <div
                     transition:slide={{ duration: 200 }}
                     class="border-l-6 hover:border-l-12 border-yellow-500 bg-muted text-white px-3 py-2 rounded text-sm font-medium cursor-grab transition-all shadow-sm"
+                    role="button"
+                    tabindex="0"
                     draggable="true"
                     ondragstart={(e) => {
-                        e.dataTransfer?.setData(
-                            "text/plain",
-                            JSON.stringify(trigger)
-                        );
-                        e.dataTransfer.effectAllowed = "copy";
+                        const dt = e.dataTransfer;
+                        if (!dt) return;
+                        dt.setData("text/plain", JSON.stringify(trigger));
+                        dt.effectAllowed = "copy";
                     }}
                 >
                     <Diamond
@@ -266,18 +263,18 @@
                     chip.id
                         ? 'opacity-50 scale-95'
                         : ''}"
+                    role="button"
+                    tabindex="0"
                     draggable="true"
                     ondragstart={(e) => {
-                        draggedChipId = chip.id;
-                        e.dataTransfer.setData(
-                            "application/json",
-                            JSON.stringify(chip)
-                        );
-                        e.dataTransfer.effectAllowed = "copy";
+                        draggedChipId = chip.id as any;
+                        const dt = e.dataTransfer;
+                        if (!dt) return;
+                        dt.setData("application/json", JSON.stringify(chip));
+                        dt.setData("application/x-chip-source", "palette");
+                        dt.effectAllowed = "copy";
                     }}
                     ondragend={() => {
-                        // Chips from palette should never disappear when dragged
-                        // Only chips dragged from blocks should disappear on failed drops
                         draggedChipId = null;
                     }}
                 >
@@ -307,17 +304,21 @@
                     <ContextMenu.Trigger>
                         <div
                             class="bg-gradient-to-r from-green-500 to-green-600 text-white px-2 py-1 rounded-full text-xs font-medium shadow-sm inline-block mr-1 cursor-grab hover:from-green-600 hover:to-green-700 transition-all"
+                            role="button"
+                            tabindex="0"
                             draggable="true"
                             ondragstart={(e) => {
-                                // Generate a variable chip with the variable name pre-filled
                                 const variableChip = generateChip("variable", {
                                     name: variable.name,
                                 });
-                                e.dataTransfer?.setData(
+                                const dt = e.dataTransfer;
+                                if (!dt) return;
+                                dt.setData(
                                     "application/json",
                                     JSON.stringify(variableChip)
                                 );
-                                e.dataTransfer.effectAllowed = "copy";
+                                dt.setData("application/x-chip-source", "palette");
+                                dt.effectAllowed = "copy";
                             }}
                         >
                             {variable.name}
