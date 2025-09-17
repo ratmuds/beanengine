@@ -28,7 +28,7 @@
 
         <div class="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-                href="/editor"
+                href="/projects"
                 size="lg"
                 class="bg-orange-500 hover:bg-orange-600 text-white"
             >

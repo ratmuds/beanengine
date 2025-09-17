@@ -3,6 +3,8 @@
 
 import { nanoid } from "nanoid";
 
+
+
 // Scene class to manage objects in the scene
 class BScene {
     objects: BObject[]; // All objects in the scene
@@ -11,6 +13,10 @@ class BScene {
     constructor() {
         this.objects = [];
         this.children = [];
+        
+        // Create default BStorage container
+        const defaultStorage = new BStorage("Storage", null, null);
+        this.addObject(defaultStorage);
     }
 
     addObject(object: BObject) {
@@ -87,6 +93,18 @@ class BObject {
             current = current.parent;
         }
         return false;
+    }
+}
+
+// Storage container for inactive objects (similar to Roblox ReplicatedStorage)
+class BStorage extends BObject {
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "storage";
     }
 }
 
@@ -247,6 +265,8 @@ class BNode3D extends BObject {
         return cloned;
     }
 }
+
+
 
 // Available primitive mesh types
 type PrimitiveMeshType =
@@ -756,6 +776,7 @@ export {
     BLight,
     BConstraint,
     BScript,
+    BStorage,
     BAsset,
     BAssetCollection,
     BMaterial,

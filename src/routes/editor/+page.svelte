@@ -323,7 +323,7 @@
             { text: "Loading assets...", delay: 150 },
         ];
 
-        await tryLoadProjectById();
+        //await tryLoadProjectById();
 
         for (const step of steps) {
             loadingText = step.text;

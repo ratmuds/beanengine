@@ -257,6 +257,60 @@ export const blockConfig: Record<string, BlockConfig> = {
         ],
         info: "Logs a message to the console",
     },
+
+    clone: {
+        color: colorMap.orange,
+        label: "Clone",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "variable",
+                placeholder: "variable name",
+                icon: Variable,
+            },
+        ],
+        info: "Creates a copy of the target object and stores its ID in the specified variable. If no target is provided, clones the object this script is on.",
+    },
+
+    destroy: {
+        color: colorMap.red,
+        label: "Destroy",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+        ],
+        info: "Destroys the target object and removes it from the scene. If no target is provided, destroys the object this script is on.",
+    },
+
+    parent: {
+        color: colorMap.yellow,
+        label: "Parent",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "parent",
+                placeholder: "parent object",
+                icon: User,
+            },
+        ],
+        info: "Sets the parent of the target object. If no target is provided, parents the object this script is on. Use 'null' or empty to unparent.",
+    },
 };
 
 export function generateAvailableBlocks() {

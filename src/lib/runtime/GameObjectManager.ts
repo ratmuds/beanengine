@@ -101,6 +101,8 @@ export class GameObjectManager {
             const gameObject = this.gameObjects.get(obj.id);
             if (!gameObject) continue;
 
+
+
             // Add VisualComponent for renderable objects
             if (obj instanceof Types.BPart || obj instanceof Types.BLight) {
                 gameObject.addComponent(

@@ -4,7 +4,7 @@
     import * as Popover from "$lib/components/ui/popover/index.js";
     import * as Command from "$lib/components/ui/command/index.js";
     import { buttonVariants } from "$lib/components/ui/button/index.js";
-    import ItemSwitcher from '$lib/components/ItemSwitcher.svelte';
+    import ItemSwitcher from "$lib/components/ItemSwitcher.svelte";
     import {
         FolderOpen,
         Camera,
@@ -145,6 +145,8 @@
                 return Lightbulb;
             case "constraint":
                 return Navigation;
+            case "storage":
+                return FolderTree;
             default:
                 return Box;
         }
@@ -202,6 +204,7 @@
                     handleDuplicateObject(objectId);
                 }
                 break;
+
             case "delete":
                 if (objectId) {
                     handleDeleteObject(objectId);
@@ -218,6 +221,7 @@
     function handleCopyObject(objectId: string) {
         const allObjects = $sceneStore.getScene().objects;
         const objectToCopy = allObjects.find((obj: any) => obj.id === objectId);
+        if (objectToCopy && objectToCopy.type === "storage") return; // cannot copy storage
         if (objectToCopy) {
             copiedObject = structuredClone(objectToCopy);
             dispatch("copyObject", { id: objectId });
@@ -226,6 +230,12 @@
 
     function handlePasteObject(parentId: string | number) {
         if (copiedObject) {
+            if (parentId !== -1) {
+                const targetParent = $sceneStore
+                    .getScene()
+                    .objects.find((o: any) => o.id === parentId);
+                if (targetParent && targetParent.type === "storage") return; // cannot paste into storage
+            }
             dispatch("pasteObject", {
                 copiedObject: structuredClone(copiedObject),
                 parentId,
@@ -238,6 +248,7 @@
         const objectToDuplicate = allObjects.find(
             (obj: any) => obj.id === objectId
         );
+        if (objectToDuplicate && objectToDuplicate.type === "storage") return; // cannot duplicate storage
         if (objectToDuplicate) {
             const duplicatedObject = structuredClone(objectToDuplicate);
             dispatch("duplicateObject", {
@@ -248,6 +259,9 @@
     }
 
     function handleDeleteObject(objectId: string) {
+        const allObjects = $sceneStore.getScene().objects;
+        const objectToDelete = allObjects.find((o: any) => o.id === objectId);
+        if (objectToDelete && objectToDelete.type === "storage") return; // cannot delete storage
         dispatch("deleteObject", { id: objectId });
     }
 
@@ -263,6 +277,13 @@
 
     function handleDragStart(event: DragEvent, objectId: string) {
         if (!event.dataTransfer) return;
+        // Disallow dragging storage objects
+        const allObjects = $sceneStore.getScene().objects;
+        const obj = allObjects.find((o: any) => o.id === objectId);
+        if (obj && obj.type === "storage") {
+            event.preventDefault();
+            return;
+        }
         draggedObject = objectId;
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", objectId);
@@ -576,7 +597,7 @@
                     style="margin-left: {obj.depth * 16}px"
                     onclick={() => handleObjectClick(obj.id)}
                     oncontextmenu={(e) => handleRightClick(e, obj.id)}
-                    draggable="true"
+                    draggable={obj.type !== "storage"}
                     ondragstart={(e) => handleDragStart(e, obj.id)}
                     ondragend={handleDragEnd}
                     ondragover={(e) => handleDragOver(e, obj.id)}
@@ -643,39 +664,44 @@
                     >
 
                     <!-- Controls -->
-                    <div
-                        class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
-                    >
-                        <button
-                            class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.visible ===
-                            false
-                                ? 'text-orange-400 hover:text-orange-300'
-                                : ''}"
-                            onclick={(e) => handleToggleVisibility(e, obj.id)}
-                            title={obj.visible === false
-                                ? "Show object"
-                                : "Hide object"}
+                    {#if obj.type !== "storage"}
+                        <div
+                            class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200"
                         >
-                            {#if obj.visible === false}
-                                <EyeOff class="w-4 h-4" />
-                            {:else}
-                                <Eye class="w-4 h-4" />
-                            {/if}
-                        </button>
-                        <button
-                            class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.locked
-                                ? 'text-red-400 hover:text-red-300'
-                                : ''}"
-                            onclick={(e) => handleToggleLock(e, obj.id)}
-                            title={obj.locked ? "Unlock object" : "Lock object"}
-                        >
-                            {#if obj.locked}
-                                <Lock class="w-4 h-4" />
-                            {:else}
-                                <Unlock class="w-4 h-4" />
-                            {/if}
-                        </button>
-                    </div>
+                            <button
+                                class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.visible ===
+                                false
+                                    ? 'text-orange-400 hover:text-orange-300'
+                                    : ''}"
+                                onclick={(e) =>
+                                    handleToggleVisibility(e, obj.id)}
+                                title={obj.visible === false
+                                    ? "Show object"
+                                    : "Hide object"}
+                            >
+                                {#if obj.visible === false}
+                                    <EyeOff class="w-4 h-4" />
+                                {:else}
+                                    <Eye class="w-4 h-4" />
+                                {/if}
+                            </button>
+                            <button
+                                class="w-8 h-8 p-0 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-all duration-200 flex items-center justify-center {obj.locked
+                                    ? 'text-red-400 hover:text-red-300'
+                                    : ''}"
+                                onclick={(e) => handleToggleLock(e, obj.id)}
+                                title={obj.locked
+                                    ? "Unlock object"
+                                    : "Lock object"}
+                            >
+                                {#if obj.locked}
+                                    <Lock class="w-4 h-4" />
+                                {:else}
+                                    <Unlock class="w-4 h-4" />
+                                {/if}
+                            </button>
+                        </div>
+                    {/if}
                 </div>
             {/each}
         </div>
@@ -689,14 +715,20 @@
         style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
     >
         {#if contextMenu.objectId}
+            {@const ctxObj = $sceneStore
+                .getScene()
+                .objects.find((o: any) => o.id === contextMenu.objectId)}
+            {@const isStorage = ctxObj && ctxObj.type === "storage"}
             <!-- Object-specific context menu -->
-            <button
-                class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-                onclick={() => handleContextAction("copy")}
-            >
-                <Copy class="w-4 h-4 text-blue-400" />
-                Copy
-            </button>
+            {#if !isStorage}
+                <button
+                    class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                    onclick={() => handleContextAction("copy")}
+                >
+                    <Copy class="w-4 h-4 text-blue-400" />
+                    Copy
+                </button>
+            {/if}
             {#if copiedObject}
                 <button
                     class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
@@ -706,14 +738,16 @@
                     Paste as Child
                 </button>
             {/if}
-            <button
-                class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-                onclick={() => handleContextAction("duplicate")}
-            >
-                <FileImage class="w-4 h-4 text-green-400" />
-                Duplicate
-            </button>
-            <div class="h-px bg-border/30 my-2 mx-2"></div>
+            {#if !isStorage}
+                <button
+                    class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                    onclick={() => handleContextAction("duplicate")}
+                >
+                    <FileImage class="w-4 h-4 text-green-400" />
+                    Duplicate
+                </button>
+                <div class="h-px bg-border/30 my-2 mx-2"></div>
+            {/if}
             <button
                 class="w-full px-4 py-3 text-left text-sm text-foreground hover:bg-muted/60 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
                 onclick={() => handleContextAction("goto")}
@@ -721,14 +755,16 @@
                 <Navigation class="w-4 h-4 text-purple-400" />
                 Go to Object
             </button>
-            <div class="h-px bg-border/30 my-2 mx-2"></div>
-            <button
-                class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
-                onclick={() => handleContextAction("delete")}
-            >
-                <Trash2 class="w-4 h-4" />
-                Delete
-            </button>
+            {#if !isStorage}
+                <div class="h-px bg-border/30 my-2 mx-2"></div>
+                <button
+                    class="w-full px-4 py-3 text-left text-sm text-red-400 hover:bg-red-500/20 hover:text-red-300 flex items-center gap-3 transition-all duration-200 rounded-lg font-medium"
+                    onclick={() => handleContextAction("delete")}
+                >
+                    <Trash2 class="w-4 h-4" />
+                    Delete
+                </button>
+            {/if}
         {:else}
             <!-- Empty space context menu -->
             {#if copiedObject}

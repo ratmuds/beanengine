@@ -42,12 +42,65 @@ The entire scene is built upon a hierarchy of classes.
 -   `BCamera`: Extends `BNode3D`. Represents a camera in the scene.
 -   `BLight`: Extends `BNode3D`. Represents a light source.
 -   `BScript`: Extends `BObject`. A container for visual scripting blocks. It is parented to a `BNode3D` to attach logic to an object.
+-   `BStorage`: Extends `BObject`. A simple folder-like container for organizing objects in the hierarchy. Similar to Roblox's ReplicatedStorage, it acts as a non-interactive container that cannot be moved, deleted, or have its properties edited in the editor. Objects inside BStorage are not processed by the runtime system.
 -   `BAsset`: Represents a file imported by the user (e.g., a `.gltf` model or `.png` texture). Managed by the `assetStore`.
 -   `BMaterial`: Represents a material that can be applied to a `BPart`. Managed by the `materialStore`.
 
 ---
 
 ## 4. State Management (`src/lib/*Store.ts`)
+
+### Supabase Integration (Latest)
+
+Bean Engine now includes full Supabase integration for user authentication and project persistence:
+
+#### Authentication System
+- **`authStore.ts`**: Manages user authentication state using Supabase Auth
+  - Provides sign-in, sign-up, and sign-out functionality
+  - Maintains reactive user session state
+  - Automatically initializes auth state on browser load
+  - Integrates with Supabase RLS (Row Level Security) for data access control
+
+#### Project Management
+- **`supabase.ts`**: Core Supabase client configuration and helper functions
+  - Configured with environment variables: `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY`
+  - Provides CRUD operations for projects table
+  - Includes Project interface with id, name, data (JSONB), user_id, timestamps
+  - All operations respect RLS policies ensuring users only access their own projects
+
+- **`projectStore.ts`**: Manages project state and integrates with scene serialization
+  - Loads user projects from Supabase
+  - Creates new projects using current scene data via `sceneStore.serialize()`
+  - Saves projects by updating Supabase with serialized scene data
+  - Loads projects by deserializing data via `sceneStore.deserialize()`
+  - Handles project deletion and renaming
+  - Maintains current project state for save/load operations
+
+#### Database Schema
+- **Projects Table** (`supabase-schema.sql`):
+  - `id` (UUID, primary key)
+  - `name` (TEXT, project name)
+  - `data` (JSONB, serialized scene data)
+  - `user_id` (UUID, foreign key to auth.users)
+  - `created_at`, `updated_at` (timestamps)
+  - RLS policies ensure users can only access their own projects
+  - Automatic `updated_at` trigger for timestamp management
+
+#### UI Integration
+- **Login Page** (`/login`): Authentication interface with sign-in/sign-up forms
+- **Projects Page** (`/projects`): Project management interface with:
+  - Grid view of user projects with creation/update timestamps
+  - Create new project functionality (saves current scene)
+  - Load project functionality (deserializes into scene)
+  - Rename and delete project operations
+  - Current project indicator and save current project button
+  - Navigation back to editor with loaded project
+
+#### Scene Persistence Flow
+1. **Save**: Current scene → `sceneStore.serialize()` → JSON → Supabase projects table
+2. **Load**: Supabase projects table → JSON → `sceneStore.deserialize()` → Scene reconstruction
+3. **Authentication**: All operations require valid Supabase session with RLS enforcement
+4. **Data Isolation**: Each user can only access their own projects via database policies
 
 ### Recent Updates
 
@@ -220,3 +273,44 @@ The editor is built with Svelte components, orchestrated by `src/routes/editor/+
 
 1.  **Define Config**: Add a new entry to the `blockConfig` object in `src/lib/blockConfig.ts`. Define its color, label, and input fields.
 2.  **Implement Logic**: Add a case for your new block's `type` in the `executeItem` method in `src/lib/interpreter.ts`. Use `context.evaluateChip()` to get the values from any input fields.
+
+### Recent Block Implementations (Latest)
+
+### Recent Fixes (Latest)
+
+#### Login Page Error Fixes
+Fixed multiple TypeScript and component errors in the login page:
+
+- **AuthStore Access**: Fixed `authState` derivation to use `$authStore` instead of non-existent `authStore.manager` property
+- **Input Validation**: Fixed `minlength` attribute type errors by using numbers instead of strings
+- **Alert Component**: Fixed Alert component import to use proper namespace import structure (`* as Alert`)
+
+All ESLint errors have been resolved and the login page is now functional.
+
+### Recent Block Implementations
+
+#### Object Lifecycle Blocks
+Three new blocks have been added to support dynamic object management during runtime:
+
+- **Clone Block**: Creates a copy of a target object and stores its ID in a variable
+  - Configuration: Target field (defaults to self) and variable name field
+  - Implementation: Uses `BNode3D.clone()` to create a deep copy, then `GameObjectManager.addGameObject()` to instantiate it in the runtime
+  - The cloned object gets a new unique ID and is fully independent from the original
+  - Variable storage allows scripts to reference and manipulate the cloned object
+
+- **Destroy Block**: Removes a target object from the scene
+  - Configuration: Target field (defaults to self)
+  - Implementation: Uses `GameObjectManager.removeGameObject()` to properly clean up the GameObject and all its components
+  - Handles physics cleanup, visual component removal, and parent-child relationship updates
+
+- **Parent Block**: Sets or removes parent-child relationships between objects
+  - Configuration: Target field (defaults to self) and parent field
+  - Implementation: Uses `GameObject.setParent()` to establish relationships
+  - Supports unparenting by using "null", empty string, or no parent value
+  - Maintains proper transform hierarchy and offset calculations
+
+These blocks enable dynamic scene manipulation during gameplay, supporting patterns like:
+- Spawning projectiles or enemies (clone + parent)
+- Cleaning up temporary objects (destroy)
+- Attaching objects to moving platforms (parent)
+- Creating modular, reusable object systems

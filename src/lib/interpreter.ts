@@ -9,7 +9,6 @@ import { InterpreterScriptError } from "./types.js";
 import * as Types from "./types.js";
 import { PhysicsComponent } from "./runtime/PhysicsComponent.js";
 import {
-    resolveTarget,
     resolveTargetGameObject,
     getTargetResolutionError,
 } from "$lib/services/targetResolver.js";
@@ -160,6 +159,15 @@ export class CodeInterpreter {
                     break;
                 case "directionalvelocity":
                     await this.executeDirectionalVelocity(item, context);
+                    break;
+                case "clone":
+                    await this.executeClone(item, context);
+                    break;
+                case "destroy":
+                    await this.executeDestroy(item, context);
+                    break;
+                case "parent":
+                    await this.executeParent(item, context);
                     break;
                 default:
                     runtimeStore.warn(
@@ -498,5 +506,156 @@ export class CodeInterpreter {
         targetGameObject
             .getComponent(PhysicsComponent)
             .setDirectionalVelocity(dir);
+    }
+
+    private async executeClone(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const variableName = await context.evaluateChip(item.variable, context);
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `Clone target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "Clone block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        if (!variableName) {
+            throw new InterpreterScriptError("Clone block missing variable name");
+        }
+
+        try {
+            // Clone the underlying BNode3D
+            const clonedBNode = targetGameObject.bNode.clone();
+            
+            // Create a new GameObject from the cloned BNode
+            const gameObjectManager = runtimeStore.getGameObjectManager();
+            const clonedGameObject = gameObjectManager.addGameObject(clonedBNode);
+
+            // Store the cloned object's ID in the specified variable
+            context.variables[variableName] = clonedGameObject.bNode.id;
+
+            console.log(`Cloned object ${targetGameObject.bNode.id} to ${clonedGameObject.bNode.id}, stored in variable '${variableName}'`);
+        } catch (error) {
+            runtimeStore.error(
+                `Error cloning object: ${error}`,
+                "Interpreter"
+            );
+        }
+    }
+
+    private async executeDestroy(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `Destroy target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "Destroy block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            // Remove from GameObjectManager
+            const gameObjectManager = runtimeStore.getGameObjectManager();
+            gameObjectManager.removeGameObject(targetGameObject.bNode.id);
+
+            console.log(`Destroyed object ${targetGameObject.bNode.id}`);
+        } catch (error) {
+            runtimeStore.error(
+                `Error destroying object: ${error}`,
+                "Interpreter"
+            );
+        }
+    }
+
+    private async executeParent(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const parentRef = await context.evaluateChip(item.parent, context);
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `Parent target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "Parent block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            // Handle unparenting (null or empty parent)
+            if (!parentRef || parentRef === "null" || parentRef === "") {
+                targetGameObject.setParent(null);
+                console.log(`Unparented object ${targetGameObject.bNode.id}`);
+                return;
+            }
+
+            // Resolve parent object
+            const parentGameObject = resolveTargetGameObject(parentRef, context);
+            if (!parentGameObject) {
+                const error = getTargetResolutionError(parentRef, context);
+                runtimeStore.warn(
+                    `Parent resolution failed: ${error}. Parent: '${parentRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+
+            // Set the parent
+            targetGameObject.setParent(parentGameObject);
+            console.log(`Parented object ${targetGameObject.bNode.id} to ${parentGameObject.bNode.id}`);
+        } catch (error) {
+            runtimeStore.error(
+                `Error setting parent: ${error}`,
+                "Interpreter"
+            );
+        }
     }
 }
