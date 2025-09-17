@@ -163,6 +163,18 @@ class SceneManager {
                         newObject.maxLookAngle = options.cameraClampAngle;
                 }
                 break;
+            case "constraint":
+                // Create constraint with placeholder parts (will be set via properties panel)
+                const allParts = this.getAllParts();
+                const partA = allParts[0] || null;
+                const partB = allParts[1] || partA || null;
+                if (!partA || !partB) {
+                    console.warn("Cannot create constraint: need at least one BPart in scene");
+                    newObject = new Types.BObject(name, null, null);
+                    break;
+                }
+                newObject = new Types.BConstraint(name, null, null, partA, partB);
+                break;
             default:
                 console.warn(`Unknown object type: ${objectType}`);
                 newObject = new Types.BObject(name, null, null);

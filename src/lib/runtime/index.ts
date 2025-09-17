@@ -5,5 +5,7 @@ export type { Transform } from "./GameObject";
 export { VisualComponent } from "./VisualComponent";
 export { ScriptComponent } from "./ScriptComponent";
 export { PhysicsComponent } from "./PhysicsComponent";
+export { ConstraintComponent } from "./ConstraintComponent";
 export { GameObjectManager } from "./GameObjectManager";
 export { CameraComponent } from "./CameraComponent";
+export { PlayerControllerComponent } from "./PlayerControllerComponent";

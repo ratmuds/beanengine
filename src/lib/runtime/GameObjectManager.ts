@@ -5,6 +5,7 @@ import { ScriptComponent } from "./ScriptComponent";
 import * as Types from "$lib/types";
 import { PhysicsComponent } from "./PhysicsComponent";
 import { PlayerControllerComponent } from "./PlayerControllerComponent";
+import { ConstraintComponent } from "./ConstraintComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { CameraComponent } from "./CameraComponent";
 
@@ -163,6 +164,18 @@ export class GameObjectManager {
                     console.warn(`Script ${obj.id} has no parent object`);
                     // TODO: support scripts with no parent
                 }
+            }
+        }
+
+        // Fifth pass: handle constraints (must be after all GameObjects are created)
+        for (const obj of sceneObjects) {
+            if (obj instanceof Types.BConstraint) {
+                // Create a placeholder GameObject for the constraint
+                const constraintGameObject = new GameObject(obj as any);
+                this.gameObjects.set(obj.id, constraintGameObject);
+                
+                // Add ConstraintComponent
+                constraintGameObject.addComponent(new ConstraintComponent(constraintGameObject));
             }
         }
 

@@ -161,6 +161,69 @@
         const updatedObject = event.detail.object.clone();
         onPropertyChange(updatedObject);
     }
+
+    // TODO: Constraint properties - partA and partB selector dropdowns
+    // Get all BPart objects from the scene for constraint selection
+    const partOptions = $derived(() => {
+        if (!object || !(object instanceof Types.BConstraint)) return [];
+        
+        const allObjects = $sceneStore.getScene().objects;
+        const parts = allObjects.filter(obj => obj instanceof Types.BPart) as Types.BPart[];
+        
+        return parts.map(part => ({
+            id: part.id,
+            label: part.name,
+            data: { part }
+        }));
+    });
+
+    let partASelectorValue: string | null = $state(null);
+    let partBSelectorValue: string | null = $state(null);
+
+    $effect(() => {
+        if (!object || !(object instanceof Types.BConstraint)) {
+            partASelectorValue = null;
+            partBSelectorValue = null;
+            return;
+        }
+        
+        partASelectorValue = object.partA?.id || null;
+        partBSelectorValue = object.partB?.id || null;
+    });
+
+    function handlePartAChange(event) {
+        if (!object || !(object instanceof Types.BConstraint)) return;
+
+        const selectedPart = $sceneStore.getScene().objects.find(obj => obj.id === event.detail.value);
+        if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
+
+        // Create a new constraint with the updated partA
+        const updatedObject = new Types.BConstraint(
+            object.name,
+            object.id,
+            object.parent,
+            selectedPart,
+            object.partB
+        );
+        onPropertyChange(updatedObject);
+    }
+
+    function handlePartBChange(event) {
+        if (!object || !(object instanceof Types.BConstraint)) return;
+
+        const selectedPart = $sceneStore.getScene().objects.find(obj => obj.id === event.detail.value);
+        if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
+
+        // Create a new constraint with the updated partB
+        const updatedObject = new Types.BConstraint(
+            object.name,
+            object.id,
+            object.parent,
+            object.partA,
+            selectedPart
+        );
+        onPropertyChange(updatedObject);
+    }
 </script>
 
 <div
@@ -517,6 +580,62 @@
                                 <FileCode class="w-4 h-4 mr-2" />
                                 Open Code Editor (Coming Soon)
                             </Button>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Constraint Properties -->
+            {#if object instanceof Types.BConstraint}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-2 bg-orange-500/10 rounded-lg">
+                            <Hash class="w-5 h-5 text-orange-400" />
+                        </div>
+                        <h3 class="font-semibold text-lg text-foreground">
+                            Constraint Properties
+                        </h3>
+                    </div>
+
+                    <div class="space-y-4">
+                        <!-- Part A Selector -->
+                        <PropertyDropdown
+                            label="Part A"
+                            bind:value={partASelectorValue}
+                            options={partOptions}
+                            placeholder="Select first part..."
+                            on:change={handlePartAChange}
+                        />
+
+                        <!-- Part B Selector -->
+                        <PropertyDropdown
+                            label="Part B"
+                            bind:value={partBSelectorValue}
+                            options={partOptions}
+                            placeholder="Select second part..."
+                            on:change={handlePartBChange}
+                        />
+
+                        <!-- Constraint Status -->
+                        <div class="bg-muted/20 p-3 rounded-lg">
+                            <p class="text-xs text-muted-foreground mb-2">
+                                Constraint Status
+                            </p>
+                            <div class="flex items-center gap-2">
+                                {#if object.partA && object.partB}
+                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <span class="text-sm text-foreground">
+                                        Ready - {object.partA.name} ↔ {object.partB.name}
+                                    </span>
+                                {:else}
+                                    <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    <span class="text-sm text-muted-foreground">
+                                        Incomplete - Select both parts
+                                    </span>
+                                {/if}
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -104,7 +104,21 @@ Bean Engine now includes full Supabase integration for user authentication and p
 
 ### Recent Updates
 
-#### Player Controller Movement System (Latest)
+#### Constraint System (Latest)
+- **Purpose**: Connect two physics objects with fixed joints for rigid body constraints
+- **Implementation**: 
+  - `BConstraint` class in `types.ts` stores references to `partA` and `partB` (BPart instances)
+  - `ConstraintComponent.ts` creates RAPIER fixed joints between physics bodies
+  - Automatically finds GameObjects and their PhysicsComponents at runtime
+  - Uses `RAPIER.JointData.fixed()` to create rigid constraints
+- **UI Integration**:
+  - PropertiesPanel shows constraint-specific UI when BConstraint is selected
+  - Part A and Part B dropdowns populated with all BPart objects in scene
+  - Visual status indicator shows when constraint is properly configured
+  - ObjectExplorer supports creating constraints via Command interface
+- **Workflow**: Create constraint → Select parts via Properties Panel → Constraint activates in play mode
+
+#### Player Controller Movement System
 - **Issue**: Player movement using `setDirectionalForce()` caused acceleration buildup, making players move faster and faster without stopping
 - **Solution**: Implemented velocity-based movement system
   - Added `setVelocity()` and `getVelocity()` methods to <mcfile name="PhysicsComponent.ts" path="src/lib/runtime/PhysicsComponent.ts"></mcfile>
@@ -146,6 +160,7 @@ When the user enters "play mode", the scene is handed over to the runtime engine
 -   **Core Components**:
     -   `VisualComponent.ts`: Creates and manages the `THREE.Mesh` or `THREE.Light` for a `GameObject`. Uses quaternions for mesh rotation. Creates unit-sized geometries and applies scaling via mesh.scale to avoid double scaling.
     -   `PhysicsComponent.ts`: Manages the `RAPIER.RigidBody` for a `GameObject`, syncing the physics simulation with the object's quaternion-based transform. **Important**: RAPIER's `ColliderDesc.cuboid()` expects half-extents, so scale values are divided by 2. Safely cleans up physics bodies and colliders when destroyed, checking handle validity to prevent double-removal errors.
+    -   `ConstraintComponent.ts`: Creates RAPIER physics joints between two BPart GameObjects. Automatically resolves partA and partB references to their corresponding GameObjects and PhysicsComponents. Creates fixed joints that rigidly connect the physics bodies.
     -   `PlayerControllerComponent.ts`: Handles player input for `BPlayerController` objects. Processes WASD keys for movement, applies forces through the `PhysicsComponent`, handles mouse look for rotation, and manages camera rotation with vertical clamping if a `BCamera` is parented to the controller.
     -   `ScriptComponent.ts`: Attaches a `BScript` to a `GameObject` and uses the `CodeInterpreter` to execute its logic.
 

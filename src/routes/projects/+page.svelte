@@ -367,7 +367,7 @@
                                     class="w-12 h-12 text-muted-foreground mx-auto mb-2"
                                 />
                                 <div class="text-xs text-muted-foreground">
-                                    Bean Engine Project
+                                    Project
                                 </div>
                             </div>
 
@@ -486,7 +486,7 @@
         <Dialog.Header>
             <Dialog.Title>Create New Project</Dialog.Title>
             <Dialog.Description>
-                Create a new Bean Engine project to start building your game.
+                Create a new project to start building your game.
             </Dialog.Description>
         </Dialog.Header>
 

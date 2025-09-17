@@ -144,9 +144,11 @@
             case "light":
                 return Lightbulb;
             case "constraint":
-                return Navigation;
+                return Clipboard;
             case "storage":
                 return FolderTree;
+            case "playercontroller":
+                return Navigation;
             default:
                 return Box;
         }
@@ -462,45 +464,62 @@
                                 <Command.Item
                                     value="part"
                                     onSelect={() => handleAddObjectType("Part")}
-                                    class="rounded-lg m-1">Part</Command.Item
+                                    class="rounded-lg m-1"
                                 >
+                                    <Box class="w-4 h-4 mr-2" />
+                                    Part
+                                </Command.Item>
                                 <Command.Item
                                     value="script"
-                                    onSelect={() =>
-                                        handleAddObjectType("Script")}
-                                    class="rounded-lg m-1">Script</Command.Item
+                                    onSelect={() => handleAddObjectType("Script")}
+                                    class="rounded-lg m-1"
                                 >
+                                    <FileCode class="w-4 h-4 mr-2" />
+                                    Script
+                                </Command.Item>
                                 <Command.Item
                                     value="camera"
-                                    onSelect={() =>
-                                        handleAddObjectType("Camera")}
-                                    class="rounded-lg m-1">Camera</Command.Item
+                                    onSelect={() => handleAddObjectType("Camera")}
+                                    class="rounded-lg m-1"
                                 >
+                                    <Camera class="w-4 h-4 mr-2" />
+                                    Camera
+                                </Command.Item>
+                                <Command.Item
+                                    value="light"
+                                    onSelect={() => handleAddObjectType("Light")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Lightbulb class="w-4 h-4 mr-2" />
+                                    Light
+                                </Command.Item>
                                 <Command.Item
                                     value="playercontroller"
-                                    onSelect={() =>
-                                        handleAddObjectType("PlayerController")}
+                                    onSelect={() => handleAddObjectType("PlayerController")}
                                     class="rounded-lg m-1"
-                                    >Player Controller</Command.Item
                                 >
-                                <Command.Item class="rounded-lg m-1"
-                                    >Light</Command.Item
-                                >
+                                    <Navigation class="w-4 h-4 mr-2" />
+                                    Player Controller
+                                </Command.Item>
                             </Command.Group>
                             <Command.Separator />
-                            <Command.Group heading="Other">
-                                <Command.Item class="rounded-lg m-1"
-                                    >Folder</Command.Item
+                            <Command.Group heading="Physics & Organization">
+                                <Command.Item
+                                    value="constraint"
+                                    onSelect={() => handleAddObjectType("Constraint")}
+                                    class="rounded-lg m-1"
                                 >
-                                <Command.Item class="rounded-lg m-1"
-                                    >Spawn</Command.Item
+                                    <Clipboard class="w-4 h-4 mr-2" />
+                                    Constraint
+                                </Command.Item>
+                                <Command.Item
+                                    value="storage"
+                                    onSelect={() => handleAddObjectType("Storage")}
+                                    class="rounded-lg m-1"
                                 >
-                                <Command.Item class="rounded-lg m-1"
-                                    >Particles</Command.Item
-                                >
-                                <Command.Item class="rounded-lg m-1"
-                                    >Constraint</Command.Item
-                                >
+                                    <FolderOpen class="w-4 h-4 mr-2" />
+                                    Storage
+                                </Command.Item>
                             </Command.Group>
                         </Command.List>
                     </Command.Root>
