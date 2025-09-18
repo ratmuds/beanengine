@@ -117,8 +117,8 @@ export class PhysicsComponent extends Component {
 
     private applyLocks(): void {
         // Check if the gameObject's data is a BPart with lock properties
-        if (this.gameObject.bNode instanceof Types.BPart) {
-            const part = this.gameObject.bNode as Types.BPart;
+        if (this.gameObject.bObject instanceof Types.BPart) {
+            const part = this.gameObject.bObject as Types.BPart;
 
             // Apply position lock if enabled
             if (part.positionLocked) {

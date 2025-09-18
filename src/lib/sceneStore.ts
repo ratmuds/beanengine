@@ -169,11 +169,19 @@ class SceneManager {
                 const partA = allParts[0] || null;
                 const partB = allParts[1] || partA || null;
                 if (!partA || !partB) {
-                    console.warn("Cannot create constraint: need at least one BPart in scene");
+                    console.warn(
+                        "Cannot create constraint: need at least one BPart in scene"
+                    );
                     newObject = new Types.BObject(name, null, null);
                     break;
                 }
-                newObject = new Types.BConstraint(name, null, null, partA, partB);
+                newObject = new Types.BConstraint(
+                    name,
+                    null,
+                    null,
+                    partA,
+                    partB
+                );
                 break;
             default:
                 console.warn(`Unknown object type: ${objectType}`);
@@ -538,7 +546,7 @@ class SceneManager {
                 const child = objectMap.get(objData.id);
                 const parent = objectMap.get(objData.parentId);
                 if (child && parent) {
-                    child.setParent(parent);
+                    child.parent = parent;
                 }
             }
         }
@@ -594,26 +602,30 @@ class SceneManager {
         // Apply type-specific properties
         if (obj instanceof Types.BNode3D && data.position) {
             const node3D = obj as Types.BNode3D;
-            node3D.position.set(
+            node3D.position = new Types.BVector3(
                 data.position.x,
                 data.position.y,
                 data.position.z
             );
-            node3D.rotation.set(
+            node3D.rotation = new Types.BVector3(
                 data.rotation.x,
                 data.rotation.y,
                 data.rotation.z
             );
-            node3D.scale.set(data.scale.x, data.scale.y, data.scale.z);
+            node3D.scale = new Types.BVector3(
+                data.scale.x,
+                data.scale.y,
+                data.scale.z
+            );
             if (data.positionOffset) {
-                node3D.positionOffset.set(
+                node3D.positionOffset = new Types.BVector3(
                     data.positionOffset.x,
                     data.positionOffset.y,
                     data.positionOffset.z
                 );
             }
             if (data.rotationOffset) {
-                node3D.rotationOffset.set(
+                node3D.rotationOffset = new Types.BVector3(
                     data.rotationOffset.x,
                     data.rotationOffset.y,
                     data.rotationOffset.z
@@ -756,7 +768,7 @@ function createSceneStore() {
 
         updateObject: (object: Types.BObject) => {
             update((currentManager) => {
-            console.log("Updating object:", object);
+                console.log("Updating object:", object);
                 currentManager.updateObject(object);
                 // Return the same manager - update() call triggers reactivity
                 return currentManager;
@@ -773,7 +785,7 @@ function createSceneStore() {
 
         triggerReactivity: () => {
             update((currentManager) => {
-            console.log("Triggering reactivity");
+                console.log("Triggering reactivity");
                 return currentManager;
             });
         },

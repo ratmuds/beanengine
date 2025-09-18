@@ -22,28 +22,71 @@ export class ConstraintComponent extends Component {
             throw new Error("Physics world not initialized");
         }
 
-        // Cast bNode to BConstraint to access partA and partB
-        const constraintNode = gameObject.bNode as unknown as Types.BConstraint;
+        // Cast bObject to BConstraint to access partA and partB
+        const constraintNode =
+            gameObject.bObject as unknown as Types.BConstraint;
         const manager = runtimeStore.getGameObjectManager();
         const partA = constraintNode.partA;
         const partB = constraintNode.partB;
         const goA = manager?.getGameObject(partA.id);
         const goB = manager?.getGameObject(partB.id);
         if (!goA || !goB) {
-            throw new Error("ConstraintComponent: Could not find GameObjects for partA or partB");
+            throw new Error(
+                "ConstraintComponent: Could not find GameObjects for partA or partB"
+            );
         }
         const physA = goA.getComponent(PhysicsComponent) as PhysicsComponent;
         const physB = goB.getComponent(PhysicsComponent) as PhysicsComponent;
         if (!physA || !physB) {
-            throw new Error("ConstraintComponent: PhysicsComponent missing on partA or partB GameObject");
+            throw new Error(
+                "ConstraintComponent: PhysicsComponent missing on partA or partB GameObject"
+            );
         }
 
-        // Create joint between the two physics bodies
-        let params = RAPIER.JointData.fixed(
-            { x: 0.0, y: 0.0, z: 0.0 }, { w: 1.0, x: 0.0, y: 0.0, z: 0.0 },
-            { x: 0.0, y: -2.0, z: 0.0 }, { w: 1.0, x: 0.0, y: 0.0, z: 0.0 }
+        // We need to calculate the local frames for the joint, keeping both parts in the correct world position:
+        // Choose body A's local frame as identity (anchor at its center, no rotation).
+        // Compute body B's local frame so that: T_A = T_B * F2  =>  F2 = inv(T_B) * T_A
+        // Therefore: rot2 = inv(rotB) * rotA,  anchor2 = inv(rotB) * (posA - posB)
+
+        // Get current positions and rotations from the physics bodies
+        const posA = physA.body.translation();
+        const rotA = physA.body.rotation();
+        const posB = physB.body.translation();
+        const rotB = physB.body.rotation();
+
+        // Convert to THREE for safer quaternion math
+        const qA = new THREE.Quaternion(rotA.x, rotA.y, rotA.z, rotA.w);
+        const qB = new THREE.Quaternion(rotB.x, rotB.y, rotB.z, rotB.w);
+        const qBInv = qB.clone().invert();
+
+        // rot2 = inv(RB) * RA
+        const rot2Three = qBInv.clone().multiply(qA).normalize();
+
+        // anchor2 = inv(RB) * (pA - pB)
+        const delta = new THREE.Vector3(
+            posA.x - posB.x,
+            posA.y - posB.y,
+            posA.z - posB.z
+        ).applyQuaternion(qBInv);
+
+        // Create joint with calculated local frames
+        const params = RAPIER.JointData.fixed(
+            { x: 0.0, y: 0.0, z: 0.0 },
+            { w: 1.0, x: 0.0, y: 0.0, z: 0.0 },
+            { x: delta.x, y: delta.y, z: delta.z },
+            { w: rot2Three.w, x: rot2Three.x, y: rot2Three.y, z: rot2Three.z }
         );
-        this.joint = physicsWorld.createImpulseJoint(params, physA.body, physB.body, true);
+        this.joint = physicsWorld.createImpulseJoint(
+            params,
+            physA.body,
+            physB.body,
+            true
+        );
+
+        runtimeStore.info(
+            `Created joint between ${partA.id} and ${partB.id}`,
+            "ConstraintComponent"
+        );
     }
 
     public update(): void {

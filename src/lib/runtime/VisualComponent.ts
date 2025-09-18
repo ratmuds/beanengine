@@ -21,7 +21,7 @@ export class VisualComponent extends Component {
      * Create the appropriate THREE.js object based on the BNode3D type
      */
     private createVisualRepresentation(): void {
-        const bNode = this.gameObject.bNode;
+        const bNode = this.gameObject.bObject;
 
         if (bNode instanceof Types.BPart) {
             this.createPartMesh(bNode);
