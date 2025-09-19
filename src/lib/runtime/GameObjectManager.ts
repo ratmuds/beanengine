@@ -209,39 +209,6 @@ export class GameObjectManager {
     }
 
     /**
-     * Create THREE.js camera from BCamera
-     */
-    private createCameraFromBCamera(
-        bCamera: Types.BCamera
-    ): THREE.PerspectiveCamera {
-        const camera = new THREE.PerspectiveCamera(
-            bCamera.fieldOfView || 75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-
-        camera.position.set(
-            bCamera.position.x,
-            bCamera.position.y,
-            bCamera.position.z
-        );
-
-        // Convert BCamera Euler rotation to Three.js quaternion
-        const euler = new THREE.Euler(
-            bCamera.rotation.x,
-            bCamera.rotation.y,
-            bCamera.rotation.z
-        );
-        camera.quaternion.setFromEuler(euler);
-
-        camera.updateProjectionMatrix();
-        camera.updateMatrixWorld();
-
-        return camera;
-    }
-
-    /**
      * Update all GameObjects
      */
     update(delta: number): void {

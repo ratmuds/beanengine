@@ -720,6 +720,7 @@ function createSceneStore() {
             });
         },
 
+
         // Convenience methods for backward compatibility
         createPartInFrontOfCamera: (
             parentId: string | number,

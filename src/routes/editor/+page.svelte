@@ -540,35 +540,6 @@
                 >
             </Button>
 
-            <!-- Top Bar Tabs -->
-            <Tabs.Root value="home">
-                <Tabs.List
-                    class="bg-muted/40 rounded-xl border border-border/40"
-                >
-                    <Tabs.Trigger
-                        value="home"
-                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
-                    >
-                        <House class="w-4 h-4 mr-2" />
-                        Home
-                    </Tabs.Trigger>
-                    <Tabs.Trigger
-                        value="object"
-                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
-                    >
-                        <Box class="w-4 h-4 mr-2" />
-                        Objects
-                    </Tabs.Trigger>
-                    <Tabs.Trigger
-                        value="ui"
-                        class="px-5 py-3 rounded-lg text-sm font-medium transition-all duration-200"
-                    >
-                        <LayoutDashboard class="w-4 h-4 mr-2" />
-                        UI
-                    </Tabs.Trigger>
-                </Tabs.List>
-            </Tabs.Root>
-
             <!-- Action Buttons -->
             <div class="flex items-center gap-4 ml-8">
                 <!-- Play/Stop Button -->

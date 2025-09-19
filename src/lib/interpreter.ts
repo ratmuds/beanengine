@@ -542,16 +542,16 @@ export class CodeInterpreter {
 
         try {
             // Clone the underlying BNode3D
-            const clonedBNode = targetGameObject.bNode.clone();
+            const clonedBNode = targetGameObject.bObject.clone();
             
             // Create a new GameObject from the cloned BNode
             const gameObjectManager = runtimeStore.getGameObjectManager();
             const clonedGameObject = gameObjectManager.addGameObject(clonedBNode);
 
             // Store the cloned object's ID in the specified variable
-            context.variables[variableName] = clonedGameObject.bNode.id;
+            context.variables[variableName] = clonedGameObject.bObject.id;
 
-            console.log(`Cloned object ${targetGameObject.bNode.id} to ${clonedGameObject.bNode.id}, stored in variable '${variableName}'`);
+            console.log(`Cloned object ${targetGameObject.bObject.id} to ${clonedGameObject.bObject.id}, stored in variable '${variableName}'`);
         } catch (error) {
             runtimeStore.error(
                 `Error cloning object: ${error}`,
@@ -590,9 +590,9 @@ export class CodeInterpreter {
         try {
             // Remove from GameObjectManager
             const gameObjectManager = runtimeStore.getGameObjectManager();
-            gameObjectManager.removeGameObject(targetGameObject.bNode.id);
+            gameObjectManager.removeGameObject(targetGameObject.bObject.id);
 
-            console.log(`Destroyed object ${targetGameObject.bNode.id}`);
+            console.log(`Destroyed object ${targetGameObject.bObject.id}`);
         } catch (error) {
             runtimeStore.error(
                 `Error destroying object: ${error}`,
@@ -633,7 +633,7 @@ export class CodeInterpreter {
             // Handle unparenting (null or empty parent)
             if (!parentRef || parentRef === "null" || parentRef === "") {
                 targetGameObject.setParent(null);
-                console.log(`Unparented object ${targetGameObject.bNode.id}`);
+                console.log(`Unparented object ${targetGameObject.bObject.id}`);
                 return;
             }
 
@@ -650,7 +650,7 @@ export class CodeInterpreter {
 
             // Set the parent
             targetGameObject.setParent(parentGameObject);
-            console.log(`Parented object ${targetGameObject.bNode.id} to ${parentGameObject.bNode.id}`);
+            console.log(`Parented object ${targetGameObject.bObject.id} to ${parentGameObject.bObject.id}`);
         } catch (error) {
             runtimeStore.error(
                 `Error setting parent: ${error}`,
