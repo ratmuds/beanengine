@@ -266,6 +266,26 @@ export class GameObjectManager {
         }
     }
 
+    cloneGameObject(id: string): GameObject | null {
+        const original = this.getGameObject(id);
+        if (!original) {
+            console.warn(`GameObject with id ${id} not found`);
+            return null;
+        }
+
+        // Create a new GameObject by cloning the original
+        const clone = original.clone();
+        this.addGameObject(clone);
+
+        // Clone all components
+        for (const component of original.getComponents()) {
+            clone.addComponent(component.clone(clone));
+        }
+
+        console.log(`Cloned GameObject ${id} to ${clone.id}`);
+        return clone;
+    }
+
     /**
      * Update variables map (useful when scene variables change)
      */

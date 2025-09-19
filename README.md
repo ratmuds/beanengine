@@ -1,6 +1,8 @@
-# Bean Engine 🫘
+# Bean Engine
 
 > A game development platform that bridges the gap between Scratch and professional game engines
+
+It's complicated probably. I want it's components, AND it's children also cloned and for their relationships to be correct. And copying all the properties manually is a terrible idea. I change the properties pretty often, like breaking changes, and there are different things to clone based on the type, etc. What's the most clean way to implement this? I'm guessing like recursively structuredClone children and then update the parent and children things?
 
 **Bean Engine** is a visual programming game development environment designed for learners transitioning from block-based programming (like Scratch) to real game development. It combines the approachability of visual scripting with the power of 3D graphics and professional game development concepts.
 

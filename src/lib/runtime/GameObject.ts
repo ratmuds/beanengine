@@ -46,8 +46,8 @@ export interface Transform {
 
 /**
  * GameObject wraps a BNode3D and manages its components
- * Provides a unified interface for visual, physics, and script components
- * Works like Roblox Studio - modify transform directly and parent-child relationships work automatically
+ * Basically the runtime representation of a BNode3D
+ * Some values changed will be detected and updated automatically
  */
 export class GameObject {
     public readonly id: string;
@@ -245,6 +245,10 @@ export class GameObject {
 
     findChildByName(name: string): GameObject | null {
         return this.children.find((c) => c.name === name) ?? null;
+    }
+
+    clone(): GameObject {
+        return structuredClone(this)
     }
 
     /**
