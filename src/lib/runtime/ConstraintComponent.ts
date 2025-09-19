@@ -11,14 +11,11 @@ import { PhysicsComponent } from "./PhysicsComponent";
  * ConstraintComponent handles constraints between GameObjects
  */
 export class ConstraintComponent extends Component {
-    public joint: RAPIER.ImpulseJoint;
+    public joint: RAPIER.ImpulseJoint | null = null;
     private intialized: boolean = false;
-    private gameObject: GameObject;
 
     constructor(gameObject: GameObject) {
         super(gameObject);
-
-        this.gameObject = gameObject;
         this.init();
     }
 

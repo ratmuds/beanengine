@@ -2,6 +2,7 @@
 import { writable } from "svelte/store";
 import type { GameObjectManager } from "$lib/runtime/GameObjectManager";
 import { nanoid } from "nanoid";
+import * as THREE from "three";
 
 export type LogLevel = "info" | "warn" | "error";
 
@@ -61,6 +62,7 @@ class RuntimeManager {
     public gameObjectManager: GameObjectManager | null = null;
     public scriptEvents: Map<string, ScriptEvent>;
     public scriptEventListeners: Map<string, Set<(..._args: any[]) => void>>;
+    public threeScene: THREE.Scene | null = null;
 
     constructor() {
         this.logs = [];
@@ -424,6 +426,14 @@ class RuntimeManager {
     isMouseCaptured(): boolean {
         return this.inputState.mouseCaptured;
     }
+
+    getThreeScene(): THREE.Scene | null {
+        return this.threeScene;
+    }
+
+    setThreeScene(scene: THREE.Scene | null): void {
+        this.threeScene = scene;
+    }
 }
 
 // Create reactive store
@@ -580,6 +590,15 @@ function createRuntimeStore() {
         },
         isMouseCaptured: () => {
             return manager.isMouseCaptured();
+        },
+
+        getThreeScene: () => {
+            return manager.getThreeScene();
+        },
+
+        setThreeScene: (scene: THREE.Scene | null) => {
+            manager.setThreeScene(scene);
+            update((m) => m);
         },
     };
 }

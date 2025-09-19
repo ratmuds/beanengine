@@ -123,7 +123,8 @@
 <!-- Scene Rendering -->
 {#each $sceneStore
     .getScene()
-    .objects.filter((obj) => obj instanceof Types.BNode3D) as object (object.id)}
+    .objects.filter((obj) => obj instanceof Types.BNode3D)
+    .filter((obj) => !obj.isDescendantOfType("storage")) as object (object.id)}
     {@const position = [
         object.position.x,
         object.position.y,

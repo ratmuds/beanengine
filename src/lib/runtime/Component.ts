@@ -1,4 +1,4 @@
-import type { GameObject } from './GameObject';
+import type { GameObject } from "./GameObject";
 
 /**
  * Base class for all components in the game runtime system.
@@ -7,6 +7,7 @@ import type { GameObject } from './GameObject';
 export abstract class Component {
     protected gameObject: GameObject;
     protected enabled: boolean = true;
+    public name: string = this.constructor.name;
 
     constructor(gameObject: GameObject) {
         this.gameObject = gameObject;

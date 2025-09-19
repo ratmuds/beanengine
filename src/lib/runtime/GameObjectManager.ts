@@ -8,6 +8,7 @@ import { PlayerControllerComponent } from "./PlayerControllerComponent";
 import { ConstraintComponent } from "./ConstraintComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { CameraComponent } from "./CameraComponent";
+import { runtimeStore } from "$lib/runtimeStore";
 
 /**
  * GameObjectManager handles the lifecycle of all GameObjects in the scene
@@ -17,10 +18,11 @@ export class GameObjectManager {
     private gameObjects: Map<string, GameObject> = new Map();
     private scene: THREE.Scene;
     private camera: THREE.Camera | null = null;
-    private variablesMap: Record<string, { value: any; type: string }> = {};
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
+
+        runtimeStore.setThreeScene(scene);
     }
 
     /**
@@ -35,25 +37,16 @@ export class GameObjectManager {
         let sceneCamera: Types.BCamera | null = null;
         let activeCameraSet = false;
 
-        // Create variables map from scene store
-        const variables = sceneStore.getVariables();
-        this.variablesMap = variables.reduce(
-            (acc: Record<string, { value: any; type: string }>, v: any) => {
-                acc[v.name] = { value: v.value, type: v.type };
-                return acc;
-            },
-            {}
-        );
-
         // First pass: build hierarchy map from all BObjects
         const hierarchyMap = new Map<string, string[]>(); // parentId -> childIds
         const rootObjects: Types.BObject[] = [];
 
         for (const obj of sceneObjects) {
             const parentRef: any = (obj as any).parent;
-            const parentId: string | null = typeof parentRef === "string" 
-                ? parentRef 
-                : (parentRef && parentRef.id) || null;
+            const parentId: string | null =
+                typeof parentRef === "string"
+                    ? parentRef
+                    : (parentRef && parentRef.id) || null;
 
             if (parentId) {
                 if (!hierarchyMap.has(parentId)) {
@@ -66,7 +59,9 @@ export class GameObjectManager {
         }
 
         // Second pass: create GameObjects recursively with complete hierarchy
-        const createGameObjectWithChildren = (bObject: Types.BObject): GameObject => {
+        const createGameObjectWithChildren = (
+            bObject: Types.BObject
+        ): GameObject => {
             console.warn(
                 "NOT ALL PROPERTY REPLICATION IMPLEMENTED YET. ADDING",
                 bObject
@@ -78,7 +73,9 @@ export class GameObjectManager {
 
             // Recursively create child GameObjects first
             for (const childId of childIds) {
-                const childBObject = sceneObjects.find(obj => obj.id === childId);
+                const childBObject = sceneObjects.find(
+                    (obj) => obj.id === childId
+                );
                 if (childBObject) {
                     children.push(createGameObjectWithChildren(childBObject));
                 }
@@ -150,26 +147,23 @@ export class GameObjectManager {
                     const gameObject = this.gameObjects.get(parentObject.id);
                     if (gameObject) {
                         gameObject.addComponent(
-                            new ScriptComponent(
-                                gameObject,
-                                obj,
-                                this.scene,
-                                this.variablesMap
-                            )
+                            new ScriptComponent(gameObject, obj, this.scene)
                         );
                     } else {
-                        console.warn(
-                            `Script ${obj.id} parent ${parentObject.id} not found in GameObjects`
+                        runtimeStore.warn(
+                            `Script ${obj.id} parent ${parentObject.id} not found in GameObjects`,
+                            "GameObjectManager"
                         );
                     }
                 } else {
-                    console.warn(`Script ${obj.id} has no parent object`);
+                    runtimeStore.warn(
+                        `Script ${obj.id} has no parent object`,
+                        "GameObjectManager"
+                    );
                     // TODO: support scripts with no parent
                 }
             }
         }
-
-
 
         // Setup camera if found (fallback to first camera if no active marked)
         if (!this.camera && sceneCamera) {
@@ -182,8 +176,9 @@ export class GameObjectManager {
             }
         }
 
-        console.log(
-            `GameObjectManager initialized with ${this.gameObjects.size} objects`
+        runtimeStore.info(
+            `GameObjectManager initialized with ${this.gameObjects.size} objects`,
+            "GameObjectManager"
         );
         return this.camera;
     }
@@ -235,7 +230,7 @@ export class GameObjectManager {
     getGameObjectsWithComponent<T>(
         componentClass: new (...args: any[]) => T
     ): GameObject[] {
-        return this.getAllGameObjects().filter((go) =>
+        return this.getAllGameObjects().filter((go: GameObject) =>
             go.hasComponent(componentClass)
         );
     }
@@ -261,7 +256,10 @@ export class GameObjectManager {
     cloneGameObject(id: string): GameObject | null {
         const original = this.getGameObject(id);
         if (!original) {
-            console.warn(`GameObject with id ${id} not found`);
+            runtimeStore.warn(
+                `GameObject with id ${id} not found`,
+                "GameObjectManager"
+            );
             return null;
         }
 
@@ -269,31 +267,14 @@ export class GameObjectManager {
         const clone = original.clone();
         this.addGameObject(clone);
 
-        // Clone all components
-        for (const component of original.getComponents()) {
-            clone.addComponent(component.clone(clone));
-        }
-
-        console.log(`Cloned GameObject ${id} to ${clone.id}`);
+        runtimeStore.info(
+            `Cloned GameObject ${id} to ${clone.id}`,
+            "GameObjectManager"
+        );
         return clone;
     }
 
-    /**
-     * Update variables map (useful when scene variables change)
-     */
-    updateVariables(
-        variablesMap: Record<string, { value: any; type: string }>
-    ): void {
-        this.variablesMap = variablesMap;
-
-        // Update all script components with new variables
-        for (const gameObject of this.gameObjects.values()) {
-            const scriptComponent = gameObject.getComponent(ScriptComponent);
-            if (scriptComponent) {
-                scriptComponent.updateVariables(variablesMap);
-            }
-        }
-    }
+    // updateVariables removed; variables live in runtimeStore
 
     /**
      * Get the current camera
@@ -334,8 +315,7 @@ export class GameObjectManager {
     destroy(): void {
         this.clear();
 
-        // Reset physics world after all GameObjects are destroyed
-        // This ensures no double-removal of physics bodies/colliders
+        // Reset physics world after all GameObjects are destroyed to clean up any leftover bodies/colliders
         sceneStore.resetPhysicsWorld();
     }
 }

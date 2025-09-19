@@ -4,26 +4,24 @@ import { Component } from "./Component";
 import type { GameObject } from "./GameObject";
 import { CodeInterpreter } from "$lib/interpreter";
 import { compileScript, createRuntimeContext } from "$lib/compiler";
+import { runtimeStore } from "$lib/runtimeStore";
 
 /**
  * ScriptComponent handles code execution for GameObjects with BScript nodes
  */
 export class ScriptComponent extends Component {
     private interpreter: CodeInterpreter | null = null;
-    private script: Types.BScript;
+    public script: Types.BScript;
     private scene: THREE.Scene;
-    private variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }>;
 
     constructor(
         gameObject: GameObject,
         script: Types.BScript,
-        scene: THREE.Scene,
-        variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }> = {}
+        scene: THREE.Scene
     ) {
         super(gameObject);
         this.script = script;
         this.scene = scene;
-        this.variablesMap = variablesMap;
         this.initializeInterpreter();
     }
 
@@ -45,7 +43,7 @@ export class ScriptComponent extends Component {
             );
 
             // Create runtime context
-            const context = createRuntimeContext(this.variablesMap);
+            const context = createRuntimeContext({});
             context.gameObject = this.gameObject;
             context.scene = this.scene;
             context.script = this.script;
@@ -53,8 +51,9 @@ export class ScriptComponent extends Component {
             // Run the script
             this.interpreter.run(context);
         } catch (error) {
-            console.error(
+            runtimeStore.error(
                 `Error initializing script ${this.script.id}:`,
+                "ScriptComponent",
                 error
             );
         }
@@ -63,34 +62,20 @@ export class ScriptComponent extends Component {
     /**
      * Update script execution (if needed for continuous scripts)
      */
-    update(delta: number): void {
+    update(_delta: number): void {
         // Most scripts run once on initialization
         // This method can be extended for scripts that need continuous updates
         if (this.interpreter) {
             try {
-                // Update runtime context if needed
-                const context = createRuntimeContext(this.variablesMap);
-                context.gameObject = this.script.parent;
-                context.scene = this.scene;
-
-                // Some interpreters might have update methods for continuous execution
-                // This would depend on the interpreter implementation
+                // No-op for now; interpreter runs on init
             } catch (error) {
-                console.error(
+                runtimeStore.error(
                     `Error updating script ${this.script.id}:`,
+                    "ScriptComponent",
                     error
                 );
             }
         }
-    }
-
-    /**
-     * Update the variables map (useful when scene variables change)
-     */
-    updateVariables(
-        variablesMap: Record<string, { value: any; type: "string" | "number" | "boolean" | "object" }>
-    ): void {
-        this.variablesMap = variablesMap;
     }
 
     /**

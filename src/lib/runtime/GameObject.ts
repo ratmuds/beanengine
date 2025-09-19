@@ -1,6 +1,14 @@
 import * as THREE from "three";
 import * as Types from "$lib/types";
 import { Component } from "./Component";
+import { VisualComponent } from "./VisualComponent";
+import { ScriptComponent } from "./ScriptComponent";
+import { PhysicsComponent } from "./PhysicsComponent";
+import { ConstraintComponent } from "./ConstraintComponent";
+import { CameraComponent } from "./CameraComponent";
+import { PlayerControllerComponent } from "./PlayerControllerComponent";
+import { sceneStore } from "$lib/sceneStore";
+import { runtimeStore } from "$lib/runtimeStore";
 
 /**
  * Utility functions for converting between Euler angles and quaternions
@@ -85,8 +93,8 @@ export class GameObject {
     constructor(bObject: Types.BObject, children?: GameObject[]) {
         this.id = bObject.id;
         this.bObject = bObject;
-        this.name = (bObject as any)?.name ?? '';
-        this.nodeType = (bObject as any)?.constructor?.name ?? 'BObject';
+        this.name = bObject.name ?? "";
+        this.nodeType = bObject.constructor?.name ?? "BObject";
 
         // Initialize transform
         if (bObject instanceof Types.BNode3D) {
@@ -96,14 +104,14 @@ export class GameObject {
                 rotation: RotationUtils.eulerToNormalizedQuaternion(
                     bObject.rotation
                 ),
-                scale: new THREE.Vector3().copy(bObject.scale)
+                scale: new THREE.Vector3().copy(bObject.scale),
             };
         } else {
             // Default transform for non-spatial objects
             this.transform = {
                 position: new THREE.Vector3(),
                 rotation: new THREE.Quaternion(),
-                scale: new THREE.Vector3(1, 1, 1)
+                scale: new THREE.Vector3(1, 1, 1),
             };
         }
 
@@ -144,8 +152,6 @@ export class GameObject {
             const scaledOffset = this.offsetFromParent.position.clone();
             const rotatedOffset = scaledOffset.applyQuaternion(parentRot);
             this.transform.position.copy(parentPos).add(rotatedOffset);
-
-            let oldRotation = this.transform.rotation.clone();
 
             // rotation = parentRot * offsetRot
             this.transform.rotation.multiplyQuaternions(
@@ -260,7 +266,164 @@ export class GameObject {
     }
 
     clone(): GameObject {
-        return structuredClone(this)
+        // 1) Clone the underlying editor object with a fresh ID, preserving its class
+        const clonedBObject = GameObject.cloneBObjectWithNewId(this.bObject);
+
+        // 2) Create the cloned GameObject (no components yet)
+        const cloneGO = new GameObject(clonedBObject);
+
+        // 3) Copy world-space transform (position/quaternion/scale)
+        cloneGO.transform.position.copy(this.transform.position);
+        cloneGO.transform.rotation.copy(this.transform.rotation);
+        cloneGO.transform.scale.copy(this.transform.scale);
+        cloneGO.worldMatrix.copy(this.worldMatrix);
+
+        // 4) Clone children first so hierarchy exists before components initialize
+        for (const child of this.getChildren()) {
+            const childClone = child.clone();
+            cloneGO.addChild(childClone);
+        }
+
+        // 5) Clone components after hierarchy is set and attach to clone
+        const scene = runtimeStore.getThreeScene();
+        for (const comp of this.getComponents()) {
+            if (comp instanceof VisualComponent) {
+                if (scene) {
+                    cloneGO.addComponent(new VisualComponent(cloneGO, scene));
+                } else {
+                    runtimeStore.warn(
+                        "THREE.Scene not available while cloning VisualComponent",
+                        "GameObject"
+                    );
+                }
+            } else if (comp instanceof ScriptComponent) {
+                const originalScript = (comp as ScriptComponent).script;
+                if (scene) {
+                    cloneGO.addComponent(
+                        new ScriptComponent(cloneGO, originalScript, scene)
+                    );
+                } else {
+                    runtimeStore.warn(
+                        "THREE.Scene not available while cloning ScriptComponent",
+                        "GameObject"
+                    );
+                }
+            } else if (comp instanceof PhysicsComponent) {
+                cloneGO.addComponent(new PhysicsComponent(cloneGO));
+            } else if (comp instanceof ConstraintComponent) {
+                cloneGO.addComponent(new ConstraintComponent(cloneGO));
+            } else if (comp instanceof CameraComponent) {
+                cloneGO.addComponent(new CameraComponent(cloneGO));
+            } else {
+                runtimeStore.warn(
+                    `Unrecognized component type: ${comp.constructor.name}`,
+                    "GameObject"
+                );
+            }
+        }
+
+        return cloneGO;
+    }
+
+    /**
+     * Clone a Types.BObject while preserving its prototype and issuing a fresh id.
+     */
+    private static cloneBObjectWithNewId(source: Types.BObject): Types.BObject {
+        // BPlayerController has a custom deep clone that issues a new id
+        if (source instanceof Types.BPlayerController) {
+            const cloned = source.clone();
+            cloned.parent = null;
+            cloned.children = [];
+            return cloned;
+        }
+
+        // BPart: create a fresh instance and copy fields (ensures new id)
+        if (source instanceof Types.BPart) {
+            const s = source as Types.BPart;
+            const cloned = new Types.BPart(s.name, null, null);
+            // copy simple fields
+            cloned.color = s.color;
+            cloned.material = s.material;
+            cloned.transparency = s.transparency;
+            cloned.castShadows = s.castShadows;
+            cloned.receiveShadows = s.receiveShadows;
+            cloned.visible = s.visible;
+            cloned.positionLocked = s.positionLocked;
+            cloned.rotationLocked = s.rotationLocked;
+            cloned.canTouch = s.canTouch;
+            cloned.canCollide = s.canCollide;
+            cloned.canQuery = s.canQuery;
+            cloned.meshSource = { ...s.meshSource };
+            // transform
+            cloned.position = s.position.clone();
+            cloned.rotation = s.rotation.clone();
+            cloned.scale = s.scale.clone();
+            cloned.positionOffset = s.positionOffset.clone();
+            cloned.rotationOffset = s.rotationOffset.clone();
+            // detach
+            cloned.parent = null;
+            cloned.children = [];
+            return cloned;
+        }
+
+        // BCamera manual clone
+        if (source instanceof Types.BCamera) {
+            const s = source as Types.BCamera;
+            const cloned = new Types.BCamera(s.name, null, null);
+            cloned.fieldOfView = s.fieldOfView;
+            cloned.nearClipPlane = s.nearClipPlane;
+            cloned.farClipPlane = s.farClipPlane;
+            cloned.projectionType = s.projectionType;
+            cloned.orthographicSize = s.orthographicSize;
+            cloned.aspectRatio = s.aspectRatio;
+            cloned.isActive = s.isActive;
+            cloned.clearColor = s.clearColor;
+            cloned.clearFlags = s.clearFlags;
+            // Transform
+            cloned.position = s.position.clone();
+            cloned.rotation = s.rotation.clone();
+            cloned.scale = s.scale.clone();
+            cloned.positionOffset = s.positionOffset.clone();
+            cloned.rotationOffset = s.rotationOffset.clone();
+            return cloned;
+        }
+
+        // BLight manual clone
+        if (source instanceof Types.BLight) {
+            const s = source as Types.BLight;
+            const cloned = new Types.BLight(s.name, null, null);
+            cloned.color = s.color;
+            cloned.intensity = s.intensity;
+            cloned.position = s.position.clone();
+            cloned.rotation = s.rotation.clone();
+            cloned.scale = s.scale.clone();
+            cloned.positionOffset = s.positionOffset.clone();
+            cloned.rotationOffset = s.rotationOffset.clone();
+            return cloned;
+        }
+
+        // Generic BNode3D clone path
+        if (source instanceof Types.BNode3D) {
+            const cloned = source.clone();
+            cloned.parent = null;
+            cloned.children = [];
+            return cloned;
+        }
+
+        // BScript – simple re-instantiation with deep-copied code array
+        if (source instanceof Types.BScript) {
+            const s = source as Types.BScript;
+            const cloned = new Types.BScript(s.name, null, null);
+            cloned.code =
+                typeof structuredClone === "function"
+                    ? structuredClone(s.code)
+                    : JSON.parse(JSON.stringify(s.code ?? []));
+            return cloned;
+        }
+
+        // Fallback: construct a plain BObject with a new id
+        const cloned = new Types.BObject(source.name ?? "Object", null, null);
+        return cloned;
     }
 
     /**
@@ -288,9 +451,9 @@ export class GameObject {
     /**
      * Get a component by its class type
      */
-    getComponent<T extends Component>(
-        componentClass: new (...args: any[]) => T
-    ): T | null {
+    getComponent<T extends Component>(componentClass: {
+        name: string;
+    }): T | null {
         return (this.componentMap.get(componentClass.name) as T) || null;
     }
 
@@ -304,9 +467,7 @@ export class GameObject {
     /**
      * Check if this GameObject has a specific component type
      */
-    hasComponent<T extends Component>(
-        componentClass: new (...args: any[]) => T
-    ): boolean {
+    hasComponent(componentClass: { name: string }): boolean {
         return this.componentMap.has(componentClass.name);
     }
 
@@ -319,8 +480,9 @@ export class GameObject {
                 try {
                     component.update(delta);
                 } catch (error) {
-                    console.error(
+                    runtimeStore.error(
                         `Error updating component ${component.constructor.name} on GameObject ${this.id}:`,
+                        "GameObject",
                         error
                     );
                 }

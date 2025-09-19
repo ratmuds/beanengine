@@ -237,7 +237,8 @@ export const chipConfig: Record<string, ChipConfig> = {
             }
 
             // Vector-like addition: supports Types.BVector3 or plain objects with x,y,z
-            const isVec = (v: any) => v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
             if (isVec(a) && isVec(b)) {
                 const ax = Number(a.x) || 0;
                 const ay = Number(a.y) || 0;
@@ -290,7 +291,8 @@ export const chipConfig: Record<string, ChipConfig> = {
             }
 
             // Vector-like component-wise multiplication
-            const isVec = (v: any) => v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
             if (isVec(a) && isVec(b)) {
                 const ax = Number(a.x) || 0;
                 const ay = Number(a.y) || 0;

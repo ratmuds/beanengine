@@ -1,6 +1,6 @@
 /**
  * Target Resolution Service
- * 
+ *
  * Resolves target references in scripts and chips against RUNTIME GameObjects only.
  * Supports path-based navigation (., .., ./child, ../sibling) and lookup queries (#id, @name, $type).
  */
@@ -17,7 +17,7 @@ export interface TargetResolutionResult {
 
 /**
  * Resolves a target reference string to an actual GameObject
- * 
+ *
  * @param targetRef - The target reference string (path, id, name, etc.)
  * @param context - Runtime context containing current object and scene info
  * @returns Resolution result with target GameObject or error
@@ -45,11 +45,11 @@ export function resolveTarget(
 
     try {
         // Handle different reference types
-        if (ref.startsWith("#id:")) {
+        if (ref.startsWith("@id:")) {
             return resolveById(ref.substring(4).trimStart());
         } else if (ref.startsWith("@name:")) {
             return resolveByName(ref.substring(6).trimStart());
-        } else if (ref.startsWith("$first:")) {
+        } else if (ref.startsWith("@first:")) {
             return resolveByType(ref.substring(7).trimStart());
         } else if (ref.startsWith("/")) {
             return resolveAbsolutePath(ref);
@@ -75,7 +75,10 @@ function resolveById(id: string): TargetResolutionResult {
 
     const go = gameObjectManager.getGameObject(id);
     if (!go) {
-        return { success: false, error: `GameObject with ID '${id}' not found` };
+        return {
+            success: false,
+            error: `GameObject with ID '${id}' not found`,
+        };
     }
     return { success: true, target: go };
 }
@@ -89,9 +92,14 @@ function resolveByName(name: string): TargetResolutionResult {
         return { success: false, error: "GameObjectManager not available" };
     }
 
-    const go = gameObjectManager.getAllGameObjects().find((g) => g.name === name) || null;
+    const go =
+        gameObjectManager.getAllGameObjects().find((g) => g.name === name) ||
+        null;
     if (!go) {
-        return { success: false, error: `GameObject with name '${name}' not found` };
+        return {
+            success: false,
+            error: `GameObject with name '${name}' not found`,
+        };
     }
     return { success: true, target: go };
 }
@@ -106,9 +114,15 @@ function resolveByType(type: string): TargetResolutionResult {
         return { success: false, error: "GameObjectManager not available" };
     }
 
-    const go = gameObjectManager.getAllGameObjects().find((g) => g.nodeType === type) || null;
+    const go =
+        gameObjectManager
+            .getAllGameObjects()
+            .find((g) => g.nodeType === type) || null;
     if (!go) {
-        return { success: false, error: `No GameObject of type '${type}' found` };
+        return {
+            success: false,
+            error: `No GameObject of type '${type}' found`,
+        };
     }
     return { success: true, target: go };
 }
@@ -118,7 +132,7 @@ function resolveByType(type: string): TargetResolutionResult {
  * Format: /objectName/childName/grandchildName
  */
 function resolveAbsolutePath(path: string): TargetResolutionResult {
-    const parts = path.split('/').filter((part) => part.length > 0);
+    const parts = path.split("/").filter((part) => part.length > 0);
 
     if (parts.length === 0) {
         return {
@@ -137,7 +151,8 @@ function resolveAbsolutePath(path: string): TargetResolutionResult {
         .getAllGameObjects()
         .filter((g) => g.getParent() === null);
 
-    let current: GameObject | null = roots.find((g) => g.name === parts[0]) || null;
+    let current: GameObject | null =
+        roots.find((g) => g.name === parts[0]) || null;
     if (!current) {
         return { success: false, error: `Root object '${parts[0]}' not found` };
     }
@@ -162,7 +177,10 @@ function resolveAbsolutePath(path: string): TargetResolutionResult {
  * Resolve relative path from current GameObject
  * Formats: ., .., ./child, ../sibling, ../../uncle/cousin
  */
-function resolveRelativePath(path: string, context: RuntimeContext): TargetResolutionResult {
+function resolveRelativePath(
+    path: string,
+    context: RuntimeContext
+): TargetResolutionResult {
     if (!context.gameObject) {
         return {
             success: false,
@@ -171,12 +189,12 @@ function resolveRelativePath(path: string, context: RuntimeContext): TargetResol
     }
 
     let current: GameObject | null = context.gameObject;
-    const parts = path.split('/').filter((part) => part.length > 0);
+    const parts = path.split("/").filter((part) => part.length > 0);
 
     for (const part of parts) {
-        if (part === '.') {
+        if (part === ".") {
             continue; // stay on current
-        } else if (part === '..') {
+        } else if (part === "..") {
             if (current) {
                 const parent = current.getParent();
                 current = parent; // Allow null (scene root level)
@@ -188,13 +206,16 @@ function resolveRelativePath(path: string, context: RuntimeContext): TargetResol
                 // We're at scene root level, search among root GameObjects
                 const gameObjectManager = runtimeStore.getGameObjectManager();
                 if (!gameObjectManager) {
-                    return { success: false, error: "GameObjectManager not available" };
+                    return {
+                        success: false,
+                        error: "GameObjectManager not available",
+                    };
                 }
-                
+
                 const roots = gameObjectManager
                     .getAllGameObjects()
                     .filter((g) => g.getParent() === null);
-                
+
                 const found = roots.find((g) => g.name === part);
                 if (!found) {
                     return {
@@ -246,5 +267,7 @@ export function getTargetResolutionError(
     context: RuntimeContext
 ): string | null {
     const result = resolveTarget(targetRef, context);
-    return result.success ? null : result.error || "Unknown target resolution error";
+    return result.success
+        ? null
+        : result.error || "Unknown target resolution error";
 }

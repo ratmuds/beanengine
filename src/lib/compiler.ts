@@ -63,7 +63,10 @@ export function compileItem(chip: any): CompiledItem | null {
 
         // Handle children for blocks with fields (like if statements)
         if (chip.children && Array.isArray(chip.children)) {
-            console.log("COMPILING CHILDREN FOR BLOCK WITH FIELDS", chip.children);
+            console.log(
+                "COMPILING CHILDREN FOR BLOCK WITH FIELDS",
+                chip.children
+            );
             compiled.children = chip.children
                 .map((child: any) => compileItem(child))
                 .filter(Boolean);
@@ -158,10 +161,7 @@ export function createEvaluateChip(): (
         if (compiledChip.type && chipConfig[compiledChip.type]) {
             const config = chipConfig[compiledChip.type];
             if (config.evaluate) {
-                return await config.evaluate(
-                    compiledChip,
-                    context
-                );
+                return await config.evaluate(compiledChip, context);
             }
         }
 
@@ -174,10 +174,14 @@ export function createEvaluateChip(): (
  * Creates a runtime context with variables and evaluation capability
  */
 export function createRuntimeContext(
-    variables: Record<string, { value: any; type: "number" | "string" | "boolean" | "object" }>
+    variables?: Record<
+        string,
+        { value: unknown; type: "number" | "string" | "boolean" | "object" }
+    >
 ): RuntimeContext {
     const context: RuntimeContext = {
-        variables,
+        // Retain optional legacy field for compatibility; chips use runtimeStore directly
+        variables: variables ?? {},
         evaluateChip: null as any, // Will be set below
     };
 

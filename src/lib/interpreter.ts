@@ -537,26 +537,29 @@ export class CodeInterpreter {
         }
 
         if (!variableName) {
-            throw new InterpreterScriptError("Clone block missing variable name");
+            throw new InterpreterScriptError(
+                "Clone block missing variable name"
+            );
         }
 
         try {
-            // Clone the underlying BNode3D
-            const clonedBNode = targetGameObject.bObject.clone();
-            
+            // Clone the GameObject
+            const clonedObject = targetGameObject.clone();
+
             // Create a new GameObject from the cloned BNode
             const gameObjectManager = runtimeStore.getGameObjectManager();
-            const clonedGameObject = gameObjectManager.addGameObject(clonedBNode);
+            gameObjectManager.addGameObject(clonedObject);
+
+            console.log(gameObjectManager?.getAllGameObjects());
 
             // Store the cloned object's ID in the specified variable
-            context.variables[variableName] = clonedGameObject.bObject.id;
+            runtimeStore.setVariable(variableName, `@id:${clonedObject.id}`);
 
-            console.log(`Cloned object ${targetGameObject.bObject.id} to ${clonedGameObject.bObject.id}, stored in variable '${variableName}'`);
-        } catch (error) {
-            runtimeStore.error(
-                `Error cloning object: ${error}`,
-                "Interpreter"
+            console.log(
+                `Cloned object ${targetGameObject.bObject.id} to ${clonedObject.id}, stored in variable '${variableName}'`
             );
+        } catch (error) {
+            runtimeStore.error(`Error cloning object: ${error}`, "Interpreter");
         }
     }
 
@@ -638,7 +641,10 @@ export class CodeInterpreter {
             }
 
             // Resolve parent object
-            const parentGameObject = resolveTargetGameObject(parentRef, context);
+            const parentGameObject = resolveTargetGameObject(
+                parentRef,
+                context
+            );
             if (!parentGameObject) {
                 const error = getTargetResolutionError(parentRef, context);
                 runtimeStore.warn(
@@ -650,12 +656,11 @@ export class CodeInterpreter {
 
             // Set the parent
             targetGameObject.setParent(parentGameObject);
-            console.log(`Parented object ${targetGameObject.bObject.id} to ${parentGameObject.bObject.id}`);
-        } catch (error) {
-            runtimeStore.error(
-                `Error setting parent: ${error}`,
-                "Interpreter"
+            console.log(
+                `Parented object ${targetGameObject.bObject.id} to ${parentGameObject.bObject.id}`
             );
+        } catch (error) {
+            runtimeStore.error(`Error setting parent: ${error}`, "Interpreter");
         }
     }
 }

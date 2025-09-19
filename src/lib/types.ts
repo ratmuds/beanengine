@@ -3,8 +3,6 @@
 
 import { nanoid } from "nanoid";
 
-
-
 // Scene class to manage objects in the scene
 class BScene {
     objects: BObject[]; // All objects in the scene
@@ -13,7 +11,7 @@ class BScene {
     constructor() {
         this.objects = [];
         this.children = [];
-        
+
         // Create default BStorage container
         const defaultStorage = new BStorage("Storage", null, null);
         this.addObject(defaultStorage);
@@ -90,6 +88,15 @@ class BObject {
         let current: BObject | null = this.parent;
         while (current) {
             if (current === ancestor) return true;
+            current = current.parent;
+        }
+        return false;
+    }
+
+    isDescendantOfType(type: string): boolean {
+        let current: BObject | null = this.parent;
+        while (current) {
+            if (current.type === type) return true;
             current = current.parent;
         }
         return false;
@@ -265,8 +272,6 @@ class BNode3D extends BObject {
         return cloned;
     }
 }
-
-
 
 // Available primitive mesh types
 type PrimitiveMeshType =

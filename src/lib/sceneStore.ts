@@ -395,8 +395,9 @@ class SceneManager {
     /**
      * Clear the scene by removing all objects and resetting variables
      * This keeps the physics world intact for reuse
+     * @param createDefaultStorage - Whether to create a default BStorage object (default: true)
      */
-    public clearScene(): void {
+    public clearScene(createDefaultStorage: boolean = true): void {
         // Clear all objects from the scene
         this.scene.objects = [];
         this.scene.children = [];
@@ -404,9 +405,11 @@ class SceneManager {
         // Reset variables
         this.variables = [];
 
-        // Create default BStorage container
-        const defaultStorage = new Types.BStorage("Storage", null, null);
-        this.scene.addObject(defaultStorage);
+        // Create default BStorage container only if requested
+        if (createDefaultStorage) {
+            const defaultStorage = new Types.BStorage("Storage", null, null);
+            this.scene.addObject(defaultStorage);
+        }
 
         console.log(
             "[SceneStore] Scene cleared - all objects and variables reset"
@@ -490,8 +493,9 @@ class SceneManager {
      * Creates objects first, then wires parent-child relationships by ID
      */
     public deserialize(data: SerializedScene): void {
-        // Clear the current scene first
-        this.clearScene();
+        // Clear the current scene first, but don't create default storage
+        // since the serialized data should contain its own storage objects
+        this.clearScene(false);
 
         // Create a map to store objects by ID for parent-child and ref wiring
         const objectMap = new Map<string, Types.BObject>();
@@ -570,6 +574,17 @@ class SceneManager {
                 type: v.type,
             }));
         }
+
+        // Ensure there's at least one Storage object if none exists in the serialized data
+        const hasStorage = data.objects.some((obj) => obj.type === "storage");
+        if (!hasStorage) {
+            const defaultStorage = new Types.BStorage("Storage", null, null);
+            this.scene.addObject(defaultStorage);
+            console.log(
+                "[SceneStore] Added default Storage object as none was found in serialized data"
+            );
+        }
+
         console.log("[SceneStore] Scene deserialized successfully");
     }
 
@@ -684,7 +699,6 @@ function createSceneStore() {
                 return currentManager;
             });
         },
-
 
         // Convenience methods for backward compatibility
         createPartInFrontOfCamera: (
@@ -838,8 +852,8 @@ function createSceneStore() {
         },
 
         // Scene serialization methods
-        clearScene: () => {
-            manager.clearScene();
+        clearScene: (createDefaultStorage: boolean = true) => {
+            manager.clearScene(createDefaultStorage);
         },
 
         serialize: () => {
