@@ -1,7 +1,7 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { fade } from "svelte/transition";
-
+    import { page } from "$app/stores";
     import { Button } from "$lib/components/ui/button";
     import {
         ResizablePaneGroup,
@@ -42,6 +42,7 @@
         Clapperboard,
         Plus,
         Sparkles,
+        Save,
     } from "lucide-svelte";
 
     import { Canvas } from "@threlte/core";
@@ -294,24 +295,41 @@
     let loadingText = $state("Starting...");
 
     // Read project id from route and load if present
-    let projectId: string | null = null;
+    let projectId = $page.params.id;
 
     async function tryLoadProjectById() {
         try {
-            // SvelteKit passes [id] as a prop in page-svelte-only routes via url, so read from location
-            const match = window.location.pathname.match(/\/editor\/([^/]+)/);
-            projectId = match?.[1] ?? null;
+            console.log("Attempting to load project with ID:", projectId);
             if (!projectId) return;
 
             loadingText = `Loading project ${projectId}...`;
             const raw = localStorage.getItem(`beanengine:project:${projectId}`);
+            console.log("Raw project data:", raw);
             if (!raw) return;
 
             const payload = JSON.parse(raw);
+            console.log("Loaded project data:", payload);
             sceneStore.clearScene();
             sceneStore.deserialize(payload);
         } catch (err) {
             console.error("Failed to load project", err);
+        }
+    }
+
+    async function saveProject() {
+        try {
+            console.log("Attempting to save project with ID:", projectId);
+            if (!projectId) return;
+
+            const payload = sceneStore.serialize();
+            localStorage.setItem(
+                `beanengine:project:${projectId}`,
+                JSON.stringify(payload)
+            );
+
+            console.log("Project saved:", payload);
+        } catch (err) {
+            console.error("Failed to save project", err);
         }
     }
 
@@ -323,7 +341,7 @@
             { text: "Loading assets...", delay: 150 },
         ];
 
-        //await tryLoadProjectById();
+        await tryLoadProjectById();
 
         for (const step of steps) {
             loadingText = step.text;
@@ -725,6 +743,20 @@
                             <Box class="w-4 h-4 text-orange-500" />
                             <span class="text-sm font-medium">Local</span>
                         {/if}
+                    </div>
+                </Button>
+
+                <!-- Save Button -->
+                <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-10 px-4 bg-card/60 backdrop-blur-sm border border-border/40 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-border/60 transition-all duration-200 shadow-sm"
+                    onclick={() => saveProject()}
+                    title="Save Project"
+                >
+                    <div class="flex items-center gap-2">
+                        <Save class="w-4 h-4 text-green-500" />
+                        <span class="text-sm font-medium">Save</span>
                     </div>
                 </Button>
             </div>
