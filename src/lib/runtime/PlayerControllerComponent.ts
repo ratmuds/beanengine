@@ -19,13 +19,13 @@ export class PlayerControllerComponent extends Component {
         super(gameObject);
 
         // Ensure the gameObject has a BPlayerController
-        if (!(gameObject.bNode instanceof Types.BPlayerController)) {
+        if (!(gameObject.bObject instanceof Types.BPlayerController)) {
             throw new Error(
                 "PlayerControllerComponent can only be attached to BPlayerController objects"
             );
         }
 
-        this.playerController = gameObject.bNode as Types.BPlayerController;
+        this.playerController = gameObject.bObject as Types.BPlayerController;
 
         // Find physics component
         this.physicsComponent = gameObject.getComponent(PhysicsComponent);
@@ -42,7 +42,7 @@ export class PlayerControllerComponent extends Component {
         if (this.cameraGO) {
             console.log(
                 "Camera found during PlayerController construction:",
-                this.cameraGO.bNode.id
+                this.cameraGO.bObject.id
             );
         } else {
             console.warn(
@@ -56,7 +56,7 @@ export class PlayerControllerComponent extends Component {
         // Walk runtime GameObject hierarchy instead of Types
         const children = this.gameObject.getChildren();
         for (const child of children) {
-            if (child.bNode instanceof Types.BCamera) {
+            if (child.bObject instanceof Types.BCamera) {
                 this.cameraGO = child;
                 break;
             }
@@ -92,14 +92,17 @@ export class PlayerControllerComponent extends Component {
 
         // Normalize movement vector to prevent faster diagonal movement
         if (movementVector.x !== 0 || movementVector.z !== 0) {
-            const length = Math.sqrt(movementVector.x * movementVector.x + movementVector.z * movementVector.z);
+            const length = Math.sqrt(
+                movementVector.x * movementVector.x +
+                    movementVector.z * movementVector.z
+            );
             movementVector.x = (movementVector.x / length) * speed;
             movementVector.z = (movementVector.z / length) * speed;
         }
 
         // Get current velocity to preserve Y component (gravity)
         const currentVelocity = this.physicsComponent.getVelocity();
-        
+
         // Set new velocity with desired horizontal movement but preserve vertical velocity
         const newVelocity = new Types.BVector3(
             movementVector.x,

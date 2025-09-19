@@ -51,7 +51,7 @@ export interface Transform {
  */
 export class GameObject {
     public readonly id: string;
-    public readonly bNode: Types.BNode3D;
+    public readonly bObject: Types.BObject;
     public readonly name: string;
     /**
      * Type name derived from the source BNode (e.g. BPart, BCamera, BLight)
@@ -82,18 +82,30 @@ export class GameObject {
      */
     private offsetFromParent: Transform | null = null;
 
-    constructor(bNode: Types.BNode3D, children?: GameObject[]) {
-        this.id = bNode.id;
-        this.bNode = bNode;
-        this.name = (bNode as any)?.name ?? "";
-        this.nodeType = (bNode as any)?.constructor?.name ?? "BNode3D";
+    constructor(bObject: Types.BObject, children?: GameObject[]) {
+        this.id = bObject.id;
+        this.bObject = bObject;
+        this.name = (bObject as any)?.name ?? '';
+        this.nodeType = (bObject as any)?.constructor?.name ?? 'BObject';
 
-        // Initialize transform from BNode3D (editor values are in world space at Play start)
-        this.transform = {
-            position: new THREE.Vector3().copy(bNode.position),
-            rotation: RotationUtils.eulerToNormalizedQuaternion(bNode.rotation),
-            scale: new THREE.Vector3().copy(bNode.scale),
-        };
+        // Initialize transform
+        if (bObject instanceof Types.BNode3D) {
+            // from BNode3D (editor values are in world space at Play start)
+            this.transform = {
+                position: new THREE.Vector3().copy(bObject.position),
+                rotation: RotationUtils.eulerToNormalizedQuaternion(
+                    bObject.rotation
+                ),
+                scale: new THREE.Vector3().copy(bObject.scale)
+            };
+        } else {
+            // Default transform for non-spatial objects
+            this.transform = {
+                position: new THREE.Vector3(),
+                rotation: new THREE.Quaternion(),
+                scale: new THREE.Vector3(1, 1, 1)
+            };
+        }
 
         this.worldMatrix = new THREE.Matrix4();
         // Compose initial world matrix
