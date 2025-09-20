@@ -10,8 +10,8 @@ import { runtimeStore } from "$lib/runtimeStore";
  * PhysicsComponent handles physics simulation for GameObjects
  */
 export class PhysicsComponent extends Component {
-    public body: RAPIER.RigidBody;
-    public collider: RAPIER.Collider;
+    public body: RAPIER.RigidBody | null;
+    public collider: RAPIER.Collider | null;
 
     private oldPosition: THREE.Vector3;
     private oldRotation: THREE.Quaternion;
@@ -90,6 +90,7 @@ export class PhysicsComponent extends Component {
     }
 
     public setDirectionalForce(direction: Types.BVector3) {
+        if (!this.body) return;
         this.body.addForce(
             new RAPIER.Vector3(direction.x, direction.y, direction.z),
             true // wake up
@@ -97,6 +98,7 @@ export class PhysicsComponent extends Component {
     }
 
     public addDirectionalImpulse(direction: Types.BVector3) {
+        if (!this.body) return;
         this.body.applyImpulse(
             new RAPIER.Vector3(direction.x, direction.y, direction.z),
             true // wake up
@@ -104,6 +106,7 @@ export class PhysicsComponent extends Component {
     }
 
     public setVelocity(velocity: Types.BVector3) {
+        if (!this.body) return;
         this.body.setLinvel(
             new RAPIER.Vector3(velocity.x, velocity.y, velocity.z),
             true // wake up
@@ -111,6 +114,7 @@ export class PhysicsComponent extends Component {
     }
 
     public getVelocity(): Types.BVector3 {
+        if (!this.body) return new Types.BVector3(0, 0, 0);
         const vel = this.body.linvel();
         return new Types.BVector3(vel.x, vel.y, vel.z);
     }
@@ -122,16 +126,16 @@ export class PhysicsComponent extends Component {
 
             // Apply position lock if enabled
             if (part.positionLocked) {
-                this.body.lockTranslations(true, true); // lock translation, wake up
+                this.body?.lockTranslations(true, true); // lock translation, wake up
             } else {
-                this.body.lockTranslations(false, true); // unlock translation, wake up
+                this.body?.lockTranslations(false, true); // unlock translation, wake up
             }
 
             // Apply rotation lock if enabled
             if (part.rotationLocked) {
-                this.body.lockRotations(true, true); // lock rotation, wake up
+                this.body?.lockRotations(true, true); // lock rotation, wake up
             } else {
-                this.body.lockRotations(false, true); // unlock rotation, wake up
+                this.body?.lockRotations(false, true); // unlock rotation, wake up
             }
         }
     }
@@ -143,6 +147,7 @@ export class PhysicsComponent extends Component {
             this.oldPosition.y === this.gameObject.transform.position.y &&
             this.oldPosition.z === this.gameObject.transform.position.z
         ) {
+            if (!this.body) return;
             const position = this.body.translation();
             this.gameObject.transform.position.set(
                 position.x,
@@ -152,7 +157,7 @@ export class PhysicsComponent extends Component {
             this.oldPosition.copy(this.gameObject.transform.position);
         } else {
             // Moved externally
-            this.body.setTranslation(
+            this.body?.setTranslation(
                 new RAPIER.Vector3(
                     this.gameObject.transform.position.x,
                     this.gameObject.transform.position.y,
@@ -170,6 +175,7 @@ export class PhysicsComponent extends Component {
             this.oldRotation.z === this.gameObject.transform.rotation.z &&
             this.oldRotation.w === this.gameObject.transform.rotation.w
         ) {
+            if (!this.body) return;
             const rotation = this.body.rotation();
             this.gameObject.transform.rotation.set(
                 rotation.x,
@@ -180,7 +186,7 @@ export class PhysicsComponent extends Component {
             this.oldRotation.copy(this.gameObject.transform.rotation);
         } else {
             // Rotated externally
-            this.body.setRotation(
+            this.body?.setRotation(
                 new RAPIER.Quaternion(
                     this.gameObject.transform.rotation.x,
                     this.gameObject.transform.rotation.y,
@@ -206,6 +212,41 @@ export class PhysicsComponent extends Component {
      */
     onDisable(): void {
         this.cleanup();
+    }
+
+    onEnable(): void {
+        if (this.body || this.collider) return; // already active
+        const physicsWorld = sceneStore.getPhysicsWorld();
+        if (!physicsWorld) return;
+        this.body = physicsWorld.createRigidBody(
+            RAPIER.RigidBodyDesc.dynamic()
+        );
+        this.collider = physicsWorld.createCollider(
+            RAPIER.ColliderDesc.cuboid(
+                this.gameObject.transform.scale.x / 2,
+                this.gameObject.transform.scale.y / 2,
+                this.gameObject.transform.scale.z / 2
+            ),
+            this.body
+        );
+        this.body.setTranslation(
+            new RAPIER.Vector3(
+                this.gameObject.transform.position.x,
+                this.gameObject.transform.position.y,
+                this.gameObject.transform.position.z
+            ),
+            true
+        );
+        this.body.setRotation(
+            new RAPIER.Quaternion(
+                this.gameObject.transform.rotation.x,
+                this.gameObject.transform.rotation.y,
+                this.gameObject.transform.rotation.z,
+                this.gameObject.transform.rotation.w
+            ),
+            true
+        );
+        this.applyLocks();
     }
 
     destroy(): void {

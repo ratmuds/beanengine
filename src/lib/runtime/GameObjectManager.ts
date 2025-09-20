@@ -21,8 +21,8 @@ export class GameObjectManager {
 
     constructor(scene: THREE.Scene) {
         this.scene = scene;
-
         runtimeStore.setThreeScene(scene);
+        runtimeStore.setGameObjectManager(this);
     }
 
     /**
@@ -98,16 +98,13 @@ export class GameObjectManager {
             const gameObject = this.gameObjects.get(obj.id);
             if (!gameObject) continue;
 
-            // Add VisualComponent for renderable objects
-            if (obj instanceof Types.BPart || obj instanceof Types.BLight) {
-                gameObject.addComponent(
-                    new VisualComponent(gameObject, this.scene)
-                );
-            }
+            // Always create components, but we'll toggle enabled based on Storage membership
+            this.addComponentsToGameObject(obj, gameObject);
+            const enable = !gameObject.isUnderStorage();
+            for (const c of gameObject.getComponents()) c.setEnabled(enable);
 
-            // Attach CameraComponent to cameras and select active camera
+            // Handle camera selection for active camera
             if (obj instanceof Types.BCamera) {
-                gameObject.addComponent(new CameraComponent(gameObject));
                 const camComp = gameObject.getComponent(
                     CameraComponent
                 ) as CameraComponent | null;
@@ -120,23 +117,6 @@ export class GameObjectManager {
                     sceneCamera = obj;
                 }
             }
-
-            // Add PhysicsComponent for physical objects
-            if (obj instanceof Types.BPart) {
-                gameObject.addComponent(new PhysicsComponent(gameObject));
-            }
-
-            // Add PlayerControllerComponent for player controllers
-            if (obj instanceof Types.BPlayerController) {
-                gameObject.addComponent(
-                    new PlayerControllerComponent(gameObject)
-                );
-            }
-
-            // Add ConstraintComponent for constraints
-            if (obj instanceof Types.BConstraint) {
-                gameObject.addComponent(new ConstraintComponent(gameObject));
-            }
         }
 
         // Fourth pass: handle scripts
@@ -146,9 +126,11 @@ export class GameObjectManager {
                 if (parentObject) {
                     const gameObject = this.gameObjects.get(parentObject.id);
                     if (gameObject) {
-                        gameObject.addComponent(
-                            new ScriptComponent(gameObject, obj, this.scene)
-                        );
+                        if (!gameObject.isUnderStorage()) {
+                            gameObject.addComponent(
+                                new ScriptComponent(gameObject, obj, this.scene)
+                            );
+                        }
                     } else {
                         runtimeStore.warn(
                             `Script ${obj.id} parent ${parentObject.id} not found in GameObjects`,
@@ -188,7 +170,9 @@ export class GameObjectManager {
      */
     updateCameraAspect(aspect: number): void {
         for (const go of this.gameObjects.values()) {
-            const cam = go.getComponent(CameraComponent);
+            const cam = go.getComponent(
+                CameraComponent
+            ) as CameraComponent | null;
             if (cam) {
                 cam.setAspect(aspect);
             }
@@ -227,9 +211,9 @@ export class GameObjectManager {
     /**
      * Get GameObjects with a specific component type
      */
-    getGameObjectsWithComponent<T>(
-        componentClass: new (...args: any[]) => T
-    ): GameObject[] {
+    getGameObjectsWithComponent(componentClass: {
+        name: string;
+    }): GameObject[] {
         return this.getAllGameObjects().filter((go: GameObject) =>
             go.hasComponent(componentClass)
         );
@@ -310,6 +294,102 @@ export class GameObjectManager {
     }
 
     /**
+     * Add components to a GameObject based on its BObject type
+     */
+    private addComponentsToGameObject(
+        bObject: Types.BObject,
+        gameObject: GameObject
+    ): void {
+        // Add VisualComponent for renderable objects (idempotent)
+        if (
+            (bObject instanceof Types.BPart ||
+                bObject instanceof Types.BLight) &&
+            !gameObject.getComponent(VisualComponent)
+        ) {
+            gameObject.addComponent(
+                new VisualComponent(gameObject, this.scene)
+            );
+        }
+
+        // Attach CameraComponent to cameras
+        if (
+            bObject instanceof Types.BCamera &&
+            !gameObject.getComponent(CameraComponent)
+        ) {
+            gameObject.addComponent(new CameraComponent(gameObject));
+        }
+
+        // Add PhysicsComponent for physical objects
+        if (
+            bObject instanceof Types.BPart &&
+            !gameObject.getComponent(PhysicsComponent)
+        ) {
+            gameObject.addComponent(new PhysicsComponent(gameObject));
+        }
+
+        // Add PlayerControllerComponent for player controllers
+        if (
+            bObject instanceof Types.BPlayerController &&
+            !gameObject.getComponent(PlayerControllerComponent)
+        ) {
+            gameObject.addComponent(new PlayerControllerComponent(gameObject));
+        }
+
+        // Add ConstraintComponent for constraints
+        if (
+            bObject instanceof Types.BConstraint &&
+            !gameObject.getComponent(ConstraintComponent)
+        ) {
+            gameObject.addComponent(new ConstraintComponent(gameObject));
+        }
+    }
+
+    /**
+     * Remove all components from a GameObject
+     */
+    removeAllComponents(gameObject: GameObject): void {
+        // Get all components and remove them one by one
+        const components = gameObject.getComponents();
+        for (const component of components) {
+            gameObject.removeComponent(component);
+        }
+    }
+
+    /**
+     * Ensure components exist for this GameObject and all descendants if not under Storage
+     */
+    ensureComponentsRecursive(gameObject: GameObject): void {
+        if (!gameObject.isUnderStorage()) {
+            this.addComponentsToGameObject(gameObject.bObject, gameObject);
+            // Attach script if present and not already attached
+            if (!gameObject.getComponent(ScriptComponent)) {
+                const bObj = gameObject.bObject;
+                const scriptChild = bObj.children?.find(
+                    (c) => c instanceof Types.BScript
+                ) as Types.BScript | undefined;
+                if (scriptChild) {
+                    gameObject.addComponent(
+                        new ScriptComponent(gameObject, scriptChild, this.scene)
+                    );
+                }
+            }
+        }
+        for (const child of gameObject.getChildren()) {
+            this.ensureComponentsRecursive(child);
+        }
+    }
+
+    /**
+     * Remove all components from this GameObject and descendants
+     */
+    removeAllComponentsRecursive(gameObject: GameObject): void {
+        this.removeAllComponents(gameObject);
+        for (const child of gameObject.getChildren()) {
+            this.removeAllComponentsRecursive(child);
+        }
+    }
+
+    /**
      * Destroy the manager and clean up all resources
      */
     destroy(): void {
@@ -317,5 +397,6 @@ export class GameObjectManager {
 
         // Reset physics world after all GameObjects are destroyed to clean up any leftover bodies/colliders
         sceneStore.resetPhysicsWorld();
+        runtimeStore.setGameObjectManager(null);
     }
 }

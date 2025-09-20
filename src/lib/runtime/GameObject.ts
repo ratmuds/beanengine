@@ -184,8 +184,20 @@ export class GameObject {
      * Runtime hierarchy helpers (do not rely on editor BNode tree)
      */
     setParent(parent: GameObject | null): void {
+        const wasUnderStorage = this.isUnderStorage();
         this.parent = parent;
         this.calculateOffsetFromParent();
+
+        const isNowUnderStorage = this.isUnderStorage();
+        if (wasUnderStorage !== isNowUnderStorage) {
+            // Toggle components enabled state for this subtree
+            const enable = !isNowUnderStorage;
+            const toggle = (go: GameObject) => {
+                for (const c of go.getComponents()) c.setEnabled(enable);
+                for (const child of go.getChildren()) toggle(child);
+            };
+            toggle(this);
+        }
     }
 
     /**
@@ -240,7 +252,25 @@ export class GameObject {
         return this.parent;
     }
 
+    /**
+     * Returns true if this GameObject is the Storage container or is parented under it
+     */
+    public isUnderStorage(): boolean {
+        let current: GameObject | null = this;
+        while (current) {
+            // If any ancestor is a BStorage, treat as under storage
+            if (current.bObject instanceof Types.BStorage) return true;
+            current = current.parent;
+        }
+        return false;
+    }
+
     addChild(child: GameObject): void {
+        // Remove from previous parent if any
+        if (child.getParent() && child.getParent() !== this) {
+            child.getParent()?.removeChild(child);
+        }
+
         if (!this.children.includes(child)) {
             this.children.push(child);
             child.setParent(this);

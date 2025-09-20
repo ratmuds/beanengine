@@ -29,7 +29,7 @@ export class VisualComponent extends Component {
             this.createCameraVisual(bNode);
         } else if (bNode instanceof Types.BLight) {
             this.createLightVisual(bNode);
-        } else {
+        } else if (bNode instanceof Types.BNode3D) {
             this.createDefaultVisual(bNode);
         }
 
@@ -173,6 +173,24 @@ export class VisualComponent extends Component {
         this.updateLightTransform();
     }
 
+    onEnable(): void {
+        if (this.mesh && !this.scene.children.includes(this.mesh)) {
+            this.scene.add(this.mesh);
+        }
+        if (this.light && !this.scene.children.includes(this.light)) {
+            this.scene.add(this.light);
+        }
+    }
+
+    onDisable(): void {
+        if (this.mesh) {
+            this.scene.remove(this.mesh);
+        }
+        if (this.light) {
+            this.scene.remove(this.light);
+        }
+    }
+
     /**
      * Get the THREE.js mesh for external access
      */
@@ -191,17 +209,15 @@ export class VisualComponent extends Component {
      * Clean up when component is destroyed
      */
     destroy(): void {
+        this.onDisable();
         if (this.mesh) {
-            this.scene.remove(this.mesh);
             this.mesh.geometry.dispose();
             if (this.mesh.material instanceof THREE.Material) {
                 this.mesh.material.dispose();
             }
             this.mesh = null;
         }
-
         if (this.light) {
-            this.scene.remove(this.light);
             this.light = null;
         }
 

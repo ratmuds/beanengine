@@ -45,13 +45,13 @@ export class ConstraintComponent extends Component {
 
             const physA = goA.getComponent(
                 PhysicsComponent
-            ) as PhysicsComponent;
+            ) as PhysicsComponent | null;
             const physB = goB.getComponent(
                 PhysicsComponent
-            ) as PhysicsComponent;
-            if (!physA || !physB) {
+            ) as PhysicsComponent | null;
+            if (!physA || !physB || !physA.body || !physB.body) {
                 throw new Error(
-                    "ConstraintComponent: PhysicsComponent missing on partA or partB GameObject"
+                    "ConstraintComponent: PhysicsComponent or bodies missing on partA or partB GameObject"
                 );
             }
 
@@ -115,5 +115,22 @@ export class ConstraintComponent extends Component {
         if (!this.intialized) {
             this.init();
         }
+    }
+
+    onDisable(): void {
+        if (this.joint) {
+            const physicsWorld = sceneStore.getPhysicsWorld();
+            try {
+                physicsWorld?.removeImpulseJoint(this.joint, true);
+            } catch {
+                // ignore
+            }
+            this.joint = null;
+        }
+        this.intialized = false;
+    }
+
+    onEnable(): void {
+        this.init();
     }
 }

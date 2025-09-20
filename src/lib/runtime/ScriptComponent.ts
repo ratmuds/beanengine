@@ -22,7 +22,7 @@ export class ScriptComponent extends Component {
         super(gameObject);
         this.script = script;
         this.scene = scene;
-        this.initializeInterpreter();
+        // Interpreter starts on enable to respect component enabled state
     }
 
     /**
@@ -38,7 +38,7 @@ export class ScriptComponent extends Component {
 
             // Create interpreter
             this.interpreter = new CodeInterpreter(
-                compileScript(this.script.code as any[]),
+                compileScript(this.script.code as unknown[]),
                 this.gameObject
             );
 
@@ -78,10 +78,23 @@ export class ScriptComponent extends Component {
         }
     }
 
+    onEnable(): void {
+        if (!this.interpreter) {
+            this.initializeInterpreter();
+        }
+    }
+
+    onDisable(): void {
+        if (this.interpreter) {
+            this.interpreter.stop();
+            this.interpreter = null;
+        }
+    }
+
     /**
      * Restart the script with new code or variables
      */
-    restartScript(newCode?: any[]): void {
+    restartScript(newCode?: unknown[]): void {
         // Ensure previous interpreter is stopped
         if (this.interpreter) {
             this.interpreter.stop();
@@ -89,7 +102,7 @@ export class ScriptComponent extends Component {
         }
         if (newCode) {
             // Script.code appears to be an array of items per CodeEditor
-            this.script.code = newCode as any;
+            this.script.code = newCode as unknown[];
         }
         this.initializeInterpreter();
     }
