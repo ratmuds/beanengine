@@ -320,7 +320,7 @@
                                     </span>
                                 {/if}
                                 <Badge variant="secondary" class="text-xs">
-                                    {material.type.toUpperCase()}
+                                    MAT
                                 </Badge>
                                 <div
                                     class="w-4 h-4 rounded-full border border-border"

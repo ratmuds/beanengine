@@ -2,7 +2,7 @@
 
 > A game development platform that bridges the gap between Scratch and professional game engines
 
-# TODO: make storage work as intended
+# TODO: get custom materials and BMaterial and shi to work
 
 **Bean Engine** is a visual programming game development environment designed for learners transitioning from block-based programming (like Scratch) to real game development. It combines the approachability of visual scripting with the power of 3D graphics and professional game development concepts.
 

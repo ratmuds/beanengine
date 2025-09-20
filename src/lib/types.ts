@@ -663,35 +663,31 @@ class BAssetCollection {
 class BMaterial {
     id: string;
     name: string;
-    type: "basic" | "pbr";
     color: string; // Color (default white)
     builtin: boolean; // If this material is provided by the engine
     textures: {
         // Asset ids (some optional)
-        albedo: string; // Albedo texture (required)
-        normal: string; // Normal map
-        metallic: string; // Metallic texture
-        roughness: string; // Roughness texture
-        ao: string; // Ambient occlusion texture
-        emission: string; // Emission texture
+        color: string; // Color texture (required)
+        displacement?: string; // Displacement map
+        normal?: string; // Normal map
+        roughness?: string; // Roughness map
+        metallic?: string; // Metallic map
     };
-    threeTexture: any; // THREE.js texture reference
+    threeMaterial: any; // THREE.js material reference
+    threlteTexture: any; // Threlte texture reference
 
-    constructor(name: string, type: "basic" | "pbr") {
+    constructor(name: string) {
         this.id = nanoid();
         this.name = name;
-        this.type = type;
         this.color = "#ffffff";
         this.builtin = false;
         this.textures = {
-            albedo: "",
+            color: "",
+            displacement: "",
             normal: "",
-            metallic: "",
             roughness: "",
-            ao: "",
-            emission: "",
+            metallic: "",
         };
-        this.threeTexture = null;
     }
 }
 

@@ -1,36 +1,136 @@
 // src/lib/materialStore.ts
 import { writable } from "svelte/store";
 import { BMaterial } from "$lib/types";
+import * as THREE from "three";
+import { useLoader } from "@threlte/core";
+import { runtimeStore } from "./runtimeStore";
 
 class MaterialManager {
     public materials: Map<string, BMaterial>;
+    private threeTextureLoader: THREE.TextureLoader = new THREE.TextureLoader();
 
     constructor() {
         this.materials = new Map();
 
         // Initialize built-in materials
         this.initializeBuiltInMaterials();
+
+        setTimeout(() => {
+            console.log(this.getAllMaterials());
+        }, 1000);
     }
 
     async initializeBuiltInMaterials() {
-        let plastic = await this.addMaterial("Plastic", "basic");
+        let plastic = await this.addMaterial("Plastic");
         this.updateMaterialProperty(plastic.id, {
             builtin: true,
             textures: {
-                albedo: "/materials/prototype/albedo.png",
+                color: "/materials/prototype/albedo.png",
+                displacement: "",
                 normal: "",
-                metallic: "",
                 roughness: "",
-                ao: "",
+                metallic: "",
             },
         });
 
-        this.addMaterial("Test", "basic");
+        this.addMaterial("Test");
     }
 
-    async addMaterial(name: string, type: "basic" | "pbr"): Promise<BMaterial> {
-        const material = new BMaterial(name, type);
+    async addMaterial(name: string): Promise<BMaterial> {
+        const material = new BMaterial(name);
         this.materials.set(material.id, material);
+
+        // Intialize material
+        const threeMaterial = new THREE.MeshStandardMaterial({});
+
+        if (material.textures.color) {
+            try {
+                const texture = await this.threeTextureLoader.load(
+                    material.textures.color
+                );
+                threeMaterial.map = texture;
+            } catch {
+                console.warn(
+                    `Failed to load color texture for material ${material.name}`,
+                    "MaterialManager"
+                );
+            }
+        } else {
+            threeMaterial.color = new THREE.Color(material.color);
+        }
+
+        if (material.textures.displacement) {
+            try {
+                const texture = await this.threeTextureLoader.load(
+                    material.textures.displacement
+                );
+                threeMaterial.displacementMap = texture;
+            } catch {
+                console.warn(
+                    `Failed to load displacement texture for material ${material.name}`,
+                    "MaterialManager"
+                );
+            }
+        }
+
+        if (material.textures.normal) {
+            try {
+                const texture = await this.threeTextureLoader.load(
+                    material.textures.normal
+                );
+                threeMaterial.normalMap = texture;
+            } catch {
+                console.warn(
+                    `Failed to load normal texture for material ${material.name}`,
+                    "MaterialManager"
+                );
+            }
+        }
+
+        if (material.textures.roughness) {
+            try {
+                const texture = await this.threeTextureLoader.load(
+                    material.textures.roughness
+                );
+                threeMaterial.roughnessMap = texture;
+            } catch {
+                console.warn(
+                    `Failed to load roughness texture for material ${material.name}`,
+                    "MaterialManager"
+                );
+            }
+        }
+
+        if (material.textures.metallic) {
+            try {
+                const texture = await this.threeTextureLoader.load(
+                    material.textures.metallic
+                );
+                threeMaterial.metallicMap = texture;
+            } catch {
+                console.warn(
+                    `Failed to load metallic texture for material ${material.name}`,
+                    "MaterialManager"
+                );
+            }
+        }
+
+        // Pass the material reference to the BMaterial
+        material.threeMaterial = threeMaterial;
+
+        // Now load the Threlte texture (just the color map as this is for viewport and doesn't need everything)
+        try {
+            const threlteTexture = this.threeTextureLoader.load(
+                material.textures.color
+            );
+            material.threlteTexture = threlteTexture;
+        } catch (error) {
+            console.warn(
+                `Failed to load Threlte texture for material ${material.name}: ${error}`,
+                "MaterialManager"
+            );
+        }
+
         return material;
     }
 
@@ -44,6 +144,15 @@ class MaterialManager {
 
     getMaterial(materialId: string): BMaterial | undefined {
         return this.materials.get(materialId);
+    }
+
+    getMaterialByName(name: string): BMaterial | undefined {
+        for (const material of this.materials.values()) {
+            if (material.name === name) {
+                return material;
+            }
+        }
+        return undefined;
     }
 
     getAllMaterials(): BMaterial[] {
@@ -98,6 +207,10 @@ function createMaterialStore() {
 
         getMaterial: (materialId: string) => {
             return manager.getMaterial(materialId);
+        },
+
+        getMaterialByName: (name: string) => {
+            return manager.getMaterialByName(name);
         },
 
         getAllMaterials: () => {

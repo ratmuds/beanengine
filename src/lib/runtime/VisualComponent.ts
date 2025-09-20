@@ -2,6 +2,7 @@ import * as THREE from "three";
 import * as Types from "$lib/types";
 import { Component } from "./Component";
 import type { GameObject } from "./GameObject";
+import { materialStore } from "$lib/materialStore";
 
 /**
  * VisualComponent handles THREE.js mesh creation and rendering for GameObjects
@@ -78,10 +79,21 @@ export class VisualComponent extends Component {
         }
 
         const material = new THREE.MeshStandardMaterial({
-            color: part.color || "#ffffff",
+            color: "#ff0000", // part.color ||
         });
 
-        this.mesh = new THREE.Mesh(geometry, material);
+        console.log(
+            "GET MATERIAL",
+            materialStore.getMaterial(part.material || ""),
+            part.material,
+            materialStore.getAllMaterials()
+        );
+
+        this.mesh = new THREE.Mesh(
+            geometry,
+            materialStore.getMaterial(part.material || "")?.threeMaterial ||
+                material
+        );
         this.mesh.name = part.id;
     }
 

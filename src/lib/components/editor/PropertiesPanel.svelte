@@ -4,6 +4,7 @@
     import Input from "$lib/components/ui/input/input.svelte";
     import Vector3Input from "$lib/components/properties/Vector3Input.svelte";
 
+    import * as Select from "$lib/components/ui/select/index.js";
     import {
         ChevronDown,
         Box,
@@ -18,7 +19,6 @@
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
     import { materialStore } from "$lib/materialStore";
-    import PropertyDropdown from "$lib/components/properties/PropertyDropdown.svelte";
     import AxisLockControls from "$lib/components/properties/AxisLockControls.svelte";
     import { sceneStore } from "$lib/sceneStore";
 
@@ -46,32 +46,32 @@
 
         const primitives = [
             {
-                id: "primitive-block",
+                value: "primitive-block",
                 label: "Block",
                 data: { type: "primitive", value: "block" },
             },
             {
-                id: "primitive-sphere",
+                value: "primitive-sphere",
                 label: "Sphere",
                 data: { type: "primitive", value: "sphere" },
             },
             {
-                id: "primitive-cylinder",
+                value: "primitive-cylinder",
                 label: "Cylinder",
                 data: { type: "primitive", value: "cylinder" },
             },
             {
-                id: "primitive-cone",
+                value: "primitive-cone",
                 label: "Cone",
                 data: { type: "primitive", value: "cone" },
             },
             {
-                id: "primitive-plane",
+                value: "primitive-plane",
                 label: "Plane",
                 data: { type: "primitive", value: "plane" },
             },
             {
-                id: "primitive-wedge",
+                value: "primitive-wedge",
                 label: "Wedge",
                 data: { type: "primitive", value: "wedge" },
             },
@@ -83,7 +83,7 @@
                 ? allAssets
                       .filter((asset) => asset.metadata.type === "mesh")
                       .map((asset) => ({
-                          id: `asset-${asset.metadata.id}`,
+                          value: `asset-${asset.metadata.id}`,
                           label: asset.metadata.name,
                           data: {
                               type: "asset",
@@ -96,11 +96,11 @@
         return [...primitives, ...assets];
     });
 
-    let meshSelectorValue = $state(null);
+    let meshSelectorValue = $state("");
 
     $effect(() => {
         if (!object || !(object instanceof Types.BPart)) {
-            meshSelectorValue = null;
+            meshSelectorValue = "";
             return;
         }
 
@@ -111,16 +111,18 @@
         }
     });
 
-    function handleMeshChange(event) {
+    function handleMeshChange(value: string) {
         if (!object || !(object instanceof Types.BPart)) return;
 
-        const { option } = event.detail;
+        const selectedOption = meshOptions().find((option: any) => option.value === value);
+        if (!selectedOption) return;
+
         const updatedObject = object.clone();
 
-        if (option.data.type === "primitive") {
-            updatedObject.setPrimitiveMesh(option.data.value);
+        if (selectedOption.data.type === "primitive") {
+            updatedObject.setPrimitiveMesh(selectedOption.data.value as any);
         } else {
-            updatedObject.setAssetMesh(option.data.value);
+            updatedObject.setAssetMesh(selectedOption.data.value);
         }
 
         onPropertyChange(updatedObject);
@@ -131,70 +133,73 @@
         const materials = $materialStore.getAllMaterials();
         if (!materials || !Array.isArray(materials)) return [];
         return materials.map((material) => ({
-            id: material.id,
+            value: material.id,
             label: material.name,
-            data: { material },
+            data: material,
         }));
     });
 
-    let materialSelectorValue = $state(null);
+    let materialSelectorValue = $state("");
 
     $effect(() => {
         if (!object || !(object instanceof Types.BPart)) {
-            materialSelectorValue = null;
+            materialSelectorValue = "";
             return;
         }
-        materialSelectorValue = object.material;
+        materialSelectorValue = object.material || "";
     });
 
-    function handleMaterialChange(event) {
+    function handleMaterialChange(value: string) {
         if (!object || !(object instanceof Types.BPart)) return;
 
         const updatedObject = object.clone();
-        updatedObject.material = event.detail.value;
+        updatedObject.material = value;
         onPropertyChange(updatedObject);
     }
 
-    function handleAxisLockChange(event) {
+    function handleAxisLockChange(event: any) {
         if (!object || !(object instanceof Types.BPart)) return;
 
         const updatedObject = event.detail.object.clone();
         onPropertyChange(updatedObject);
     }
 
-    // TODO: Constraint properties - partA and partB selector dropdowns
     // Get all BPart objects from the scene for constraint selection
     const partOptions = $derived(() => {
         if (!object || !(object instanceof Types.BConstraint)) return [];
-        
+
         const allObjects = $sceneStore.getScene().objects;
-        const parts = allObjects.filter(obj => obj instanceof Types.BPart) as Types.BPart[];
-        
-        return parts.map(part => ({
-            id: part.id,
+        const parts = allObjects.filter(
+            (obj) => obj instanceof Types.BPart
+        ) as Types.BPart[];
+
+        return parts.map((part) => ({
+            value: part.id,
             label: part.name,
-            data: { part }
+            data: { part },
         }));
     });
 
-    let partASelectorValue: string | null = $state(null);
-    let partBSelectorValue: string | null = $state(null);
+    let partASelectorValue: string = $state("");
+    let partBSelectorValue: string = $state("");
 
     $effect(() => {
         if (!object || !(object instanceof Types.BConstraint)) {
-            partASelectorValue = null;
-            partBSelectorValue = null;
+            partASelectorValue = "";
+            partBSelectorValue = "";
             return;
         }
-        
-        partASelectorValue = object.partA?.id || null;
-        partBSelectorValue = object.partB?.id || null;
+
+        partASelectorValue = object.partA?.id || "";
+        partBSelectorValue = object.partB?.id || "";
     });
 
-    function handlePartAChange(event) {
+    function handlePartAChange(value: string) {
         if (!object || !(object instanceof Types.BConstraint)) return;
 
-        const selectedPart = $sceneStore.getScene().objects.find(obj => obj.id === event.detail.value);
+        const selectedPart = $sceneStore
+            .getScene()
+            .objects.find((obj) => obj.id === value);
         if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
 
         // Create a new constraint with the updated partA
@@ -208,10 +213,12 @@
         onPropertyChange(updatedObject);
     }
 
-    function handlePartBChange(event) {
+    function handlePartBChange(value: string) {
         if (!object || !(object instanceof Types.BConstraint)) return;
 
-        const selectedPart = $sceneStore.getScene().objects.find(obj => obj.id === event.detail.value);
+        const selectedPart = $sceneStore
+            .getScene()
+            .objects.find((obj) => obj.id === value);
         if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
 
         // Create a new constraint with the updated partB
@@ -241,7 +248,9 @@
                 <div class="p-2 bg-purple-500/10 rounded-lg">
                     <Settings class="w-5 h-5 text-purple-400" />
                 </div>
-                <h2 class="text-foreground font-semibold text-lg">Properties</h2>
+                <h2 class="text-foreground font-semibold text-lg">
+                    Properties
+                </h2>
             </div>
             <Button
                 variant="ghost"
@@ -274,36 +283,35 @@
             <div
                 class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-4 shadow-sm"
             >
-                <label
-                    class="text-sm font-medium text-foreground/80 block mb-3"
-                >
-                    Object Name
-                </label>
+                <div class="space-y-3">
+                    <label for="object-name-input" class="text-sm font-medium text-foreground/80 block">
+                        Object Name
+                    </label>
 
-                <Input
-                    type="text"
-                    value={object.name}
-                    class="bg-muted/30 border-border/40 text-foreground text-base font-medium h-12 px-4 rounded-lg focus:border-blue-400/60 focus:bg-muted/50 focus:outline-none transition-all duration-200"
-                    onchange={(e) => {
-                        const target = e.target;
-                        if (target && target.value !== undefined) {
-                            const updatedObject = object.clone();
-                            updatedObject.name = target.value;
-                            onPropertyChange(updatedObject);
-                        }
-                    }}
-                />
-                <div
-                    class="text-xs text-muted-foreground font-mono mt-3 flex items-center gap-2 px-2"
-                >
-                    <Hash class="w-3 h-3" />
-                    <span class="bg-muted/40 px-2 py-1 rounded-md"
-                        >{object.id}</span
+                    <Input
+                        id="object-name-input"
+                        type="text"
+                        value={object.name}
+                        class="bg-muted/30 border-border/40 text-foreground text-base font-medium h-12 px-4 rounded-lg focus:border-blue-400/60 focus:bg-muted/50 focus:outline-none transition-all duration-200"
+                        onchange={(e) => {
+                            const target = e.target as HTMLInputElement;
+                            if (target && target.value !== undefined) {
+                                const updatedObject = (object as any).clone();
+                                updatedObject.name = target.value;
+                                onPropertyChange(updatedObject);
+                            }
+                        }}
+                    />
+                    <div
+                        class="text-xs text-muted-foreground font-mono mt-3 flex items-center gap-2 px-2"
                     >
+                        <Hash class="w-3 h-3" />
+                        <span class="bg-muted/40 px-2 py-1 rounded-md"
+                            >{object.id}</span
+                        >
+                    </div>
                 </div>
-            </div>
-
-            <!-- Node3D Properties -->
+            </div>            <!-- Node3D Properties -->
             {#if object instanceof Types.BNode3D}
                 <div
                     class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-5"
@@ -381,155 +389,70 @@
 
                     <div class="space-y-3">
                         <!-- Mesh Selector -->
-                        <PropertyDropdown
-                            label="Mesh Type"
-                            bind:value={meshSelectorValue}
-                            options={meshOptions}
-                            placeholder="Select a mesh"
-                            on:change={handleMeshChange}
-                        >
-                            <svelte:fragment slot="trigger" let:selectedOption>
-                                <div class="flex items-center gap-2">
-                                    {#if selectedOption?.data.type === "primitive"}
-                                        {#if selectedOption.data.value === "block"}
-                                            <Box
-                                                class="w-4 h-4 text-blue-400"
-                                            />
-                                        {:else if selectedOption.data.value === "sphere"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400 rounded-full"
-                                            ></div>
-                                        {:else if selectedOption.data.value === "cylinder"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400 rounded-sm"
-                                            ></div>
-                                        {:else if selectedOption.data.value === "cone"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400"
-                                                style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
-                                            ></div>
-                                        {:else if selectedOption.data.value === "plane"}
-                                            <div
-                                                class="w-4 h-1 bg-blue-400"
-                                            ></div>
-                                        {:else if selectedOption.data.value === "wedge"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400"
-                                                style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
-                                            ></div>
-                                        {/if}
-                                    {:else if selectedOption}
-                                        <Box class="w-4 h-4 text-purple-400" />
-                                    {/if}
-                                    <span class="truncate"
-                                        >{selectedOption?.label ||
-                                            "Select a mesh"}</span
-                                    >
-                                </div>
-                            </svelte:fragment>
-
-                            <svelte:fragment let:option>
-                                <div class="flex items-center gap-2 w-full">
-                                    {#if option.data.type === "primitive"}
-                                        {#if option.data.value === "block"}
-                                            <Box
-                                                class="w-4 h-4 text-blue-400"
-                                            />
-                                        {:else if option.data.value === "sphere"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400 rounded-full"
-                                            ></div>
-                                        {:else if option.data.value === "cylinder"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400 rounded-sm"
-                                            ></div>
-                                        {:else if option.data.value === "cone"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400"
-                                                style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
-                                            ></div>
-                                        {:else if option.data.value === "plane"}
-                                            <div
-                                                class="w-4 h-1 bg-blue-400"
-                                            ></div>
-                                        {:else if option.data.value === "wedge"}
-                                            <div
-                                                class="w-4 h-4 bg-blue-400"
-                                                style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
-                                            ></div>
-                                        {/if}
-                                    {:else}
-                                        <Box class="w-4 h-4 text-purple-400" />
-                                    {/if}
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-medium truncate">
-                                            {option.label}
-                                        </div>
-                                        {#if option.data.type === "asset"}
-                                            <div
-                                                class="text-xs text-muted-foreground truncate"
-                                            >
-                                                {(
-                                                    option.data.size /
-                                                    1024 /
-                                                    1024
-                                                ).toFixed(2)} MB
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80">
+                                Mesh Type
+                            </span>
+                            <Select.Root bind:value={meshSelectorValue} onValueChange={handleMeshChange} type="single">
+                                <Select.Trigger class="w-full">
+                                    {meshSelectorValue ? 
+                                        meshOptions().find((opt: any) => opt.value === meshSelectorValue)?.label || "Select a mesh"
+                                        : "Select a mesh"}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each meshOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            <div class="flex items-center gap-2">
+                                                {#if option.data.type === "primitive"}
+                                                    {#if option.data.value === "block"}
+                                                        <Box class="w-4 h-4 text-blue-400" />
+                                                    {:else if option.data.value === "sphere"}
+                                                        <div class="w-4 h-4 bg-blue-400 rounded-full"></div>
+                                                    {:else if option.data.value === "cylinder"}
+                                                        <div class="w-4 h-4 bg-blue-400 rounded-sm"></div>
+                                                    {:else if option.data.value === "cone"}
+                                                        <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"></div>
+                                                    {:else if option.data.value === "plane"}
+                                                        <div class="w-4 h-1 bg-blue-400"></div>
+                                                    {:else if option.data.value === "wedge"}
+                                                        <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"></div>
+                                                    {/if}
+                                                {:else}
+                                                    <Box class="w-4 h-4 text-purple-400" />
+                                                {/if}
+                                                <span>{option.label}</span>
+                                                {#if option.data.type === "asset" && (option.data as any).size}
+                                                    <span class="text-xs text-muted-foreground ml-auto">
+                                                        {((option.data as any).size / 1024 / 1024).toFixed(2)} MB
+                                                    </span>
+                                                {/if}
                                             </div>
-                                        {/if}
-                                    </div>
-                                </div>
-                            </svelte:fragment>
-                        </PropertyDropdown>
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
 
                         <!-- Material Selector -->
-                        <PropertyDropdown
-                            label="Material"
-                            bind:value={materialSelectorValue}
-                            options={materialOptions}
-                            placeholder="Select material..."
-                            on:change={handleMaterialChange}
-                        >
-                            <svelte:fragment
-                                slot="trigger"
-                                let:selectedOption
-                                let:isOpen
-                            >
-                                <Button
-                                    variant="outline"
-                                    class="w-full justify-between bg-muted/30 border-border/40 hover:bg-muted/50 h-12"
-                                >
-                                    <span class="text-left truncate">
-                                        {selectedOption?.label ||
-                                            "Select material..."}
-                                    </span>
-                                    <ChevronDown
-                                        class="w-4 h-4 text-muted-foreground transition-transform {isOpen
-                                            ? 'rotate-180'
-                                            : ''}"
-                                    />
-                                </Button>
-                            </svelte:fragment>
-
-                            <svelte:fragment slot="item" let:option>
-                                <div class="flex items-center gap-2 w-full">
-                                    <div
-                                        class="w-4 h-4 rounded border border-border/40"
-                                        style="background-color: {option.data
-                                            .material.color}"
-                                    ></div>
-                                    <div class="flex-1 min-w-0">
-                                        <div class="font-medium truncate">
-                                            {option.data.material.name}
-                                        </div>
-                                        <div
-                                            class="text-xs text-muted-foreground truncate"
-                                        >
-                                            {option.data.material.type.toUpperCase()}
-                                        </div>
-                                    </div>
-                                </div>
-                            </svelte:fragment>
-                        </PropertyDropdown>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80">
+                                Material
+                            </span>
+                            <Select.Root bind:value={materialSelectorValue} onValueChange={handleMaterialChange} type="single">
+                                <Select.Trigger class="w-full">
+                                    {materialSelectorValue ? 
+                                        materialOptions().find((opt: any) => opt.value === materialSelectorValue)?.label || "Select material..."
+                                        : "Select material..."}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each materialOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            {option.label}
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
 
                         <!-- Axis Lock Controls -->
                         <AxisLockControls
@@ -601,22 +524,46 @@
 
                     <div class="space-y-4">
                         <!-- Part A Selector -->
-                        <PropertyDropdown
-                            label="Part A"
-                            bind:value={partASelectorValue}
-                            options={partOptions}
-                            placeholder="Select first part..."
-                            on:change={handlePartAChange}
-                        />
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80">
+                                Part A
+                            </span>
+                            <Select.Root bind:value={partASelectorValue} onValueChange={handlePartAChange} type="single">
+                                <Select.Trigger class="w-full">
+                                    {partASelectorValue ? 
+                                        partOptions().find((opt: any) => opt.value === partASelectorValue)?.label || "Select first part..."
+                                        : "Select first part..."}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each partOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            {option.label}
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
 
                         <!-- Part B Selector -->
-                        <PropertyDropdown
-                            label="Part B"
-                            bind:value={partBSelectorValue}
-                            options={partOptions}
-                            placeholder="Select second part..."
-                            on:change={handlePartBChange}
-                        />
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80">
+                                Part B
+                            </span>
+                            <Select.Root bind:value={partBSelectorValue} onValueChange={handlePartBChange} type="single">
+                                <Select.Trigger class="w-full">
+                                    {partBSelectorValue ? 
+                                        partOptions().find((opt: any) => opt.value === partBSelectorValue)?.label || "Select second part..."
+                                        : "Select second part..."}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each partOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            {option.label}
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
 
                         <!-- Constraint Status -->
                         <div class="bg-muted/20 p-3 rounded-lg">
@@ -625,12 +572,17 @@
                             </p>
                             <div class="flex items-center gap-2">
                                 {#if object.partA && object.partB}
-                                    <div class="w-2 h-2 bg-green-400 rounded-full"></div>
+                                    <div
+                                        class="w-2 h-2 bg-green-400 rounded-full"
+                                    ></div>
                                     <span class="text-sm text-foreground">
-                                        Ready - {object.partA.name} ↔ {object.partB.name}
+                                        Constraint - {object.partA.name} ↔ {object
+                                            .partB.name}
                                     </span>
                                 {:else}
-                                    <div class="w-2 h-2 bg-yellow-400 rounded-full"></div>
+                                    <div
+                                        class="w-2 h-2 bg-yellow-400 rounded-full"
+                                    ></div>
                                     <span class="text-sm text-muted-foreground">
                                         Incomplete - Select both parts
                                     </span>
@@ -656,11 +608,21 @@
                         object,
                         (key, value) => {
                             // Handle circular references by excluding parent and replacing children with IDs
-                            if (key === 'parent') {
-                                return value ? { id: value.id, name: value.name, type: value.type } : null;
+                            if (key === "parent") {
+                                return value
+                                    ? {
+                                          id: value.id,
+                                          name: value.name,
+                                          type: value.type,
+                                      }
+                                    : null;
                             }
-                            if (key === 'children') {
-                                return value.map(child => ({ id: child.id, name: child.name, type: child.type }));
+                            if (key === "children") {
+                                return value.map((child: any) => ({
+                                    id: child.id,
+                                    name: child.name,
+                                    type: child.type,
+                                }));
                             }
                             return value;
                         },
