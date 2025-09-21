@@ -64,6 +64,13 @@ class RuntimeManager {
     public scriptEventListeners: Map<string, Set<(..._args: any[]) => void>>;
     public threeScene: THREE.Scene | null = null;
 
+    // Cache processed mesh data for convex hull generation
+    // Key: asset ID, Value: processed mesh data (centered points + original center)
+    public convex_hull_cache: Map<
+        string,
+        { centeredPoints: Float32Array; originalCenter: THREE.Vector3 }
+    > = new Map();
+
     constructor() {
         this.logs = [];
         this.variables = new Map();
@@ -598,6 +605,27 @@ function createRuntimeStore() {
 
         setThreeScene: (scene: THREE.Scene | null) => {
             manager.setThreeScene(scene);
+            update((m) => m);
+        },
+
+        // Convex hull cache management
+        getConvexHullCache: (
+            assetId: string
+        ): {
+            centeredPoints: Float32Array;
+            originalCenter: THREE.Vector3;
+        } | null => {
+            return manager.convex_hull_cache.get(assetId) || null;
+        },
+
+        setConvexHullCache: (
+            assetId: string,
+            data: {
+                centeredPoints: Float32Array;
+                originalCenter: THREE.Vector3;
+            }
+        ) => {
+            manager.convex_hull_cache.set(assetId, data);
             update((m) => m);
         },
     };

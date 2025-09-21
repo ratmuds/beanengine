@@ -2,6 +2,8 @@
 /* eslint-disable no-console */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import * as Types from "$lib/types";
+import { assetStore } from "$lib/assetStore";
+import { materialStore } from "$lib/materialStore";
 import RAPIER from "@dimforge/rapier3d-compat";
 import { writable } from "svelte/store";
 
@@ -16,6 +18,31 @@ export type SerializedObject = Record<string, unknown> & {
 export type SerializedScene = {
     objects: SerializedObject[];
     variables?: Array<{ name: string; value: unknown; type: string }>;
+    assets?: Array<{
+        id: string;
+        name: string;
+        type: Types.AssetType;
+        fileType: string;
+        size: number;
+        uploadedAt: string;
+        tags: string[];
+        description?: string;
+        thumbnailUrl?: string;
+        url?: string;
+    }>;
+    materials?: Array<{
+        id: string;
+        name: string;
+        color: string;
+        textures: {
+            color: string;
+            displacement?: string;
+            normal?: string;
+            roughness?: string;
+            metallic?: string;
+        };
+    }>;
+    particles?: Array<any>; // reserved for future use
 };
 
 class SceneManager {
@@ -426,6 +453,37 @@ class SceneManager {
             (obj) => this.serializeObject(obj)
         ) as SerializedObject[];
 
+        // Gather assets from assetStore
+        const assets = assetStore.getAllAssets().map((a) => ({
+            id: a.metadata.id,
+            name: a.metadata.name,
+            type: a.metadata.type,
+            fileType: a.metadata.fileType,
+            size: a.metadata.size,
+            uploadedAt: a.metadata.uploadedAt.toISOString(),
+            tags: a.metadata.tags,
+            description: a.metadata.description,
+            thumbnailUrl: a.metadata.thumbnailUrl,
+            url: a.url,
+        }));
+
+        // Gather non-builtin materials
+        const materials = materialStore
+            .getAllMaterials()
+            .filter((m) => !m.builtin)
+            .map((m) => ({
+                id: m.id,
+                name: m.name,
+                color: m.color,
+                textures: {
+                    color: m.textures.color || "",
+                    displacement: m.textures.displacement || "",
+                    normal: m.textures.normal || "",
+                    roughness: m.textures.roughness || "",
+                    metallic: m.textures.metallic || "",
+                },
+            }));
+
         return {
             objects: serializedObjects,
             variables: this.variables.map((v) => ({
@@ -433,6 +491,8 @@ class SceneManager {
                 value: v.value,
                 type: v.type,
             })),
+            assets,
+            materials,
         };
     }
 
@@ -496,6 +556,27 @@ class SceneManager {
         // Clear the current scene first, but don't create default storage
         // since the serialized data should contain its own storage objects
         this.clearScene(false);
+
+        // Rebuild auxiliary stores first
+        if (data.assets && data.assets.length) {
+            try {
+                assetStore.clearAll();
+                assetStore.importAssets(data.assets);
+            } catch (e) {
+                console.warn("[SceneStore] Failed to import assets:", e);
+            }
+        }
+
+        if (data.materials && data.materials.length) {
+            try {
+                materialStore.clearUserMaterials();
+                materialStore.importMaterials(data.materials);
+                // Prepare THREE materials
+                void materialStore.loadAllMaterials();
+            } catch (e) {
+                console.warn("[SceneStore] Failed to import materials:", e);
+            }
+        }
 
         // Create a map to store objects by ID for parent-child and ref wiring
         const objectMap = new Map<string, Types.BObject>();

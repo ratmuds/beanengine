@@ -12,7 +12,6 @@
     import { sceneStore } from "$lib/sceneStore";
     import { T, useTask } from "@threlte/core";
     import { onMount } from "svelte";
-    import * as THREE from "three";
 
     let {
         selectedObject = $bindable(-1),
@@ -30,10 +29,8 @@
     let groupRefs: Record<string, any> = $state({});
     let showTransformControls = $state(true);
 
-    // Particle system state
-    let particlePositions = $state<Float32Array>(new Float32Array(0));
-    let particleCount = 1000;
-    let time = $state(0);
+    // Load materials
+    materialStore.loadAllMaterials();
 
     // Workaround because Svelte reactivity breaks the transform controls so we have to recreate it everytime
     function resetTransformControlsState() {
@@ -99,27 +96,6 @@
 
 <T.AmbientLight intensity={0.3} />
 
-<!-- Particle System -->
-<!--{#if particlePositions.length > 0}
-    <T.Points>
-        <T.BufferGeometry>
-            <T.BufferAttribute
-                attach="attributes.position"
-                array={particlePositions}
-                count={particleCount}
-                itemSize={3}
-            />
-        </T.BufferGeometry>
-        <T.PointsMaterial
-            color="#ffffff"
-            size={0.1}
-            sizeAttenuation={true}
-            transparent={true}
-            opacity={0.8}
-        />
-    </T.Points>
-{/if}-->
-
 <!-- Scene Rendering -->
 {#each $sceneStore
     .getScene()
@@ -150,11 +126,10 @@
                     selectedObject = object.id;
                 }}
             >
-                {#if materialStore.getMaterialByName(object.material || "")?.threlteTexture}
+                {#if materialStore.getMaterial(object.material || "")?.threlteTexture}
                     <T.MeshStandardMaterial
-                        map={materialStore.getMaterialByName(
-                            object.material || ""
-                        )?.threlteTexture}
+                        map={materialStore.getMaterial(object.material || "")
+                            ?.threlteTexture}
                     />
                 {/if}
 
@@ -190,7 +165,9 @@
                 {/if}
 
                 {#if selectedObject === object.id}
-                    <Outlines color="#00aaff" />
+                    {#if object.meshSource.type === "primitive"}
+                        <Outlines color="#00aaff" />
+                    {/if}
                 {/if}
             </T.Mesh>
         {:else if object instanceof Types.BCamera}
@@ -205,6 +182,7 @@
                 <T.MeshBasicMaterial color="#ffff00" wireframe />
 
                 {#if selectedObject === object.id}
+                    <!-- Outlines require BufferGeometry; GLTF scene nodes may lack it -->
                     <Outlines color="#00aaff" />
                 {/if}
             </T.Mesh>
@@ -242,8 +220,8 @@
     {#if activeTool !== "select" && selectedObject === object.id && showTransformControls}
         <TransformControls
             object={groupRefs[object.id]}
-            mode={transformMode}
-            space={transformSpace}
+            mode={transformMode as "translate" | "rotate" | "scale"}
+            space={transformSpace as "local" | "world"}
             translationSnap={0.5}
             rotationSnap={Math.PI / 12}
             scaleSnap={0.1}

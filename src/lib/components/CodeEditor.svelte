@@ -1,6 +1,6 @@
 <script lang="ts">
     import { draggable } from "@neodrag/svelte";
-    import { dragHandleZone } from "svelte-dnd-action";
+    import { dragHandleZone, dndzone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/code/CodeBlock.svelte";
     import { GripVertical, Edit3, Plus, HelpCircle } from "lucide-svelte";
@@ -58,11 +58,13 @@
 
     // DND functions for code blocks using svelte-dnd-action
     function handleDndConsider(e: any) {
+        dragActive = true;
         items = e.detail.items;
     }
 
     function handleDndFinalize(e: any) {
         items = e.detail.items;
+        dragActive = false;
     }
 
     // --- recursive helpers for deep nesting ---
@@ -89,12 +91,14 @@
         if (updateChildrenById(items, itemId, e.detail.items)) {
             items = [...items];
         }
+        dragActive = true;
     }
 
     function handleChildDndFinalize(e: any, itemId: any) {
         if (updateChildrenById(items, itemId, e.detail.items)) {
             items = [...items];
         }
+        dragActive = false;
     }
 
     // Keep HTML drag for triggers since they need different behavior
@@ -188,6 +192,10 @@
 
     // Active triggers that have been dragged into the code list
     let activeTriggers: any[] = $state([]);
+    let dragActive: boolean = $state(false);
+    // Temporary bin to receive drops for deletion
+    let deleteBin: any[] = $state([]);
+    let deleteChildrenBin: any[] = $state([]);
 
     let triggerDragOverIndex = $state(-1);
 
@@ -478,23 +486,46 @@
                 </div>
             </div>
 
-            <!-- Delete Zone (invisible overlay) -->
-            <div
-                class="fixed inset-0 pointer-events-none z-0"
-                role="region"
-                ondragover={(e) => {
-                    e.preventDefault();
-                    (e.currentTarget as HTMLElement).classList.add("bg-red-500/10");
-                }}
-                ondragleave={(e) => {
-                    (e.currentTarget as HTMLElement).classList.remove("bg-red-500/10");
-                }}
-                ondrop={(e) => {
-                    e.preventDefault();
-                    (e.currentTarget as HTMLElement).classList.remove("bg-red-500/10");
-                    // Items dropped here will be deleted (handled by individual dnd zones)
-                }}
-            ></div>
+            {#if dragActive}
+                <!-- Delete Zone (hidden full-screen zones). Dropping here removes the block. -->
+                <div
+                    class="fixed inset-0 z-[100]"
+                    role="region"
+                    use:dragHandleZone={{
+                        items: deleteBin,
+                        dropFromOthersDisabled: false,
+                        dragDisabled: true,
+                        morphDisabled: true,
+                        flipDurationMs: 0,
+                        dropTargetStyle: {
+                            outline: "2px dashed #ef4444",
+                            background: "rgba(239,68,68,0.06)",
+                        },
+                    }}
+                    onfinalize={(e) => {
+                        // Clear bin so it stays empty; main zone already removed the item.
+                        deleteBin = [] as any[];
+                        dragActive = false;
+                    }}
+                ></div>
+                <div
+                    class="fixed inset-0 z-[100]"
+                    role="region"
+                    use:dndzone={{
+                        items: deleteChildrenBin,
+                        dropTargetStyle: {
+                            outline: "2px dashed #ef4444",
+                            "outline-offset": "-2px",
+                            background: "rgba(239,68,68,0.06)",
+                        },
+                    }}
+                    onfinalize={(e) => {
+                        // Keep the bin empty to act as a trash target
+                        deleteChildrenBin = [] as any[];
+                        dragActive = false;
+                    }}
+                ></div>
+            {/if}
         </div>
     </div>
 </div>

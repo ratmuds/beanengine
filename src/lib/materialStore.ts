@@ -2,7 +2,6 @@
 import { writable } from "svelte/store";
 import { BMaterial } from "$lib/types";
 import * as THREE from "three";
-import { useLoader } from "@threlte/core";
 import { runtimeStore } from "./runtimeStore";
 
 class MaterialManager {
@@ -21,9 +20,8 @@ class MaterialManager {
     }
 
     async initializeBuiltInMaterials() {
-        let plastic = await this.addMaterial("Plastic");
+        const plastic = await this.addMaterial("Plastic", true);
         this.updateMaterialProperty(plastic.id, {
-            builtin: true,
             textures: {
                 color: "/materials/prototype/albedo.png",
                 displacement: "",
@@ -32,14 +30,32 @@ class MaterialManager {
                 metallic: "",
             },
         });
-
-        this.addMaterial("Test");
     }
 
-    async addMaterial(name: string): Promise<BMaterial> {
+    async addMaterial(name: string, builtin: boolean): Promise<BMaterial> {
         const material = new BMaterial(name);
+
+        if (builtin) {
+            material.builtin = true;
+            material.id = "builtin_" + name.toLowerCase();
+
+            console.log("ADDED BUILTIN MATERIAL", material.id);
+        }
+
         this.materials.set(material.id, material);
 
+        return material;
+    }
+
+    async loadAllMaterials(): Promise<void> {
+        runtimeStore.info("Loading all materials...");
+        for (const material of this.materials.values()) {
+            runtimeStore.info(`Loading material: ${material.name}`);
+            await this.loadMaterial(material);
+        }
+    }
+
+    private async loadMaterial(material: BMaterial): Promise<THREE.Material> {
         // Intialize material
         const threeMaterial = new THREE.MeshStandardMaterial({});
 
@@ -130,8 +146,6 @@ class MaterialManager {
                 "MaterialManager"
             );
         }
-
-        return material;
     }
 
     removeMaterial(materialId: string): boolean {
@@ -181,6 +195,46 @@ class MaterialManager {
 
         return success;
     }
+
+    // Remove all non-builtin materials
+    clearUserMaterials(): void {
+        for (const [id, mat] of this.materials) {
+            if (!mat.builtin) {
+                this.materials.delete(id);
+            }
+        }
+    }
+
+    // Import a list of non-builtin materials
+    importMaterials(
+        serialized: Array<{
+            id: string;
+            name: string;
+            color: string;
+            textures: {
+                color: string;
+                displacement?: string;
+                normal?: string;
+                roughness?: string;
+                metallic?: string;
+            };
+        }>
+    ): void {
+        for (const s of serialized) {
+            const mat = new BMaterial(s.name);
+            mat.id = s.id; // preserve id
+            mat.color = s.color || "#ffffff";
+            mat.textures = {
+                color: s.textures?.color || "",
+                displacement: s.textures?.displacement || "",
+                normal: s.textures?.normal || "",
+                roughness: s.textures?.roughness || "",
+                metallic: s.textures?.metallic || "",
+            };
+            mat.builtin = false;
+            this.materials.set(mat.id, mat);
+        }
+    }
 }
 
 // Create reactive store
@@ -191,8 +245,8 @@ function createMaterialStore() {
     return {
         subscribe,
 
-        addMaterial: async (name: string, type: "basic" | "pbr") => {
-            const material = await manager.addMaterial(name, type);
+        addMaterial: async (name: string) => {
+            const material = await manager.addMaterial(name, false);
             update((m) => m);
             return material;
         },
@@ -203,6 +257,10 @@ function createMaterialStore() {
                 update((m) => m);
             }
             return success;
+        },
+
+        loadAllMaterials: async () => {
+            await manager.loadAllMaterials();
         },
 
         getMaterial: (materialId: string) => {
@@ -240,6 +298,31 @@ function createMaterialStore() {
                 update((m) => m);
             }
             return success;
+        },
+
+        // Remove all non-builtin materials
+        clearUserMaterials: () => {
+            manager.clearUserMaterials();
+            update((m) => m);
+        },
+
+        // Import non-builtin materials
+        importMaterials: (
+            serialized: Array<{
+                id: string;
+                name: string;
+                color: string;
+                textures: {
+                    color: string;
+                    displacement?: string;
+                    normal?: string;
+                    roughness?: string;
+                    metallic?: string;
+                };
+            }>
+        ) => {
+            manager.importMaterials(serialized);
+            update((m) => m);
         },
     };
 }

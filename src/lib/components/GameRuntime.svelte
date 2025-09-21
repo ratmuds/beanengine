@@ -5,6 +5,7 @@
     import { GameObjectManager } from "$lib/runtime";
     import { sceneStore } from "$lib/sceneStore";
     import { runtimeStore } from "$lib/runtimeStore";
+    import { materialStore } from "$lib/materialStore";
 
     const { renderer } = useThrelte();
     let gameScene: THREE.Scene;

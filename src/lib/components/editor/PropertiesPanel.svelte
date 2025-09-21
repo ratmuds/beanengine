@@ -114,7 +114,9 @@
     function handleMeshChange(value: string) {
         if (!object || !(object instanceof Types.BPart)) return;
 
-        const selectedOption = meshOptions().find((option: any) => option.value === value);
+        const selectedOption = meshOptions().find(
+            (option: any) => option.value === value
+        );
         if (!selectedOption) return;
 
         const updatedObject = object.clone();
@@ -284,7 +286,10 @@
                 class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-4 shadow-sm"
             >
                 <div class="space-y-3">
-                    <label for="object-name-input" class="text-sm font-medium text-foreground/80 block">
+                    <label
+                        for="object-name-input"
+                        class="text-sm font-medium text-foreground/80 block"
+                    >
                         Object Name
                     </label>
 
@@ -311,7 +316,8 @@
                         >
                     </div>
                 </div>
-            </div>            <!-- Node3D Properties -->
+            </div>
+            <!-- Node3D Properties -->
             {#if object instanceof Types.BNode3D}
                 <div
                     class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-5"
@@ -390,40 +396,75 @@
                     <div class="space-y-3">
                         <!-- Mesh Selector -->
                         <label class="space-y-2 block">
-                            <span class="text-sm font-medium text-foreground/80">
+                            <span
+                                class="text-sm font-medium text-foreground/80"
+                            >
                                 Mesh Type
                             </span>
-                            <Select.Root bind:value={meshSelectorValue} onValueChange={handleMeshChange} type="single">
+                            <Select.Root
+                                bind:value={meshSelectorValue}
+                                onValueChange={handleMeshChange}
+                                type="single"
+                            >
                                 <Select.Trigger class="w-full">
-                                    {meshSelectorValue ? 
-                                        meshOptions().find((opt: any) => opt.value === meshSelectorValue)?.label || "Select a mesh"
+                                    {meshSelectorValue
+                                        ? meshOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  meshSelectorValue
+                                          )?.label || "Select a mesh"
                                         : "Select a mesh"}
                                 </Select.Trigger>
                                 <Select.Content>
                                     {#each meshOptions() as option}
                                         <Select.Item value={option.value}>
-                                            <div class="flex items-center gap-2">
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
                                                 {#if option.data.type === "primitive"}
                                                     {#if option.data.value === "block"}
-                                                        <Box class="w-4 h-4 text-blue-400" />
+                                                        <Box
+                                                            class="w-4 h-4 text-blue-400"
+                                                        />
                                                     {:else if option.data.value === "sphere"}
-                                                        <div class="w-4 h-4 bg-blue-400 rounded-full"></div>
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400 rounded-full"
+                                                        ></div>
                                                     {:else if option.data.value === "cylinder"}
-                                                        <div class="w-4 h-4 bg-blue-400 rounded-sm"></div>
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400 rounded-sm"
+                                                        ></div>
                                                     {:else if option.data.value === "cone"}
-                                                        <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"></div>
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400"
+                                                            style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
+                                                        ></div>
                                                     {:else if option.data.value === "plane"}
-                                                        <div class="w-4 h-1 bg-blue-400"></div>
+                                                        <div
+                                                            class="w-4 h-1 bg-blue-400"
+                                                        ></div>
                                                     {:else if option.data.value === "wedge"}
-                                                        <div class="w-4 h-4 bg-blue-400" style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"></div>
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400"
+                                                            style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
+                                                        ></div>
                                                     {/if}
                                                 {:else}
-                                                    <Box class="w-4 h-4 text-purple-400" />
+                                                    <Box
+                                                        class="w-4 h-4 text-purple-400"
+                                                    />
                                                 {/if}
                                                 <span>{option.label}</span>
                                                 {#if option.data.type === "asset" && (option.data as any).size}
-                                                    <span class="text-xs text-muted-foreground ml-auto">
-                                                        {((option.data as any).size / 1024 / 1024).toFixed(2)} MB
+                                                    <span
+                                                        class="text-xs text-muted-foreground ml-auto"
+                                                    >
+                                                        {(
+                                                            (option.data as any)
+                                                                .size /
+                                                            1024 /
+                                                            1024
+                                                        ).toFixed(2)} MB
                                                     </span>
                                                 {/if}
                                             </div>
@@ -435,13 +476,23 @@
 
                         <!-- Material Selector -->
                         <label class="space-y-2 block">
-                            <span class="text-sm font-medium text-foreground/80">
+                            <span
+                                class="text-sm font-medium text-foreground/80"
+                            >
                                 Material
                             </span>
-                            <Select.Root bind:value={materialSelectorValue} onValueChange={handleMaterialChange} type="single">
+                            <Select.Root
+                                bind:value={materialSelectorValue}
+                                onValueChange={handleMaterialChange}
+                                type="single"
+                            >
                                 <Select.Trigger class="w-full">
-                                    {materialSelectorValue ? 
-                                        materialOptions().find((opt: any) => opt.value === materialSelectorValue)?.label || "Select material..."
+                                    {materialSelectorValue
+                                        ? materialOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  materialSelectorValue
+                                          )?.label || "Select material..."
                                         : "Select material..."}
                                 </Select.Trigger>
                                 <Select.Content>
@@ -525,13 +576,23 @@
                     <div class="space-y-4">
                         <!-- Part A Selector -->
                         <label class="space-y-2 block">
-                            <span class="text-sm font-medium text-foreground/80">
+                            <span
+                                class="text-sm font-medium text-foreground/80"
+                            >
                                 Part A
                             </span>
-                            <Select.Root bind:value={partASelectorValue} onValueChange={handlePartAChange} type="single">
+                            <Select.Root
+                                bind:value={partASelectorValue}
+                                onValueChange={handlePartAChange}
+                                type="single"
+                            >
                                 <Select.Trigger class="w-full">
-                                    {partASelectorValue ? 
-                                        partOptions().find((opt: any) => opt.value === partASelectorValue)?.label || "Select first part..."
+                                    {partASelectorValue
+                                        ? partOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  partASelectorValue
+                                          )?.label || "Select first part..."
                                         : "Select first part..."}
                                 </Select.Trigger>
                                 <Select.Content>
@@ -546,13 +607,23 @@
 
                         <!-- Part B Selector -->
                         <label class="space-y-2 block">
-                            <span class="text-sm font-medium text-foreground/80">
+                            <span
+                                class="text-sm font-medium text-foreground/80"
+                            >
                                 Part B
                             </span>
-                            <Select.Root bind:value={partBSelectorValue} onValueChange={handlePartBChange} type="single">
+                            <Select.Root
+                                bind:value={partBSelectorValue}
+                                onValueChange={handlePartBChange}
+                                type="single"
+                            >
                                 <Select.Trigger class="w-full">
-                                    {partBSelectorValue ? 
-                                        partOptions().find((opt: any) => opt.value === partBSelectorValue)?.label || "Select second part..."
+                                    {partBSelectorValue
+                                        ? partOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  partBSelectorValue
+                                          )?.label || "Select second part..."
                                         : "Select second part..."}
                                 </Select.Trigger>
                                 <Select.Content>

@@ -503,9 +503,7 @@ export class CodeInterpreter {
         }
 
         const dir = this.parseVector3(direction);
-        targetGameObject
-            .getComponent(PhysicsComponent)
-            .setDirectionalVelocity(dir);
+        targetGameObject.getComponent(PhysicsComponent).setVelocity(dir);
     }
 
     private async executeClone(item: any, context: RuntimeContext) {

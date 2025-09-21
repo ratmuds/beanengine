@@ -1,5 +1,6 @@
 <script lang="ts">
     import Input from "$lib/components/ui/input/input.svelte";
+    import * as Select from "$lib/components/ui/select/index.js";
     import Chip from "./Chip.svelte";
 
     let { field, item, onUpdate = null } = $props();
@@ -160,12 +161,33 @@
         </div>
     {:else}
         <!-- Input when no chips -->
-        <Input
-            type={field.type}
-            class="rounded-full h-8 min-w-8"
-            value={fieldValue}
-            oninput={(e) => updateFieldValue((e.target as HTMLInputElement)?.value)}
-            placeholder={field.placeholder}
-        />
+        {#if field.type === "dropdown" && field.options}
+            <!-- Dropdown Select -->
+            <Select.Root 
+                type="single" 
+                value={fieldValue || field.defaultValue || ""} 
+                onValueChange={(newValue) => updateFieldValue(newValue)}
+            >
+                <Select.Trigger class="rounded-full h-8 min-w-8 w-fit px-3 text-sm">
+                    {field.options.find((opt: any) => opt.value === (fieldValue || field.defaultValue))?.label || field.placeholder || "Select..."}
+                </Select.Trigger>
+                <Select.Content>
+                    {#each field.options as option (option.value)}
+                        <Select.Item value={option.value} label={option.label}>
+                            {option.label}
+                        </Select.Item>
+                    {/each}
+                </Select.Content>
+            </Select.Root>
+        {:else}
+            <!-- Regular Input -->
+            <Input
+                type={field.type}
+                class="rounded-full h-8 min-w-8"
+                value={fieldValue}
+                oninput={(e) => updateFieldValue((e.target as HTMLInputElement)?.value)}
+                placeholder={field.placeholder}
+            />
+        {/if}
     {/if}
 </div>

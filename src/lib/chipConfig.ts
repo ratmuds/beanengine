@@ -192,6 +192,55 @@ export const chipConfig: Record<string, ChipConfig> = {
         },
     },
 
+    rotation: {
+        color: "blue-500",
+        label: "Rotation",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                label: "Target",
+            },
+        ],
+        info: "Gets the rotation of a target object",
+        evaluate: async (compiled, context) => {
+            const targetRef = await context.evaluateChip(
+                compiled.target,
+                context
+            );
+
+            // Resolve target object
+            let targetGameObject = context.gameObject; // Default to current object
+            if (targetRef) {
+                const resolvedTarget = resolveTargetGameObject(
+                    targetRef,
+                    context
+                );
+                if (resolvedTarget) {
+                    targetGameObject = resolvedTarget;
+                } else {
+                    const error = getTargetResolutionError(targetRef, context);
+                    runtimeStore.warn(
+                        `Rotation chip target resolution failed: ${error}`,
+                        "Chip"
+                    );
+                    return null;
+                }
+            }
+
+            if (!targetGameObject) {
+                runtimeStore.warn(
+                    "Rotation chip: no target object available",
+                    "Chip"
+                );
+                return null;
+            }
+
+            // Return the rotation of the target game object
+            return targetGameObject.transform.rotation;
+        },
+    },
+
     lookVector: {
         color: "red-500",
         label: "Look Vector",
@@ -262,6 +311,60 @@ export const chipConfig: Record<string, ChipConfig> = {
         },
     },
 
+    sub: {
+        color: "orange-500",
+        label: "Subtract",
+        info: "Subtracts B from A",
+        fields: [
+            {
+                type: "number",
+                bind: "a",
+                label: "A",
+                placeholder: "A",
+                defaultValue: 0,
+            },
+            {
+                type: "number",
+                bind: "b",
+                label: "B",
+                placeholder: "B",
+                defaultValue: 0,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            if (typeof a === "number" && typeof b === "number") {
+                return a - b;
+            }
+
+            // Vector-like subtraction: supports Types.BVector3 or plain objects with x,y,z
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+            if (isVec(a) && isVec(b)) {
+                const ax = Number(a.x) || 0;
+                const ay = Number(a.y) || 0;
+                const az = Number(a.z) || 0;
+                const bx = Number(b.x) || 0;
+                const by = Number(b.y) || 0;
+                const bz = Number(b.z) || 0;
+                return new Types.BVector3(ax - bx, ay - by, az - bz);
+            }
+
+            runtimeStore.warn(
+                `Subtract chip: unsupported input types for subtracting. Either types not supported to be subtracted, or type mismatch. A value: ${JSON.stringify(
+                    a
+                )} A type: ${typeof a} B value: ${JSON.stringify(
+                    b
+                )} B type: ${typeof b}. Returning 0.`,
+                "Interpreter"
+            );
+
+            return 0;
+        },
+    },
+
     mul: {
         color: "orange-500",
         label: "Multiply",
@@ -313,6 +416,88 @@ export const chipConfig: Record<string, ChipConfig> = {
             );
 
             return 0;
+        },
+    },
+
+    div: {
+        color: "orange-500",
+        label: "Divide",
+        info: "Divides A by B",
+        fields: [
+            {
+                type: "number",
+                bind: "a",
+                label: "A",
+                placeholder: "A",
+                defaultValue: 0,
+            },
+            {
+                type: "number",
+                bind: "b",
+                label: "B",
+                placeholder: "B",
+                defaultValue: 1,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            if (typeof a === "number" && typeof b === "number") {
+                if (b === 0) {
+                    runtimeStore.warn("Divide by zero", "Interpreter");
+                    return 0;
+                }
+                return a / b;
+            }
+
+            // Vector-like component-wise division
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+            if (isVec(a) && isVec(b)) {
+                const ax = Number(a.x) || 0;
+                const ay = Number(a.y) || 0;
+                const az = Number(a.z) || 0;
+                const bx = Number(b.x) || 0;
+                const by = Number(b.y) || 0;
+                const bz = Number(b.z) || 0;
+                if (bx === 0 || by === 0 || bz === 0) {
+                    runtimeStore.warn("Divide by zero", "Interpreter");
+                    return new Types.BVector3(0, 0, 0);
+                }
+                return new Types.BVector3(ax / bx, ay / by, az / bz);
+            }
+
+            runtimeStore.warn(
+                `Divide chip: unsupported input types. A: ${typeof a}, B: ${typeof b}. Returning 0.`,
+                "Interpreter"
+            );
+
+            return 0;
+        },
+    },
+
+    mousebtn: {
+        color: "red-500",
+        label: "Mouse Button",
+        info: "Returns true if the specified mouse button is pressed (left, middle, right)",
+        fields: [
+            {
+                type: "dropdown",
+                bind: "button",
+                label: "Button",
+                defaultValue: "left",
+                options: [
+                    { label: "Left", value: "left" },
+                    { label: "Middle", value: "middle" },
+                    { label: "Right", value: "right" },
+                ],
+            },
+        ],
+
+        evaluate: (compiled, context) => {
+            const button = compiled.button || "left";
+            return runtimeStore.getMouseButton(button);
         },
     },
 };
