@@ -15,6 +15,10 @@ class BScene {
         // Create default BStorage container
         const defaultStorage = new BStorage("Storage", null, null);
         this.addObject(defaultStorage);
+
+        // Create default BUIStorage container
+        const defaultUIStorage = new BUIStorage("UIStorage", null, null);
+        this.addObject(defaultUIStorage);
     }
 
     addObject(object: BObject) {
@@ -115,6 +119,143 @@ class BStorage extends BObject {
     }
 }
 
+// UI Storage container for UI elements to be rendered
+class BUIStorage extends BObject {
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "uistorage";
+    }
+}
+
+// UI classes
+class BUI extends BObject {
+    autoLayout: boolean; // If enabled, the position will be managed automatically, like for lists
+    positionPercent: BVector2;
+    positionOffset: BVector2;
+
+    sizePercent: BVector2;
+    sizeOffset: BVector2;
+
+    rotation: number;
+
+    positionXAnchor: "left" | "center" | "right";
+    positionYAnchor: "top" | "center" | "bottom";
+    visible: boolean;
+    zIndex: number;
+
+    padding: BVector2;
+    margin: BVector2;
+
+    transition:
+        | "none"
+        | "blur"
+        | "crossfade"
+        | "draw"
+        | "fade"
+        | "fly"
+        | "scale"
+        | "slide";
+    transitionDuration: number; // in milliseconds
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "ui";
+
+        this.autoLayout = false;
+        this.positionPercent = new BVector2(0, 0);
+        this.positionOffset = new BVector2(0, 0);
+        this.sizePercent = new BVector2(0, 0);
+        this.sizeOffset = new BVector2(200, 50);
+        this.rotation = 0;
+        this.positionXAnchor = "left";
+        this.positionYAnchor = "top";
+        this.visible = true;
+        this.zIndex = 0;
+        this.padding = new BVector2(0, 0);
+        this.margin = new BVector2(0, 0);
+        this.transition = "none";
+        this.transitionDuration = 0;
+    }
+}
+
+class BContainerUI extends BUI {
+    scroll: "none" | "horizontal" | "vertical" | "both";
+
+    backgroundColor: string; // rgba
+    borderColor: string; // rgba
+    borderSize: number; // in pixels
+    borderRadius: number; // in pixels
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "containerui";
+
+        this.scroll = "none";
+        this.backgroundColor = "rgba(0, 0, 0, 0)";
+        this.borderColor = "rgba(0, 0, 0, 0)";
+        this.borderSize = 0;
+        this.borderRadius = 0;
+    }
+}
+
+class BTextUI extends BContainerUI {
+    text: string;
+    fontSize: number; // in pixels
+    fontFamily: string;
+    fontWeight: number;
+    color: string; // rgba
+    textAlign: "left" | "center" | "right";
+    textVerticalAlign: "top" | "center" | "bottom";
+    overflow: "none" | "wrap" | "ellipsis";
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "textui";
+
+        this.text = "";
+        this.fontSize = 16;
+        this.fontFamily = "Arial";
+        this.fontWeight = 400;
+        this.color = "rgba(0, 0, 0, 1)";
+        this.textAlign = "left";
+        this.textVerticalAlign = "top";
+        this.overflow = "none";
+    }
+}
+
+class BButtonUI extends BTextUI {
+    hoverColor: string; // rgba
+    pressedColor: string; // rgba
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "buttonui";
+
+        this.hoverColor = "rgba(0, 0, 0, 0.5)";
+        this.pressedColor = "rgba(0, 0, 0, 0.7)";
+    }
+}
+
 // --- Core 3D Types ---
 
 // Represents a 3D vector
@@ -172,6 +313,56 @@ class BVector3 {
     // Copy method to copy the vector
     copy(vector: BVector3): BVector3 {
         return new BVector3(vector.x, vector.y, vector.z);
+    }
+}
+
+// Represents a 2D vector
+class BVector2 {
+    x: number;
+    y: number;
+
+    constructor(x = 0, y = 0) {
+        this.x = x;
+        this.y = y;
+    }
+
+    // Clone method to create a new instance with the same values
+    clone(): BVector2 {
+        return new BVector2(this.x, this.y);
+    }
+
+    // Add method to add two vectors
+    add(vector: BVector2) {
+        this.x = this.x + vector.x;
+        this.y = this.y + vector.y;
+    }
+
+    // Subtract method to subtract two vectors
+    sub(vector: BVector2) {
+        this.x = this.x - vector.x;
+        this.y = this.y - vector.y;
+    }
+
+    // Multiply method to multiply two vectors
+    mul(vector: BVector2) {
+        this.x = this.x * vector.x;
+        this.y = this.y * vector.y;
+    }
+
+    // Divide method to divide two vectors
+    div(vector: BVector2) {
+        this.x = this.x / vector.x;
+        this.y = this.y / vector.y;
+    }
+
+    // Equals method to check if two vectors are equal
+    equals(vector: BVector2): boolean {
+        return this.x === vector.x && this.y === vector.y;
+    }
+
+    // Copy method to copy the vector
+    copy(vector: BVector2): BVector2 {
+        return new BVector2(vector.x, vector.y);
     }
 }
 
@@ -770,6 +961,7 @@ export {
     BScene,
     BObject,
     BVector3,
+    BVector2,
     BNode3D,
     BPart,
     BPlayerController,
@@ -778,6 +970,11 @@ export {
     BConstraint,
     BScript,
     BStorage,
+    BUIStorage,
+    BUI,
+    BContainerUI,
+    BTextUI,
+    BButtonUI,
     BAsset,
     BAssetCollection,
     BMaterial,

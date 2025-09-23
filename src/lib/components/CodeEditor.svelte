@@ -106,7 +106,12 @@
     let dragSource: any = null;
     let validDropOccurred = false;
 
-    function handleDragStart(e: DragEvent, item: any, index: number, source = "items") {
+    function handleDragStart(
+        e: DragEvent,
+        item: any,
+        index: number,
+        source = "items"
+    ) {
         draggedItem = { item, index, source };
         dragSource = source;
         validDropOccurred = false;
@@ -179,7 +184,9 @@
             const newZoom = Math.max(0.25, Math.min(3, camera.zoom + delta));
 
             // Zoom towards mouse position
-            const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+            const rect = (
+                e.currentTarget as HTMLElement
+            ).getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
             const mouseY = e.clientY - rect.top;
 

@@ -219,3 +219,5 @@
         }
     });
 </script>
+
+<!-- Overlay UI is rendered in the editor page to avoid nesting inside the canvas -->

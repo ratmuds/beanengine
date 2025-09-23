@@ -48,6 +48,7 @@
     import { Canvas } from "@threlte/core";
     import Scene from "$lib/components/editor/ViewportScene.svelte";
     import GameRuntime from "$lib/components/GameRuntime.svelte";
+    import RuntimeUI from "$lib/runtime/RuntimeUI.svelte";
     import CustomCodeEditor from "$lib/components/CodeEditor.svelte";
     import ObjectExplorer from "$lib/components/editor/ObjectExplorer.svelte";
     import CodePalette from "$lib/components/code/CodePalette.svelte";
@@ -896,6 +897,11 @@
                                                     />
                                                 {/if}
                                             </Canvas>
+                                            {#if play}
+                                                <div class="mt-5">
+                                                    <RuntimeUI />
+                                                </div>
+                                            {/if}
                                         </div>
                                     {/if}
 

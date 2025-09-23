@@ -209,6 +209,20 @@ export class GameObjectManager {
     }
 
     /**
+     * Return UI roots (children under the first BUIStorage) from the runtime snapshot
+     */
+    getUIRoots(): GameObject[] {
+        const all = this.getAllGameObjects();
+        const uiStorageGO = all.find(
+            (go) => go.bObject instanceof Types.BUIStorage
+        );
+        if (!uiStorageGO) return [];
+        return uiStorageGO
+            .getChildren()
+            .filter((child) => child.bObject instanceof Types.BUI);
+    }
+
+    /**
      * Get GameObjects with a specific component type
      */
     getGameObjectsWithComponent(componentClass: {

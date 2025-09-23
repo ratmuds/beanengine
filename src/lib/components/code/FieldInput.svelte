@@ -22,7 +22,12 @@
             ...item,
             fields: item.fields.map((f: any) =>
                 f.bind === field.bind
-                    ? { ...f, inputs: (f.inputs || []).filter((c: any) => c.id !== chipId) }
+                    ? {
+                          ...f,
+                          inputs: (f.inputs || []).filter(
+                              (c: any) => c.id !== chipId
+                          ),
+                      }
                     : f
             ),
         };
@@ -62,7 +67,9 @@
             if (!json) return;
             const droppedChip = JSON.parse(json);
 
-            const targetField = item.fields.find((f: any) => f.bind === field.bind);
+            const targetField = item.fields.find(
+                (f: any) => f.bind === field.bind
+            );
             const currentInputs = (targetField?.inputs || []).slice();
 
             const fromItemId = dt.getData("application/x-chip-from-item");
@@ -71,7 +78,9 @@
 
             if (source === "field") {
                 // Same field: no-op (avoid duplication), make dragend treat as copy to prevent deletion
-                const sameField = String(item.id) === fromItemId && String(field.bind) === fromFieldBind;
+                const sameField =
+                    String(item.id) === fromItemId &&
+                    String(field.bind) === fromFieldBind;
                 if (sameField) {
                     dt.dropEffect = "copy";
                     return;
@@ -85,11 +94,17 @@
                             if (f.bind === fromFieldBind) {
                                 return {
                                     ...f,
-                                    inputs: (f.inputs || []).filter((c: any) => String(c.id) !== String(fromChipId)),
+                                    inputs: (f.inputs || []).filter(
+                                        (c: any) =>
+                                            String(c.id) !== String(fromChipId)
+                                    ),
                                 };
                             }
                             if (f.bind === field.bind) {
-                                return { ...f, inputs: [...currentInputs, droppedChip] };
+                                return {
+                                    ...f,
+                                    inputs: [...currentInputs, droppedChip],
+                                };
                             }
                             return f;
                         }),
@@ -141,7 +156,8 @@
                     onRequestDelete={(c: any) => removeChipById(c.id)}
                     onUpdate={(updatedChip: any) => {
                         const currentInputs =
-                            item.fields.find((f: any) => f.bind === field.bind)?.inputs || [];
+                            item.fields.find((f: any) => f.bind === field.bind)
+                                ?.inputs || [];
                         const updatedInputs = currentInputs.map((input: any) =>
                             input.id === updatedChip.id ? updatedChip : input
                         );
@@ -150,7 +166,10 @@
                             ...item,
                             fields: item.fields.map((f: any) => ({
                                 ...f,
-                                inputs: f.bind === field.bind ? updatedInputs : f.inputs,
+                                inputs:
+                                    f.bind === field.bind
+                                        ? updatedInputs
+                                        : f.inputs,
                             })),
                         };
 
@@ -163,13 +182,20 @@
         <!-- Input when no chips -->
         {#if field.type === "dropdown" && field.options}
             <!-- Dropdown Select -->
-            <Select.Root 
-                type="single" 
-                value={fieldValue || field.defaultValue || ""} 
+            <Select.Root
+                type="single"
+                value={fieldValue || field.defaultValue || ""}
                 onValueChange={(newValue) => updateFieldValue(newValue)}
             >
-                <Select.Trigger class="rounded-full h-8 min-w-8 w-fit px-3 text-sm">
-                    {field.options.find((opt: any) => opt.value === (fieldValue || field.defaultValue))?.label || field.placeholder || "Select..."}
+                <Select.Trigger
+                    class="rounded-full h-8 min-w-8 w-fit px-3 text-sm"
+                >
+                    {field.options.find(
+                        (opt: any) =>
+                            opt.value === (fieldValue || field.defaultValue)
+                    )?.label ||
+                        field.placeholder ||
+                        "Select..."}
                 </Select.Trigger>
                 <Select.Content>
                     {#each field.options as option (option.value)}
@@ -185,7 +211,8 @@
                 type={field.type}
                 class="rounded-full h-8 min-w-8"
                 value={fieldValue}
-                oninput={(e) => updateFieldValue((e.target as HTMLInputElement)?.value)}
+                oninput={(e) =>
+                    updateFieldValue((e.target as HTMLInputElement)?.value)}
                 placeholder={field.placeholder}
             />
         {/if}

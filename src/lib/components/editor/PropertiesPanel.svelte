@@ -3,6 +3,7 @@
     import * as Alert from "$lib/components/ui/alert/index.js";
     import Input from "$lib/components/ui/input/input.svelte";
     import Vector3Input from "$lib/components/properties/Vector3Input.svelte";
+    import Vector2Input from "$lib/components/properties/Vector2Input.svelte";
 
     import * as Select from "$lib/components/ui/select/index.js";
     import {
@@ -21,6 +22,7 @@
     import { materialStore } from "$lib/materialStore";
     import AxisLockControls from "$lib/components/properties/AxisLockControls.svelte";
     import { sceneStore } from "$lib/sceneStore";
+    import { Switch } from "$lib/components/ui/switch";
 
     let { selectedObject, onPropertyChange } = $props();
 
@@ -194,6 +196,40 @@
 
         partASelectorValue = object.partA?.id || "";
         partBSelectorValue = object.partB?.id || "";
+    });
+
+    // UI property reactive variables
+    let positionXAnchorValue: string = $state("left");
+    let positionYAnchorValue: string = $state("top");
+    let transitionValue: string = $state("none");
+    let scrollValue: string = $state("none");
+    let textAlignValue: string = $state("left");
+    let textVerticalAlignValue: string = $state("top");
+    let overflowValue: string = $state("none");
+    let imageFitValue: string = $state("cover");
+    let imageRepeatValue: string = $state("no-repeat");
+
+    $effect(() => {
+        if (!object || !(object instanceof Types.BUI)) {
+            positionXAnchorValue = "left";
+            positionYAnchorValue = "top";
+            transitionValue = "none";
+            return;
+        }
+
+        positionXAnchorValue = (object as any).positionXAnchor || "left";
+        positionYAnchorValue = (object as any).positionYAnchor || "top";
+        transitionValue = (object as any).transition || "none";
+
+        if (object instanceof Types.BContainerUI) {
+            scrollValue = (object as any).scroll || "none";
+        }
+
+        if (object instanceof Types.BTextUI) {
+            textAlignValue = (object as any).textAlign || "left";
+            textVerticalAlignValue = (object as any).textVerticalAlign || "top";
+            overflowValue = (object as any).overflow || "none";
+        }
     });
 
     function handlePartAChange(value: string) {
@@ -510,6 +546,749 @@
                             {object}
                             on:change={handleAxisLockChange}
                         />
+                    </div>
+                </div>
+            {/if}
+
+            <!-- UI Base Properties -->
+            {#if object instanceof Types.BUI}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="p-2 bg-pink-500/10 rounded-lg">
+                            <Settings class="w-5 h-5 text-pink-400" />
+                        </div>
+                        <h3 class="font-semibold text-lg text-foreground">
+                            UI Properties
+                        </h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <div
+                            class="flex items-center justify-between bg-muted/20 rounded-xl p-3"
+                        >
+                            <div class="text-sm text-foreground/80">
+                                Auto Layout
+                            </div>
+                            <Switch
+                                checked={object.autoLayout}
+                                onCheckedChange={(v) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).autoLayout = v;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </div>
+
+                        <Vector2Input
+                            label="Position Percent (0-1)"
+                            bind:value={object.positionPercent}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).positionPercent =
+                                    e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+                        <Vector2Input
+                            label="Position Offset (px)"
+                            bind:value={object.positionOffset}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).positionOffset =
+                                    e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+                        <Vector2Input
+                            label="Size Percent (0-1)"
+                            bind:value={object.sizePercent}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).sizePercent = e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+                        <Vector2Input
+                            label="Size Offset (px)"
+                            bind:value={object.sizeOffset}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).sizeOffset = e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+
+                        <!-- Rotation -->
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Rotation (deg)</span
+                            >
+                            <Input
+                                type="number"
+                                value={object.rotation}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).rotation =
+                                        parseFloat(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 0;
+                                    onPropertyChange(updated);
+                                }}
+                                class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
+                            />
+                        </label>
+
+                        <!-- Anchors -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="space-y-2 block">
+                                <span
+                                    class="text-sm font-medium text-foreground/80"
+                                    >X Anchor</span
+                                >
+                                <Select.Root
+                                    bind:value={positionXAnchorValue}
+                                    onValueChange={(val) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).positionXAnchor = val;
+                                        onPropertyChange(updated);
+                                    }}
+                                    type="single"
+                                >
+                                    <Select.Trigger class="w-full" />
+                                    <Select.Content>
+                                        <Select.Item value="left"
+                                            >Left</Select.Item
+                                        >
+                                        <Select.Item value="center"
+                                            >Center</Select.Item
+                                        >
+                                        <Select.Item value="right"
+                                            >Right</Select.Item
+                                        >
+                                    </Select.Content>
+                                </Select.Root>
+                            </label>
+                            <label class="space-y-2 block">
+                                <span
+                                    class="text-sm font-medium text-foreground/80"
+                                    >Y Anchor</span
+                                >
+                                <Select.Root
+                                    bind:value={positionYAnchorValue}
+                                    onValueChange={(val) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).positionYAnchor = val;
+                                        onPropertyChange(updated);
+                                    }}
+                                    type="single"
+                                >
+                                    <Select.Trigger class="w-full" />
+                                    <Select.Content>
+                                        <Select.Item value="top"
+                                            >Top</Select.Item
+                                        >
+                                        <Select.Item value="center"
+                                            >Center</Select.Item
+                                        >
+                                        <Select.Item value="bottom"
+                                            >Bottom</Select.Item
+                                        >
+                                    </Select.Content>
+                                </Select.Root>
+                            </label>
+                        </div>
+
+                        <!-- Visibility & Z-Index -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-xl p-3"
+                            >
+                                <div class="text-sm text-foreground/80">
+                                    Visible
+                                </div>
+                                <Switch
+                                    checked={object.visible}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).visible = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                            <label class="space-y-2 block">
+                                <span
+                                    class="text-sm font-medium text-foreground/80"
+                                    >Z-Index</span
+                                >
+                                <Input
+                                    type="number"
+                                    value={object.zIndex}
+                                    onchange={(e) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).zIndex =
+                                            parseInt(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0;
+                                        onPropertyChange(updated);
+                                    }}
+                                    class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
+                                />
+                            </label>
+                        </div>
+
+                        <!-- Padding & Margin -->
+                        <Vector2Input
+                            label="Padding (px)"
+                            bind:value={object.padding}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).padding = e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+                        <Vector2Input
+                            label="Margin (px)"
+                            bind:value={object.margin}
+                            on:change={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).margin = e.detail.value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+
+                        <!-- Transition -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="space-y-2 block">
+                                <span
+                                    class="text-sm font-medium text-foreground/80"
+                                    >Transition</span
+                                >
+                                <Select.Root
+                                    bind:value={transitionValue}
+                                    onValueChange={(val) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).transition = val;
+                                        onPropertyChange(updated);
+                                    }}
+                                    type="single"
+                                >
+                                    <Select.Trigger class="w-full" />
+                                    <Select.Content>
+                                        <Select.Item value="none"
+                                            >None</Select.Item
+                                        >
+                                        <Select.Item value="fade"
+                                            >Fade</Select.Item
+                                        >
+                                        <Select.Item value="fly"
+                                            >Fly</Select.Item
+                                        >
+                                        <Select.Item value="slide"
+                                            >Slide</Select.Item
+                                        >
+                                        <Select.Item value="scale"
+                                            >Scale</Select.Item
+                                        >
+                                        <Select.Item value="blur"
+                                            >Blur</Select.Item
+                                        >
+                                    </Select.Content>
+                                </Select.Root>
+                            </label>
+                            <label class="space-y-2 block">
+                                <span
+                                    class="text-sm font-medium text-foreground/80"
+                                    >Transition Duration (ms)</span
+                                >
+                                <Input
+                                    type="number"
+                                    value={(object as any).transitionDuration}
+                                    onchange={(e) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).transitionDuration =
+                                            parseInt(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0;
+                                        onPropertyChange(updated);
+                                    }}
+                                    class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- UI Container Properties -->
+            {#if object instanceof Types.BContainerUI}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <h3 class="font-semibold text-md text-foreground">
+                        Container
+                    </h3>
+                    <!-- Colors and borders -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Background Color</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).backgroundColor}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).backgroundColor = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                                placeholder="rgba(0,0,0,0) or #rrggbb"
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Border Color</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).borderColor}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).borderColor = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                                placeholder="rgba(0,0,0,0) or #rrggbb"
+                            />
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Border Size (px)</span
+                            >
+                            <Input
+                                type="number"
+                                value={(object as any).borderSize}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).borderSize =
+                                        parseInt(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 0;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Border Radius (px)</span
+                            >
+                            <Input
+                                type="number"
+                                value={(object as any).borderRadius}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).borderRadius =
+                                        parseInt(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 0;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Scroll</span
+                            >
+                            <Select.Root
+                                bind:value={scrollValue}
+                                onValueChange={(val) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).scroll = val;
+                                    onPropertyChange(updated);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full" />
+                                <Select.Content>
+                                    <Select.Item value="none">None</Select.Item>
+                                    <Select.Item value="horizontal"
+                                        >Horizontal</Select.Item
+                                    >
+                                    <Select.Item value="vertical"
+                                        >Vertical</Select.Item
+                                    >
+                                    <Select.Item value="both">Both</Select.Item>
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- UI Text Properties -->
+            {#if object instanceof Types.BTextUI}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <h3 class="font-semibold text-md text-foreground">Text</h3>
+                    <label class="space-y-2 block">
+                        <span class="text-sm font-medium text-foreground/80"
+                            >Content</span
+                        >
+                        <Input
+                            type="text"
+                            value={(object as any).text}
+                            onchange={(e) => {
+                                const updated = Object.assign(
+                                    Object.create(
+                                        Object.getPrototypeOf(object)
+                                    ),
+                                    object
+                                );
+                                (updated as any).text = (
+                                    e.target as HTMLInputElement
+                                ).value;
+                                onPropertyChange(updated);
+                            }}
+                        />
+                    </label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Font Size (px)</span
+                            >
+                            <Input
+                                type="number"
+                                value={(object as any).fontSize}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).fontSize =
+                                        parseInt(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 12;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Font Family</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).fontFamily}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).fontFamily = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Font Weight</span
+                            >
+                            <Input
+                                type="number"
+                                value={(object as any).fontWeight}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).fontWeight =
+                                        parseInt(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 400;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Text Color</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).color}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).color = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Horizontal Align</span
+                            >
+                            <Select.Root
+                                bind:value={textAlignValue}
+                                onValueChange={(val) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).textAlign = val;
+                                    onPropertyChange(updated);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full" />
+                                <Select.Content>
+                                    <Select.Item value="left">Left</Select.Item>
+                                    <Select.Item value="center"
+                                        >Center</Select.Item
+                                    >
+                                    <Select.Item value="right"
+                                        >Right</Select.Item
+                                    >
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Vertical Align</span
+                            >
+                            <Select.Root
+                                bind:value={textVerticalAlignValue}
+                                onValueChange={(val) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).textVerticalAlign = val;
+                                    onPropertyChange(updated);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full" />
+                                <Select.Content>
+                                    <Select.Item value="top">Top</Select.Item>
+                                    <Select.Item value="center"
+                                        >Center</Select.Item
+                                    >
+                                    <Select.Item value="bottom"
+                                        >Bottom</Select.Item
+                                    >
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Overflow</span
+                            >
+                            <Select.Root
+                                bind:value={overflowValue}
+                                onValueChange={(val) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).overflow = val;
+                                    onPropertyChange(updated);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full" />
+                                <Select.Content>
+                                    <Select.Item value="none">None</Select.Item>
+                                    <Select.Item value="wrap">Wrap</Select.Item>
+                                    <Select.Item value="ellipsis"
+                                        >Ellipsis</Select.Item
+                                    >
+                                </Select.Content>
+                            </Select.Root>
+                        </label>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- UI Button Properties -->
+            {#if object instanceof Types.BButtonUI}
+                <div
+                    class="bg-card/60 backdrop-blur-sm border border-border/40 rounded-xl p-5 shadow-sm space-y-4"
+                >
+                    <h3 class="font-semibold text-md text-foreground">
+                        Button
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Hover Color</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).hoverColor}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).hoverColor = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
+                        <label class="space-y-2 block">
+                            <span class="text-sm font-medium text-foreground/80"
+                                >Pressed Color</span
+                            >
+                            <Input
+                                type="text"
+                                value={(object as any).pressedColor}
+                                onchange={(e) => {
+                                    const updated = Object.assign(
+                                        Object.create(
+                                            Object.getPrototypeOf(object)
+                                        ),
+                                        object
+                                    );
+                                    (updated as any).pressedColor = (
+                                        e.target as HTMLInputElement
+                                    ).value;
+                                    onPropertyChange(updated);
+                                }}
+                            />
+                        </label>
                     </div>
                 </div>
             {/if}

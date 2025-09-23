@@ -18,7 +18,6 @@ export interface CompiledItem {
  * Compiles a chip instance to runtime format, stripping UI metadata and flattening structure
  */
 export function compileItem(chip: any): CompiledItem | null {
-    console.log("COMPILING", chip);
     if (!chip) return null;
 
     // Start with base chip data
@@ -35,7 +34,6 @@ export function compileItem(chip: any): CompiledItem | null {
 
         // Recursively compile children
         if (chip.children && Array.isArray(chip.children)) {
-            console.log("COMPILING CHILDREN", chip.children);
             compiled.children = chip.children
                 .map((child) => compileItem(child))
                 .filter(Boolean);
@@ -63,10 +61,6 @@ export function compileItem(chip: any): CompiledItem | null {
 
         // Handle children for blocks with fields (like if statements)
         if (chip.children && Array.isArray(chip.children)) {
-            console.log(
-                "COMPILING CHILDREN FOR BLOCK WITH FIELDS",
-                chip.children
-            );
             compiled.children = chip.children
                 .map((child: any) => compileItem(child))
                 .filter(Boolean);

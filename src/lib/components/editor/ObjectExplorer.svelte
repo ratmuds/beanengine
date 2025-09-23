@@ -24,6 +24,7 @@
         Navigation,
         FileCode,
         FolderTree,
+        Folder,
         Clipboard,
     } from "lucide-svelte";
     import { sceneStore } from "$lib/sceneStore";
@@ -146,7 +147,9 @@
             case "constraint":
                 return Clipboard;
             case "storage":
-                return FolderTree;
+                return Folder;
+            case "uistorage":
+                return Folder;
             case "playercontroller":
                 return Navigation;
             default:
@@ -223,7 +226,12 @@
     function handleCopyObject(objectId: string) {
         const allObjects = $sceneStore.getScene().objects;
         const objectToCopy = allObjects.find((obj: any) => obj.id === objectId);
-        if (objectToCopy && objectToCopy.type === "storage") return; // cannot copy storage
+        if (
+            objectToCopy &&
+            (objectToCopy.type === "storage" ||
+                objectToCopy.type === "uistorage")
+        )
+            return; // cannot copy storage
         if (objectToCopy) {
             copiedObject = structuredClone(objectToCopy);
             dispatch("copyObject", { id: objectId });
@@ -236,7 +244,12 @@
                 const targetParent = $sceneStore
                     .getScene()
                     .objects.find((o: any) => o.id === parentId);
-                if (targetParent && targetParent.type === "storage") return; // cannot paste into storage
+                if (
+                    targetParent &&
+                    (targetParent.type === "storage" ||
+                        targetParent.type === "uistorage")
+                )
+                    return; // cannot paste into storage
             }
             dispatch("pasteObject", {
                 copiedObject: structuredClone(copiedObject),
@@ -250,7 +263,12 @@
         const objectToDuplicate = allObjects.find(
             (obj: any) => obj.id === objectId
         );
-        if (objectToDuplicate && objectToDuplicate.type === "storage") return; // cannot duplicate storage
+        if (
+            objectToDuplicate &&
+            (objectToDuplicate.type === "storage" ||
+                objectToDuplicate.type === "uistorage")
+        )
+            return; // cannot duplicate storage
         if (objectToDuplicate) {
             const duplicatedObject = structuredClone(objectToDuplicate);
             dispatch("duplicateObject", {
@@ -263,7 +281,12 @@
     function handleDeleteObject(objectId: string) {
         const allObjects = $sceneStore.getScene().objects;
         const objectToDelete = allObjects.find((o: any) => o.id === objectId);
-        if (objectToDelete && objectToDelete.type === "storage") return; // cannot delete storage
+        if (
+            objectToDelete &&
+            (objectToDelete.type === "storage" ||
+                objectToDelete.type === "uistorage")
+        )
+            return; // cannot delete storage
         dispatch("deleteObject", { id: objectId });
     }
 
@@ -282,7 +305,7 @@
         // Disallow dragging storage objects
         const allObjects = $sceneStore.getScene().objects;
         const obj = allObjects.find((o: any) => o.id === objectId);
-        if (obj && obj.type === "storage") {
+        if (obj && (obj.type === "storage" || obj.type === "uistorage")) {
             event.preventDefault();
             return;
         }
@@ -471,7 +494,8 @@
                                 </Command.Item>
                                 <Command.Item
                                     value="script"
-                                    onSelect={() => handleAddObjectType("Script")}
+                                    onSelect={() =>
+                                        handleAddObjectType("Script")}
                                     class="rounded-lg m-1"
                                 >
                                     <FileCode class="w-4 h-4 mr-2" />
@@ -479,7 +503,8 @@
                                 </Command.Item>
                                 <Command.Item
                                     value="camera"
-                                    onSelect={() => handleAddObjectType("Camera")}
+                                    onSelect={() =>
+                                        handleAddObjectType("Camera")}
                                     class="rounded-lg m-1"
                                 >
                                     <Camera class="w-4 h-4 mr-2" />
@@ -487,7 +512,8 @@
                                 </Command.Item>
                                 <Command.Item
                                     value="light"
-                                    onSelect={() => handleAddObjectType("Light")}
+                                    onSelect={() =>
+                                        handleAddObjectType("Light")}
                                     class="rounded-lg m-1"
                                 >
                                     <Lightbulb class="w-4 h-4 mr-2" />
@@ -495,7 +521,8 @@
                                 </Command.Item>
                                 <Command.Item
                                     value="playercontroller"
-                                    onSelect={() => handleAddObjectType("PlayerController")}
+                                    onSelect={() =>
+                                        handleAddObjectType("PlayerController")}
                                     class="rounded-lg m-1"
                                 >
                                     <Navigation class="w-4 h-4 mr-2" />
@@ -503,22 +530,45 @@
                                 </Command.Item>
                             </Command.Group>
                             <Command.Separator />
-                            <Command.Group heading="Physics & Organization">
+                            <Command.Group heading="Physics">
                                 <Command.Item
                                     value="constraint"
-                                    onSelect={() => handleAddObjectType("Constraint")}
+                                    onSelect={() =>
+                                        handleAddObjectType("Constraint")}
                                     class="rounded-lg m-1"
                                 >
                                     <Clipboard class="w-4 h-4 mr-2" />
                                     Constraint
                                 </Command.Item>
+                            </Command.Group>
+                            <Command.Separator />
+                            <Command.Group heading="UI">
                                 <Command.Item
-                                    value="storage"
-                                    onSelect={() => handleAddObjectType("Storage")}
+                                    value="containerui"
+                                    onSelect={() =>
+                                        handleAddObjectType("ContainerUI")}
                                     class="rounded-lg m-1"
                                 >
-                                    <FolderOpen class="w-4 h-4 mr-2" />
-                                    Storage
+                                    <Box class="w-4 h-4 mr-2" />
+                                    Container UI
+                                </Command.Item>
+                                <Command.Item
+                                    value="textui"
+                                    onSelect={() =>
+                                        handleAddObjectType("TextUI")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <FileImage class="w-4 h-4 mr-2" />
+                                    Text UI
+                                </Command.Item>
+                                <Command.Item
+                                    value="buttonui"
+                                    onSelect={() =>
+                                        handleAddObjectType("ButtonUI")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Box class="w-4 h-4 mr-2" />
+                                    Button UI
                                 </Command.Item>
                             </Command.Group>
                         </Command.List>
@@ -616,7 +666,8 @@
                     style="margin-left: {obj.depth * 16}px"
                     onclick={() => handleObjectClick(obj.id)}
                     oncontextmenu={(e) => handleRightClick(e, obj.id)}
-                    draggable={obj.type !== "storage"}
+                    draggable={obj.type !== "storage" ||
+                        obj.type !== "uistorage"}
                     ondragstart={(e) => handleDragStart(e, obj.id)}
                     ondragend={handleDragEnd}
                     ondragover={(e) => handleDragOver(e, obj.id)}

@@ -166,6 +166,18 @@ class SceneManager {
             case "storage":
                 newObject = new Types.BStorage(name, null, null);
                 break;
+            case "uistorage":
+                newObject = new Types.BUIStorage(name, null, null);
+                break;
+            case "containerui":
+                newObject = new Types.BContainerUI(name, null, null);
+                break;
+            case "textui":
+                newObject = new Types.BTextUI(name, null, null);
+                break;
+            case "buttonui":
+                newObject = new Types.BButtonUI(name, null, null);
+                break;
             case "camera":
                 newObject = new Types.BCamera(name, null, null);
                 if (newObject instanceof Types.BCamera) {
@@ -422,9 +434,9 @@ class SceneManager {
     /**
      * Clear the scene by removing all objects and resetting variables
      * This keeps the physics world intact for reuse
-     * @param createDefaultStorage - Whether to create a default BStorage object (default: true)
+     * @param createDefaults - Whether to create default objects in the scene (Storage, UI) (default: true)
      */
-    public clearScene(createDefaultStorage: boolean = true): void {
+    public clearScene(createDefaults: boolean = true): void {
         // Clear all objects from the scene
         this.scene.objects = [];
         this.scene.children = [];
@@ -433,9 +445,16 @@ class SceneManager {
         this.variables = [];
 
         // Create default BStorage container only if requested
-        if (createDefaultStorage) {
+        if (createDefaults) {
             const defaultStorage = new Types.BStorage("Storage", null, null);
             this.scene.addObject(defaultStorage);
+
+            const defaultUIStorage = new Types.BUIStorage(
+                "UI Storage",
+                null,
+                null
+            );
+            this.scene.addObject(defaultUIStorage);
         }
 
         console.log(
@@ -666,6 +685,22 @@ class SceneManager {
             );
         }
 
+        // Ensure there's at least one UIStorage object if none exists in the serialized data
+        const hasUIStorage = data.objects.some(
+            (obj) => obj.type === "uistorage"
+        );
+        if (!hasUIStorage) {
+            const defaultUIStorage = new Types.BStorage(
+                "UIStorage",
+                null,
+                null
+            );
+            this.scene.addObject(defaultUIStorage);
+            console.log(
+                "[SceneStore] Added default UIStorage object as none was found in serialized data"
+            );
+        }
+
         console.log("[SceneStore] Scene deserialized successfully");
     }
 
@@ -675,34 +710,46 @@ class SceneManager {
     private createObjectFromData(data: SerializedObject): Types.BObject | null {
         let obj: Types.BObject | null = null;
 
-        // Create object based on type
+        // Create object based on type, passing the original ID to preserve it
         switch (data.type) {
             case "part":
-                obj = new Types.BPart(data.name, null, null);
+                obj = new Types.BPart(data.name, data.id, null);
                 break;
             case "playercontroller":
-                obj = new Types.BPlayerController(data.name, null, null);
+                obj = new Types.BPlayerController(data.name, data.id, null);
                 break;
             case "storage":
-                obj = new Types.BStorage(data.name, null, null);
+                obj = new Types.BStorage(data.name, data.id, null);
+                break;
+            case "uistorage":
+                obj = new Types.BUIStorage(data.name, data.id, null);
+                break;
+            case "containerui":
+                obj = new Types.BContainerUI(data.name, data.id, null);
+                break;
+            case "textui":
+                obj = new Types.BTextUI(data.name, data.id, null);
+                break;
+            case "buttonui":
+                obj = new Types.BButtonUI(data.name, data.id, null);
                 break;
             case "constraint":
                 obj = new Types.BConstraint(
                     data.name,
-                    null,
+                    data.id,
                     null,
                     undefined as unknown as Types.BPart,
                     undefined as unknown as Types.BPart
                 );
                 break;
             case "camera":
-                obj = new Types.BCamera(data.name, null, null);
+                obj = new Types.BCamera(data.name, data.id, null);
                 break;
             case "light":
-                obj = new Types.BLight(data.name, null, null);
+                obj = new Types.BLight(data.name, data.id, null);
                 break;
             case "script":
-                obj = new Types.BScript(data.name, null, null);
+                obj = new Types.BScript(data.name, data.id, null);
                 break;
             default:
                 console.warn(`[SceneStore] Unknown object type: ${data.type}`);
@@ -710,9 +757,6 @@ class SceneManager {
         }
 
         if (!obj) return null;
-
-        // Set the ID to match the serialized data
-        obj.id = data.id;
 
         // Apply generic properties (exclude refs ending with Id/Ids and reserved keys)
         const isVectorLike = (v: unknown): boolean =>
