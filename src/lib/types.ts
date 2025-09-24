@@ -751,6 +751,15 @@ class BCamera extends BNode3D {
 // Script (contains code omg no way)
 class BScript extends BObject {
     code: any[];
+    // Declarative list of triggers for this script
+    triggers: Array<{
+        id: string;
+        type: "start" | "update" | "keydown" | "mousedown" | "mouseup" | "mousemove" | "custom";
+        name: string; // display name in editor
+        event?: string; // for custom events: event name to subscribe to
+        args: Array<{ name: string; type: "number" | "string" | "boolean" | "object" }>;
+        enabled?: boolean;
+    }>;
 
     constructor(
         name: string | null,
@@ -760,6 +769,7 @@ class BScript extends BObject {
         super(name ? name : "Script", id, parent);
         this.type = "script";
         this.code = [];
+        this.triggers = [];
     }
 }
 
