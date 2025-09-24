@@ -121,15 +121,13 @@
         );
         if (!selectedOption) return;
 
-        const updatedObject = object.clone();
-
         if (selectedOption.data.type === "primitive") {
-            updatedObject.setPrimitiveMesh(selectedOption.data.value as any);
+            object.setPrimitiveMesh(selectedOption.data.value as any);
         } else {
-            updatedObject.setAssetMesh(selectedOption.data.value);
+            object.setAssetMesh(selectedOption.data.value);
         }
 
-        onPropertyChange(updatedObject);
+        onPropertyChange(object);
     }
 
     // Material selector reactive variables

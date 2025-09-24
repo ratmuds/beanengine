@@ -105,6 +105,125 @@ class BObject {
         }
         return false;
     }
+
+    clone(): BObject {
+        // Helper predicates
+        const hasCloneMethod = (obj: unknown): obj is { clone(): unknown } =>
+            typeof obj === "object" &&
+            obj !== null &&
+            "clone" in obj &&
+            typeof (obj as Record<string, unknown>).clone === "function";
+        const isPlainObject = (obj: unknown): obj is Record<string, unknown> =>
+            typeof obj === "object" &&
+            obj !== null &&
+            (obj as object).constructor === Object;
+
+        // 1) Collect original subtree (self + descendants)
+        const originals: BObject[] = [this, ...this.getDescendants()];
+        const originalsSet = new Set(originals);
+
+        // 2) First pass: create structural clones preserving prototype, assign new ids, copy fields except parent/children
+        const map = new Map<BObject, BObject>();
+        for (const original of originals) {
+            const clone = Object.create(
+                Object.getPrototypeOf(original)
+            ) as BObject;
+            const cloneObj = clone as unknown as Record<string, unknown>;
+            const entries = Object.entries(original) as Array<
+                [string, unknown]
+            >;
+            for (const [key, value] of entries) {
+                if (key === "parent" || key === "children") continue;
+                if (key === "id") {
+                    cloneObj.id = nanoid();
+                    continue;
+                }
+
+                if (hasCloneMethod(value)) {
+                    cloneObj[key] = (value as { clone: () => unknown }).clone();
+                } else if (Array.isArray(value)) {
+                    cloneObj[key] = [...(value as unknown[])];
+                } else if (isPlainObject(value)) {
+                    cloneObj[key] = { ...(value as Record<string, unknown>) };
+                } else {
+                    cloneObj[key] = value as unknown;
+                }
+            }
+
+            // Ensure required base fields exist
+            if ((cloneObj as { name?: string }).name == null) {
+                (cloneObj as { name: string }).name = original.name;
+            }
+            (cloneObj as { type: string }).type = original.type;
+            (cloneObj as { parent: BObject | null }).parent = null;
+            (cloneObj as { children: BObject[] }).children = [];
+
+            map.set(original, clone);
+        }
+
+        // 3) Second pass: remap any properties that reference BObjects within the cloned subtree
+        for (const original of originals) {
+            const clone = map.get(original);
+            if (!clone) continue;
+
+            for (const [key, value] of Object.entries(original) as Array<
+                [string, unknown]
+            >) {
+                if (key === "parent" || key === "children" || key === "id")
+                    continue;
+
+                const cloneObj = clone as unknown as Record<string, unknown>;
+                const current = cloneObj[key];
+                if (value instanceof BObject) {
+                    if (originalsSet.has(value)) {
+                        const mapped = map.get(value);
+                        if (mapped) cloneObj[key] = mapped;
+                    } else {
+                        cloneObj[key] = value as unknown;
+                    }
+                } else if (Array.isArray(value)) {
+                    const mappedArr = (value as unknown[]).map((item) => {
+                        if (item instanceof BObject && originalsSet.has(item)) {
+                            const m = map.get(item);
+                            return m ? m : item;
+                        }
+                        return item;
+                    });
+                    cloneObj[key] = mappedArr as unknown;
+                } else if (isPlainObject(value)) {
+                    // Shallow remap any direct BObject fields inside a plain object
+                    const base = (current as Record<string, unknown>) || {};
+                    const obj: Record<string, unknown> = { ...base };
+                    for (const [subKey, subVal] of Object.entries(
+                        value as Record<string, unknown>
+                    )) {
+                        if (
+                            subVal instanceof BObject &&
+                            originalsSet.has(subVal)
+                        ) {
+                            const mapped = map.get(subVal);
+                            obj[subKey] = mapped ? mapped : subVal;
+                        }
+                    }
+                    cloneObj[key] = obj;
+                }
+            }
+        }
+
+        // 4) Rebuild parent/child relationships
+        for (const original of originals) {
+            const clone = map.get(original);
+            if (!clone) continue;
+            for (const child of original.children) {
+                const childClone = map.get(child);
+                if (childClone) clone.addChild(childClone);
+            }
+        }
+
+        // Return the clone corresponding to 'this'
+        const rootClone = map.get(this);
+        return rootClone ? rootClone : this; // Fallback should never happen
+    }
 }
 
 // Storage container for inactive objects (similar to Roblox ReplicatedStorage)
@@ -452,16 +571,6 @@ class BNode3D extends BObject {
             (child) => child instanceof BNode3D
         ) as BNode3D[];
     }
-
-    clone(): BNode3D {
-        const cloned = new BNode3D(this.name, null, null);
-        cloned.position = this.position.clone();
-        cloned.rotation = this.rotation.clone();
-        cloned.scale = this.scale.clone();
-        cloned.positionOffset = this.positionOffset.clone();
-        cloned.rotationOffset = this.rotationOffset.clone();
-        return cloned;
-    }
 }
 
 // Available primitive mesh types
@@ -547,23 +656,7 @@ class BPart extends BNode3D {
     }
 
     clone(): BPart {
-        // Create a fresh instance so we keep the prototype (and therefore all methods)
-        const cloned = new BPart(this.name, this.id, this.parent);
-
-        // Shallow-copy all enumerable own properties (cheap and covers new fields automatically)
-        Object.assign(cloned, this);
-
-        // Deep-clone transform-related value objects to avoid shared references
-        cloned.position = this.position.clone();
-        cloned.rotation = this.rotation.clone();
-        cloned.scale = this.scale.clone();
-        cloned.positionOffset = this.positionOffset.clone();
-        cloned.rotationOffset = this.rotationOffset.clone();
-
-        // Clone meshSource so modifications on the clone don’t mutate original
-        cloned.meshSource = { ...this.meshSource };
-
-        return cloned;
+        return super.clone() as BPart;
     }
 }
 
@@ -798,29 +891,14 @@ class BPlayerController extends BPart {
         this.type = "playercontroller";
 
         // Default movement settings
-        this.moveSpeed = 10;
-        this.jumpForce = 15;
+        this.moveSpeed = 5;
+        this.jumpForce = 2;
         this.mouseSensitivity = 0.2; //0.002;
         this.maxLookAngle = 80; // degrees
     }
 
     clone(): BPlayerController {
-        const cloned = new BPlayerController(this.name, null, null);
-
-        // Copy all BPart properties
-        Object.assign(cloned, this);
-
-        // Deep-clone transform-related value objects
-        cloned.position = this.position.clone();
-        cloned.rotation = this.rotation.clone();
-        cloned.scale = this.scale.clone();
-        cloned.positionOffset = this.positionOffset.clone();
-        cloned.rotationOffset = this.rotationOffset.clone();
-
-        // Clone meshSource
-        cloned.meshSource = { ...this.meshSource };
-
-        return cloned;
+        return super.clone() as BPlayerController;
     }
 }
 

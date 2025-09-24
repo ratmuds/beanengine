@@ -30,11 +30,7 @@ class AssetManager {
                 .from(bucket)
                 .upload(path, file, {
                     cacheControl: "3600",
-                    upsert: true,
-                    contentType:
-                        file && typeof (file as File).type === "string"
-                            ? (file as File).type
-                            : undefined,
+                    upsert: false,
                 });
             if (uploadError) {
                 // Fall back to object URL, but keep working locally

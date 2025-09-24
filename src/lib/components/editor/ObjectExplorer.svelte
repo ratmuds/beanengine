@@ -233,7 +233,8 @@
         )
             return; // cannot copy storage
         if (objectToCopy) {
-            copiedObject = structuredClone(objectToCopy);
+            // Use the proper clone method instead of structuredClone
+            copiedObject = objectToCopy.clone();
             dispatch("copyObject", { id: objectId });
         }
     }
@@ -252,7 +253,7 @@
                     return; // cannot paste into storage
             }
             dispatch("pasteObject", {
-                copiedObject: structuredClone(copiedObject),
+                copiedObject: copiedObject,
                 parentId,
             });
         }
@@ -270,10 +271,10 @@
         )
             return; // cannot duplicate storage
         if (objectToDuplicate) {
-            const duplicatedObject = structuredClone(objectToDuplicate);
+            // Use the proper clone method instead of structuredClone
             dispatch("duplicateObject", {
                 originalId: objectId,
-                duplicatedObject,
+                duplicatedObject: objectToDuplicate,
             });
         }
     }

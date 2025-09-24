@@ -452,7 +452,7 @@
         );
 
         // Create a new object based on the copied object
-        const newObject = structuredClone(copiedObject);
+        const newObject = copiedObject.clone();
         // Generate a new unique ID
         newObject.id = crypto.randomUUID();
         // Update the name to indicate it's a copy
@@ -472,9 +472,8 @@
         console.log("Duplicating object:", originalId);
 
         // Create a new object based on the duplicated object
-        const newObject = structuredClone(duplicatedObject);
-        // Generate a new unique ID
-        newObject.id = crypto.randomUUID();
+        const newObject = duplicatedObject.clone();
+
         // Update the name to indicate it's a duplicate
         newObject.name = `${duplicatedObject.name} Copy`;
 
