@@ -3,7 +3,8 @@
     import { dragHandleZone, dndzone } from "svelte-dnd-action";
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/code/CodeBlock.svelte";
-    import { GripVertical, Edit3, Plus, HelpCircle } from "lucide-svelte";
+    import Input from "$lib/components/ui/input/input.svelte";
+    import { GripVertical, Edit3, Plus, HelpCircle, Diamond, X } from "lucide-svelte";
 
     import { compileScript } from "$lib/compiler.js";
 
@@ -197,7 +198,7 @@
         }
     }
 
-    // Active triggers that have been dragged into the code list
+    // Active triggers bound to the selected script
     let activeTriggers: any[] = $state([]);
     let dragActive: boolean = $state(false);
     // Temporary bin to receive drops for deletion
@@ -232,6 +233,50 @@
             newTriggers.splice(dropIndex, 0, removed);
             activeTriggers = newTriggers as any[];
         }
+    }
+
+    // Initialize triggers from selected script and keep them in sync
+    $effect(() => {
+        if (selectedScript) {
+            activeTriggers = Array.isArray(selectedScript.triggers)
+                ? selectedScript.triggers
+                : [];
+        } else {
+            activeTriggers = [];
+        }
+    });
+
+    $effect(() => {
+        if (selectedScript) {
+            selectedScript.triggers = activeTriggers;
+        }
+    });
+
+    // Helpers to edit trigger args
+    function addTriggerArg(idx: number) {
+        const t = activeTriggers[idx];
+        t.args = t.args || [];
+        t.args.push({ name: `arg${t.args.length + 1}`, type: "string" });
+        activeTriggers = [...activeTriggers];
+    }
+
+    function updateTriggerArg(
+        idx: number,
+        argIdx: number,
+        field: "name" | "type",
+        value: string
+    ) {
+        const t = activeTriggers[idx];
+        if (!t.args) t.args = [];
+        t.args[argIdx] = { ...t.args[argIdx], [field]: value };
+        activeTriggers = [...activeTriggers];
+    }
+
+    function removeTriggerArg(idx: number, argIdx: number) {
+        const t = activeTriggers[idx];
+        if (!t.args) return;
+        t.args.splice(argIdx, 1);
+        activeTriggers = [...activeTriggers];
     }
 </script>
 
@@ -316,8 +361,24 @@
 
                 <!-- Triggers Drop Zone -->
                 <div class="p-3">
-                    <div class="text-[#ccc] text-sm font-medium mb-2">
-                        Triggers
+                    <div class="text-[#ccc] text-sm font-medium mb-2 flex items-center justify-between gap-2">
+                        <span>Triggers</span>
+                        <div class="flex items-center gap-2">
+                            <button class="text-xs border border-[#2e2e2e] rounded px-2 py-1" onclick={() => {
+                                activeTriggers = [
+                                    ...activeTriggers,
+                                    {
+                                        id: `${Date.now()}-${Math.random()}`,
+                                        type: 'custom',
+                                        name: 'Custom Event',
+                                        event: 'customEvent',
+                                        args: [],
+                                        enabled: true,
+                                    }
+                                ];
+                            }}>+ Custom</button>
+                            <span class="text-xs text-muted-foreground">... or drop from palette</span>
+                        </div>
                     </div>
                     <div
                         class="min-h-12 p-2 border border-[#2e2e2e] rounded bg-[#252525]/30 {triggerDragOverIndex >=
@@ -345,9 +406,28 @@
                                         !source
                                     ) {
                                         // Only create new trigger if it's from palette (no source)
+                                        // Map palette trigger to script trigger data
+                                        const mapType = (t: string) =>
+                                            t === "onStart"
+                                                ? "start"
+                                                : t === "onUpdate"
+                                                ? "update"
+                                                : t === "onKeyPress"
+                                                ? "keydown"
+                                                : "custom";
+                                        const type = mapType(trigger.type);
+                                        const defaultArgs =
+                                            type === "update"
+                                                ? [{ name: "deltatime", type: "number" }]
+                                                : type === "keydown"
+                                                ? [{ name: "key", type: "string" }]
+                                                : [];
                                         const newTrigger = {
-                                            ...trigger,
-                                            id: Date.now() + Math.random(),
+                                            id: `${Date.now()}-${Math.random()}`,
+                                            type,
+                                            name: trigger.name || trigger.type,
+                                            args: defaultArgs,
+                                            enabled: true,
                                         } as any;
                                         activeTriggers = [
                                             ...activeTriggers,
@@ -375,10 +455,10 @@
                                 Drop triggers here to activate the code below
                             </div>
                         {:else}
-                            <div class="flex flex-wrap gap-1">
+                            <div class="flex flex-col gap-2">
                                 {#each activeTriggers as trigger, i (trigger.id)}
                                     <div
-                                        class="w-full border-l-6 border-yellow-500 bg-muted text-white p-3 rounded text-sm font-semibold shadow-sm cursor-move"
+                                        class="w-full border-l-6 border-yellow-500 bg-muted text-white p-3 rounded text-sm shadow-sm cursor-move"
                                         role="button"
                                         tabindex="0"
                                         draggable="true"
@@ -395,7 +475,45 @@
                                         ondrop={(e) => handleTriggerDrop(e, i)}
                                         ondragend={handleDragEnd}
                                     >
-                                        {trigger.name}
+                                        <div class="flex items-center justify-between">
+                                            <div class="font-semibold flex items-center gap-2">
+                                                <Diamond class="w-4 h-4 inline mr-1 text-gray-500 -translate-y-0.5" />
+                                                <Input class="bg-transparent border-b border-[#2e2e2e] focus:border-blue-500 outline-none text-sm" value={trigger.name} oninput={(e) => { trigger.name = (e.target as HTMLInputElement).value; activeTriggers = [...activeTriggers]; }} />
+                                                <span class="ml-2 text-xs text-muted-foreground">({trigger.type}{trigger.event ? `:${trigger.event}` : ''})</span>
+                                            </div>
+                                            <div class="text-xs text-muted-foreground flex items-center gap-2">
+                                                {#if trigger.type === 'update'}
+                                                    args: [{trigger.args?.[0]?.name || 'deltatime'}: number]
+                                                {:else if trigger.type === 'keydown'}
+                                                    args: [{trigger.args?.[0]?.name || 'key'}: string]
+                                                {:else if trigger.type === 'mousedown' || trigger.type === 'mouseup'}
+                                                    args: [{trigger.args?.[0]?.name || 'button'}: string]
+                                                {:else if trigger.type === 'mousemove'}
+                                                    args: [{trigger.args?.[0]?.name || 'mouseX'}: number, {trigger.args?.[1]?.name || 'mouseY'}: number]
+                                                {:else if trigger.type === 'custom'}
+                                                    <span>event:</span>
+                                                    <input class="bg-transparent border-b border-[#2e2e2e] focus:border-blue-500 outline-none text-xs w-40" value={trigger.event || ''} oninput={(e) => { trigger.event = (e.target as HTMLInputElement).value; activeTriggers = [...activeTriggers]; }} />
+                                                {/if}
+                                            </div>
+                                        </div>
+                                        {#if trigger.type !== 'start'}
+                                            <div class="mt-2 flex flex-wrap gap-2 items-center">
+                                                {#each trigger.args || [] as arg, ai}
+                                                    <div class="flex items-center gap-1 bg-[#1f1f1f] rounded px-2 py-1">
+                                                        <span class="text-xs text-muted-foreground mr-1">arg</span>
+                                                        <Input class="text-xs w-28 outline-none" value={arg.name} oninput={(e) => updateTriggerArg(i, ai, 'name', (e.target as HTMLInputElement).value)} />
+                                                        <select class="text-xs border border-[#2e2e2e] rounded px-1" bind:value={arg.type} onchange={(e) => updateTriggerArg(i, ai, 'type', (e.target as HTMLSelectElement).value)}>
+                                                            <option value="string">string</option>
+                                                            <option value="number">number</option>
+                                                            <option value="boolean">boolean</option>
+                                                            <option value="object">object</option>
+                                                        </select>
+                                                        <button class="text-red-400 text-xs" onclick={() => removeTriggerArg(i, ai)}><X class="w-4 h-4" /></button>
+                                                    </div>
+                                                {/each}
+                                                <button class="text-xs border border-[#2e2e2e] rounded px-2 py-1" onclick={() => addTriggerArg(i)}>+ arg</button>
+                                            </div>
+                                        {/if}
                                     </div>
                                 {/each}
                             </div>

@@ -192,6 +192,9 @@ export class GameObjectManager {
         for (const gameObject of this.gameObjects.values()) {
             gameObject.update(delta);
         }
+
+        // Broadcast update event for scripts that listen
+        runtimeStore.emit("update", delta);
     }
 
     /**

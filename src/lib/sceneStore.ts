@@ -542,6 +542,15 @@ class SceneManager {
             if (key === "id" || key === "name" || key === "type") continue;
             if (key === "parent" || key === "children") continue;
 
+            // Persist BScript.triggers explicitly (plain array)
+            if (
+                obj instanceof Types.BScript &&
+                key === "triggers"
+            ) {
+                (data as Record<string, unknown>)[key] = (obj as any)[key] || [];
+                continue;
+            }
+
             const value = (obj as unknown as Record<string, unknown>)[key];
 
             // Skip functions
@@ -779,7 +788,13 @@ class SceneManager {
             const value = (data as Record<string, unknown>)[key];
             const target = (obj as unknown as Record<string, unknown>)[key];
 
-            if (isVectorLike(value)) {
+            if (
+                (obj instanceof Types.BScript && key === "triggers") &&
+                Array.isArray(value)
+            ) {
+                // Assign triggers as-is (plain data)
+                (obj as any)[key] = value as unknown[];
+            } else if (isVectorLike(value)) {
                 const v3 = value as { x: number; y: number; z: number };
                 (obj as unknown as Record<string, unknown>)[key] =
                     new Types.BVector3(v3.x, v3.y, v3.z);

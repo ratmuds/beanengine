@@ -17,9 +17,19 @@
 
     // Available trigger templates for dragging
     let availableTriggers = $state([
-        { id: "trigger1", type: "onStart", name: "On Start" },
-        { id: "trigger2", type: "onUpdate", name: "On Update" },
-        { id: "trigger3", type: "onKeyPress", name: "On Key Press" },
+        { id: "trigger1", type: "onStart", name: "On Start", args: [] },
+        {
+            id: "trigger2",
+            type: "onUpdate",
+            name: "On Update",
+            args: [{ name: "deltatime", type: "number" }],
+        },
+        {
+            id: "trigger3",
+            type: "onKeyPress",
+            name: "On Key Press",
+            args: [{ name: "key", type: "string" }],
+        },
     ]);
 
     // Variable creation modal state
@@ -232,10 +242,17 @@
                         dt.effectAllowed = "copy";
                     }}
                 >
-                    <Diamond
-                        class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5"
-                    />
-                    {trigger.name}
+                    <div class="flex items-center justify-between gap-2">
+                        <div>
+                            <Diamond class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5" />
+                            {trigger.name}
+                        </div>
+                        {#if trigger.args && trigger.args.length}
+                            <div class="text-xs text-muted-foreground">
+                                [{#each trigger.args as a, i}{a.name}: {a.type}{i < trigger.args.length - 1 ? ', ' : ''}{/each}]
+                            </div>
+                        {/if}
+                    </div>
                 </div>
             {/each}
             {#if filteredTriggers.length === 0}

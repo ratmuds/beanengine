@@ -168,6 +168,51 @@ class RuntimeManager {
         });
     }
 
+    // --- Simple Event Bus ---
+    addEventListener(
+        eventName: string,
+        listener: (...args: any[]) => void
+    ): () => void {
+        if (!this.scriptEventListeners.has(eventName)) {
+            this.scriptEventListeners.set(eventName, new Set());
+        }
+        const set = this.scriptEventListeners.get(eventName)!;
+        set.add(listener);
+        return () => {
+            set.delete(listener);
+            if (set.size === 0) this.scriptEventListeners.delete(eventName);
+        };
+    }
+
+    removeEventListener(
+        eventName: string,
+        listener: (...args: any[]) => void
+    ): void {
+        const set = this.scriptEventListeners.get(eventName);
+        if (set) {
+            set.delete(listener);
+            if (set.size === 0) this.scriptEventListeners.delete(eventName);
+        }
+    }
+
+    emitEvent(eventName: string, ...args: any[]): void {
+        const set = this.scriptEventListeners.get(eventName);
+        if (!set || set.size === 0) return;
+        // Call listeners in try/catch individually to avoid breaking chain
+        for (const fn of Array.from(set)) {
+            try {
+                fn(...args);
+            } catch (e) {
+                this.addLog(
+                    "error",
+                    `Error in '${eventName}' listener: ${(e as Error).message}`,
+                    "runtimeStore",
+                    e
+                );
+            }
+        }
+    }
+
     addLog(
         level: LogLevel,
         message: string,
@@ -283,10 +328,16 @@ class RuntimeManager {
         button: "left" | "right" | "middle",
         pressed: boolean
     ): void {
+        const prev = this.inputState.mouseButtons[button];
         this.inputState.mouseButtons[button] = pressed;
 
         // Capture mouse if not already
         this.captureMouseIfNotCaptured();
+
+        // Emit button events on transition
+        if (pressed !== prev) {
+            this.emitEvent(pressed ? "mousedown" : "mouseup", button);
+        }
     }
 
     getMouseButton(button: "left" | "right" | "middle"): boolean {
@@ -294,7 +345,12 @@ class RuntimeManager {
     }
 
     setKey(key: string, pressed: boolean): void {
-        this.inputState.keys.set(key.toLowerCase(), pressed);
+        const k = key.toLowerCase();
+        const prev = this.inputState.keys.get(k) || false;
+        this.inputState.keys.set(k, pressed);
+        if (pressed !== prev) {
+            this.emitEvent(pressed ? "keydown" : "keyup", k);
+        }
     }
 
     getKey(key: string): boolean {
@@ -309,6 +365,7 @@ class RuntimeManager {
             x: x - oldX,
             y: y - oldY,
         };
+        this.emitEvent("mousemove", x, y);
     }
 
     setMouseDelta(deltaX: number, deltaY: number): void {
@@ -627,6 +684,26 @@ function createRuntimeStore() {
         ) => {
             manager.convex_hull_cache.set(assetId, data);
             update((m) => m);
+        },
+
+        // Event bus API
+        on: (
+            eventName: string,
+            listener: (...args: any[]) => void
+        ): (() => void) => {
+            const off = manager.addEventListener(eventName, listener);
+            update((m) => m);
+            return off;
+        },
+        off: (
+            eventName: string,
+            listener: (...args: any[]) => void
+        ): void => {
+            manager.removeEventListener(eventName, listener);
+            update((m) => m);
+        },
+        emit: (eventName: string, ...args: any[]) => {
+            manager.emitEvent(eventName, ...args);
         },
     };
 }

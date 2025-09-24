@@ -13,6 +13,7 @@ export class ScriptComponent extends Component {
     private interpreter: CodeInterpreter | null = null;
     public script: Types.BScript;
     private scene: THREE.Scene;
+    private unsubscribers: Array<() => void> = [];
 
     constructor(
         gameObject: GameObject,
@@ -48,14 +49,121 @@ export class ScriptComponent extends Component {
             context.scene = this.scene;
             context.script = this.script;
 
-            // Run the script
-            this.interpreter.run(context);
+            // Register triggers for this script
+            this.registerTriggers(context);
         } catch (error) {
             runtimeStore.error(
                 `Error initializing script ${this.script.id}:`,
                 "ScriptComponent",
                 error
             );
+        }
+    }
+
+    private registerTriggers(context: any): void {
+        // Clean previous
+        for (const off of this.unsubscribers) off();
+        this.unsubscribers = [];
+
+        const triggers = this.script.triggers || [];
+        if (triggers.length === 0) {
+            // Back-compat: if no triggers defined, run once immediately
+            this.interpreter?.run(context);
+            return;
+        }
+
+        for (const trig of triggers) {
+            if (trig.enabled === false) continue;
+            switch (trig.type) {
+                case "start": {
+                    // Run immediately once
+                    this.interpreter?.run(context);
+                    break;
+                }
+                case "update": {
+                    const off = runtimeStore.on(
+                        "update",
+                        (dt: number) => {
+                            // Provide dt in configured arg name or default
+                            const varName = trig.args?.[0]?.name || "deltatime";
+                            runtimeStore.setVariable(varName, dt);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "keydown": {
+                    const off = runtimeStore.on(
+                        "keydown",
+                        (key: string) => {
+                            const varName = trig.args?.[0]?.name || "key";
+                            runtimeStore.setVariable(varName, key);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "mousedown": {
+                    const off = runtimeStore.on(
+                        "mousedown",
+                        (button: string) => {
+                            const varName = trig.args?.[0]?.name || "button";
+                            runtimeStore.setVariable(varName, button);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "mouseup": {
+                    const off = runtimeStore.on(
+                        "mouseup",
+                        (button: string) => {
+                            const varName = trig.args?.[0]?.name || "button";
+                            runtimeStore.setVariable(varName, button);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "mousemove": {
+                    const off = runtimeStore.on(
+                        "mousemove",
+                        (x: number, y: number) => {
+                            const xName = trig.args?.[0]?.name || "mouseX";
+                            const yName = trig.args?.[1]?.name || "mouseY";
+                            runtimeStore.setVariable(xName, x);
+                            runtimeStore.setVariable(yName, y);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "custom": {
+                    if (!trig.event) break;
+                    const off = runtimeStore.on(
+                        trig.event,
+                        (...args: any[]) => {
+                            // Expose args by name when possible
+                            (trig.args || []).forEach((a, i) => {
+                                runtimeStore.setVariable(
+                                    a.name,
+                                    args[i]
+                                );
+                            });
+                            // Also expose raw array
+                            runtimeStore.setVariable("args", args);
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+            }
         }
     }
 
@@ -89,6 +197,8 @@ export class ScriptComponent extends Component {
             this.interpreter.stop();
             this.interpreter = null;
         }
+        for (const off of this.unsubscribers) off();
+        this.unsubscribers = [];
     }
 
     /**
@@ -130,6 +240,8 @@ export class ScriptComponent extends Component {
             this.interpreter.stop();
             this.interpreter = null;
         }
+        for (const off of this.unsubscribers) off();
+        this.unsubscribers = [];
         super.destroy();
     }
 }

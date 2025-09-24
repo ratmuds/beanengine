@@ -169,6 +169,9 @@ export class CodeInterpreter {
                 case "parent":
                     await this.executeParent(item, context);
                     break;
+                case "emitevent":
+                    await this.executeEmitEvent(item, context);
+                    break;
                 default:
                     runtimeStore.warn(
                         `Unknown code block type: ${item.type}`,
@@ -546,6 +549,13 @@ export class CodeInterpreter {
 
             // Create a new GameObject from the cloned BNode
             const gameObjectManager = runtimeStore.getGameObjectManager();
+            if (!gameObjectManager) {
+                runtimeStore.warn(
+                    "Clone block: GameObjectManager not available",
+                    "Interpreter"
+                );
+                return;
+            }
             gameObjectManager.addGameObject(clonedObject);
 
             console.log(gameObjectManager?.getAllGameObjects());
@@ -591,6 +601,13 @@ export class CodeInterpreter {
         try {
             // Remove from GameObjectManager
             const gameObjectManager = runtimeStore.getGameObjectManager();
+            if (!gameObjectManager) {
+                runtimeStore.warn(
+                    "Destroy block: GameObjectManager not available",
+                    "Interpreter"
+                );
+                return;
+            }
             gameObjectManager.removeGameObject(targetGameObject.bObject.id);
 
             console.log(`Destroyed object ${targetGameObject.bObject.id}`);
@@ -659,6 +676,28 @@ export class CodeInterpreter {
             );
         } catch (error) {
             runtimeStore.error(`Error setting parent: ${error}`, "Interpreter");
+        }
+    }
+
+    private async executeEmitEvent(item: any, context: RuntimeContext) {
+        const name = await context.evaluateChip(item.name, context);
+        const payload = await context.evaluateChip(item.payload, context);
+
+        if (!name || typeof name !== "string") {
+            runtimeStore.warn(
+                "Emit Event block missing or invalid event name",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            runtimeStore.emit(name, payload);
+        } catch (e) {
+            runtimeStore.error(
+                `Error emitting event '${name}': ${e}`,
+                "Interpreter"
+            );
         }
     }
 }

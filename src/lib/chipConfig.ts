@@ -500,6 +500,56 @@ export const chipConfig: Record<string, ChipConfig> = {
             return runtimeStore.getMouseButton(button);
         },
     },
+
+    children: {
+        color: "blue-500",
+        label: "Children",
+        info: "Returns an array of child objects of the target object",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                label: "Target",
+                placeholder: "(self)",
+                defaultValue: "",
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const targetRef = await context.evaluateChip(
+                compiled.target,
+                context
+            );
+
+            // Resolve target object
+            let targetGameObject = context.gameObject; // Default to current object
+            if (targetRef) {
+                const resolvedTarget = resolveTargetGameObject(
+                    targetRef,
+                    context
+                );
+                if (resolvedTarget) {
+                    targetGameObject = resolvedTarget;
+                } else {
+                    const error = getTargetResolutionError(targetRef, context);
+                    runtimeStore.warn(
+                        `Children chip target resolution failed: ${error}`,
+                        "Chip"
+                    );
+                    return [];
+                }
+            }
+
+            if (!targetGameObject) {
+                runtimeStore.warn(
+                    "Children chip: no target object available",
+                    "Chip"
+                );
+                return [];
+            }
+
+            return targetGameObject.children;
+        }
+    }
 };
 
 // Generate a list of available chips for UI

@@ -37,6 +37,25 @@ const colorMap: Record<string, string> = {
 };
 
 export const blockConfig: Record<string, BlockConfig> = {
+    emitevent: {
+        color: colorMap.yellow,
+        label: "Emit Event",
+        fields: [
+            {
+                type: "text",
+                bind: "name",
+                placeholder: "event name",
+                icon: Type,
+            },
+            {
+                type: "text",
+                bind: "payload",
+                placeholder: "optional payload",
+                icon: Type,
+            },
+        ],
+        info: "Emits a custom event optionally with a payload",
+    },
     if: {
         color: colorMap.blue,
         label: "If",
@@ -58,6 +77,56 @@ export const blockConfig: Record<string, BlockConfig> = {
         label: "Forever",
         fields: [],
         info: "Continuously runs the code inside it",
+        end: "do",
+        children: true,
+    },
+
+    loopThrough: {
+        color: colorMap.blue,
+        label: "Loop Through",
+        fields: [
+            {
+                type: "text",
+                bind: "array",
+                placeholder: "array variable",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "item",
+                placeholder: "item variable",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "index",
+                placeholder: "index variable (optional)",
+                icon: Variable,
+            }
+        ],
+        info: "Loops through each item in the specified array and assigns it to the item variable",
+        end: "do",
+        children: true,
+    },
+
+    loopFor: {
+        color: colorMap.blue,
+        label: "Loop For",
+        fields: [
+            {
+                type: "number",
+                bind: "times",
+                placeholder: "number of times",
+                icon: Hash,
+            },
+            {
+                type: "text",
+                bind: "index",
+                placeholder: "index variable (optional)",
+                icon: Variable,
+            }
+        ],
+        info: "Loops for the specified number of times",
         end: "do",
         children: true,
     },
