@@ -36,7 +36,9 @@ export class ConstraintComponent extends Component {
             const partA = constraintNode.partA;
             const partB = constraintNode.partB;
             if (!partA || !partB) {
-                throw new Error("ConstraintComponent: partA or partB is not set on BConstraint");
+                throw new Error(
+                    "ConstraintComponent: partA or partB is not set on BConstraint"
+                );
             }
             const goA = manager?.getGameObject(partA.id);
             const goB = manager?.getGameObject(partB.id);
@@ -117,26 +119,23 @@ export class ConstraintComponent extends Component {
                     }
                 );
             } else if (constraintNode.constraintType === "spherical") {
-                params = RAPIER.JointData.spherical(
-                    anchorA,
-                    anchorB,
-                );
+                params = RAPIER.JointData.spherical(anchorA, anchorB);
             } else if (constraintNode.constraintType === "revolute") {
                 // Revolute axis: default to world X.
-                const axis = { x: worldXAxis.x, y: worldXAxis.y, z: worldXAxis.z } as const;
-                params = RAPIER.JointData.revolute(
-                    anchorA,
-                    anchorB,
-                    axis
-                );
+                const axis = {
+                    x: worldXAxis.x,
+                    y: worldXAxis.y,
+                    z: worldXAxis.z,
+                } as const;
+                params = RAPIER.JointData.revolute(anchorA, anchorB, axis);
             } else if (constraintNode.constraintType === "prismatic") {
                 // Prismatic axis: along the line from A to B.
-                const axis = { x: dirABWorld.x, y: dirABWorld.y, z: dirABWorld.z } as const;
-                params = RAPIER.JointData.prismatic(
-                    anchorA,
-                    anchorB,
-                    axis
-                );
+                const axis = {
+                    x: dirABWorld.x,
+                    y: dirABWorld.y,
+                    z: dirABWorld.z,
+                } as const;
+                params = RAPIER.JointData.prismatic(anchorA, anchorB, axis);
                 // Apply limits if enabled
                 if (constraintNode.prismaticLimitsEnabled) {
                     // The signed distance is (anchor2 - anchor1) dot axis1 per Rapier docs.
