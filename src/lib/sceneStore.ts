@@ -18,6 +18,11 @@ export type SerializedObject = Record<string, unknown> & {
 export type SerializedScene = {
     objects: SerializedObject[];
     variables?: Array<{ name: string; value: unknown; type: string }>;
+    customEvents?: Array<{
+        id: string;
+        name: string;
+        args: Array<{ name: string; type: string }>;
+    }>;
     assets?: Array<{
         id: string;
         name: string;
@@ -51,10 +56,16 @@ class SceneManager {
     public physicsWorld: RAPIER.World | null = null;
     public physicsInitialized: boolean = false;
     private initPromise: Promise<void> | null = null;
+    public customEvents: Array<{
+        id: string;
+        name: string;
+        args: Array<{ name: string; type: string }>;
+    }>;
 
     constructor(scene?: Types.BScene) {
         this.scene = scene || new Types.BScene();
         this.variables = [];
+        this.customEvents = [];
         // Initialize physics world asynchronously
         this.initializePhysics();
     }
@@ -238,6 +249,9 @@ class SceneManager {
                 );
                 break;
             }
+            case "value":
+                newObject = new Types.BValue(name, null, null);
+                break;
             default:
                 console.warn(`Unknown object type: ${objectType}`);
                 newObject = new Types.BObject(name, null, null);
@@ -443,6 +457,7 @@ class SceneManager {
 
         // Reset variables
         this.variables = [];
+        // Do not clear custom events here to keep them global/persistent for the project
 
         // Create default BStorage container only if requested
         if (createDefaults) {
@@ -505,6 +520,14 @@ class SceneManager {
 
         return {
             objects: serializedObjects,
+            customEvents: this.customEvents.map((e) => ({
+                id: e.id,
+                name: e.name,
+                args: (e.args || []).map((a) => ({
+                    name: a.name,
+                    type: a.type,
+                })),
+            })),
             variables: this.variables.map((v) => ({
                 name: v.name,
                 value: v.value,
@@ -543,11 +566,9 @@ class SceneManager {
             if (key === "parent" || key === "children") continue;
 
             // Persist BScript.triggers explicitly (plain array)
-            if (
-                obj instanceof Types.BScript &&
-                key === "triggers"
-            ) {
-                (data as Record<string, unknown>)[key] = (obj as any)[key] || [];
+            if (obj instanceof Types.BScript && key === "triggers") {
+                (data as Record<string, unknown>)[key] =
+                    (obj as any)[key] || [];
                 continue;
             }
 
@@ -684,6 +705,20 @@ class SceneManager {
             }));
         }
 
+        // Restore custom events
+        if (data.customEvents) {
+            this.customEvents = data.customEvents.map((e) => ({
+                id: e.id,
+                name: e.name,
+                args: (e.args || []).map((a) => ({
+                    name: a.name,
+                    type: a.type,
+                })),
+            }));
+        } else {
+            this.customEvents = [];
+        }
+
         // Ensure there's at least one Storage object if none exists in the serialized data
         const hasStorage = data.objects.some((obj) => obj.type === "storage");
         if (!hasStorage) {
@@ -760,6 +795,9 @@ class SceneManager {
             case "script":
                 obj = new Types.BScript(data.name, data.id, null);
                 break;
+            case "value":
+                obj = new Types.BValue(data.name, data.id, null);
+                break;
             default:
                 console.warn(`[SceneStore] Unknown object type: ${data.type}`);
                 return null;
@@ -789,7 +827,8 @@ class SceneManager {
             const target = (obj as unknown as Record<string, unknown>)[key];
 
             if (
-                (obj instanceof Types.BScript && key === "triggers") &&
+                obj instanceof Types.BScript &&
+                key === "triggers" &&
                 Array.isArray(value)
             ) {
                 // Assign triggers as-is (plain data)
@@ -939,6 +978,61 @@ function createSceneStore() {
 
         getVariables: () => {
             return manager.getVariables();
+        },
+
+        // Global Custom Events
+        getCustomEvents: () => {
+            return manager.customEvents;
+        },
+        addCustomEvent: (
+            name: string,
+            args: Array<{ name: string; type: string }>
+        ) => {
+            update((currentManager) => {
+                // ensure unique by name
+                const existing = currentManager.customEvents.find(
+                    (e) =>
+                        e.name.trim().toLowerCase() ===
+                        name.trim().toLowerCase()
+                );
+                if (existing) {
+                    existing.args = args;
+                } else {
+                    const id = `${Date.now()}-${Math.random()}`;
+                    currentManager.customEvents.push({ id, name, args });
+                }
+                return currentManager;
+            });
+        },
+        updateCustomEvent: (
+            id: string,
+            updates: Partial<{
+                name: string;
+                args: Array<{ name: string; type: string }>;
+            }>
+        ) => {
+            update((currentManager) => {
+                const ev = currentManager.customEvents.find((e) => e.id === id);
+                if (ev) {
+                    if (
+                        typeof updates.name === "string" &&
+                        updates.name.trim()
+                    ) {
+                        ev.name = updates.name;
+                    }
+                    if (Array.isArray(updates.args)) {
+                        ev.args = updates.args;
+                    }
+                }
+                return currentManager;
+            });
+        },
+        deleteCustomEvent: (id: string) => {
+            update((currentManager) => {
+                currentManager.customEvents =
+                    currentManager.customEvents.filter((e) => e.id !== id);
+                return currentManager;
+            });
         },
 
         // Helper functions

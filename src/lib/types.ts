@@ -226,6 +226,20 @@ class BObject {
     }
 }
 
+// Value object that can hold values
+class BValue extends BObject {
+    value: any;
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "value";
+    }
+}
+
 // Storage container for inactive objects (similar to Roblox ReplicatedStorage)
 class BStorage extends BObject {
     constructor(
@@ -754,10 +768,20 @@ class BScript extends BObject {
     // Declarative list of triggers for this script
     triggers: Array<{
         id: string;
-        type: "start" | "update" | "keydown" | "mousedown" | "mouseup" | "mousemove" | "custom";
+        type:
+            | "start"
+            | "update"
+            | "keydown"
+            | "mousedown"
+            | "mouseup"
+            | "mousemove"
+            | "custom";
         name: string; // display name in editor
         event?: string; // for custom events: event name to subscribe to
-        args: Array<{ name: string; type: "number" | "string" | "boolean" | "object" }>;
+        args: Array<{
+            name: string;
+            type: "number" | "string" | "boolean" | "object";
+        }>;
         enabled?: boolean;
     }>;
 
@@ -1048,6 +1072,7 @@ class InterpreterScriptError extends Error {
 export {
     BScene,
     BObject,
+    BValue,
     BVector3,
     BVector2,
     BNode3D,

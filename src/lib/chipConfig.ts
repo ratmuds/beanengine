@@ -69,7 +69,10 @@ export const chipConfig: Record<string, ChipConfig> = {
             // compiled.name should be a string in the new flattened structure
             const variableName = compiled.name;
 
-            return runtimeStore.getVariable(variableName)?.value ?? "null";
+            return (
+                runtimeStore.getVariable(variableName, context.script?.id)
+                    ?.value ?? "null"
+            );
         },
     },
 
@@ -548,8 +551,8 @@ export const chipConfig: Record<string, ChipConfig> = {
             }
 
             return targetGameObject.children;
-        }
-    }
+        },
+    },
 };
 
 // Generate a list of available chips for UI

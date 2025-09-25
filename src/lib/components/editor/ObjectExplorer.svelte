@@ -26,8 +26,10 @@
         FolderTree,
         Folder,
         Clipboard,
+        Hash,
     } from "lucide-svelte";
     import { sceneStore } from "$lib/sceneStore";
+    import { Item } from "../ui/select";
 
     /*export let sceneObjects: Array<{
         id: string;
@@ -152,6 +154,8 @@
                 return Folder;
             case "playercontroller":
                 return Navigation;
+            case "value":
+                return Hash;
             default:
                 return Box;
         }
@@ -570,6 +574,18 @@
                                 >
                                     <Box class="w-4 h-4 mr-2" />
                                     Button UI
+                                </Command.Item>
+                            </Command.Group>
+                            <Command.Separator />
+                            <Command.Group heading="Misc">
+                                <Command.Item
+                                    value="value"
+                                    onSelect={() =>
+                                        handleAddObjectType("Value")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Hash class="w-4 h-4 mr-2" />
+                                    Value
                                 </Command.Item>
                             </Command.Group>
                         </Command.List>

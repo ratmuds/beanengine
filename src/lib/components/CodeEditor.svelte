@@ -4,7 +4,17 @@
     import Separator from "./ui/separator/separator.svelte";
     import CodeBlock from "$lib/components/code/CodeBlock.svelte";
     import Input from "$lib/components/ui/input/input.svelte";
-    import { GripVertical, Edit3, Plus, HelpCircle, Diamond, X } from "lucide-svelte";
+    import {
+        GripVertical,
+        Edit3,
+        Plus,
+        HelpCircle,
+        Diamond,
+        X,
+    } from "lucide-svelte";
+    import * as Dialog from "$lib/components/ui/dialog/index.js";
+    import { Button } from "$lib/components/ui/button";
+    import { sceneStore } from "$lib/sceneStore.js";
 
     import { compileScript } from "$lib/compiler.js";
 
@@ -124,15 +134,7 @@
     }
 
     function handleDragEnd(e: DragEvent) {
-        // Clean up any item that was dragged but not dropped in a valid zone
-        if (draggedItem && !validDropOccurred) {
-            if (draggedItem.source === "triggers") {
-                // Remove from triggers array
-                activeTriggers = activeTriggers.filter(
-                    (_, i) => i !== draggedItem.index
-                );
-            }
-        }
+        // Do not delete triggers on invalid drop; keep existing order
         draggedItem = null;
         dragSource = null;
         validDropOccurred = false;
@@ -278,6 +280,59 @@
         t.args.splice(argIdx, 1);
         activeTriggers = [...activeTriggers];
     }
+
+    // --- Custom event creation dialog ---
+    let isAddingCustomTrigger = $state(false);
+    let newTriggerName: string = $state("");
+    let newTriggerArgs: Array<{
+        name: string;
+        type: "string" | "number" | "boolean" | "object";
+    }> = $state([]);
+
+    function openAddCustomTrigger() {
+        isAddingCustomTrigger = true;
+        newTriggerName = "";
+        newTriggerArgs = [];
+    }
+
+    function closeAddCustomTrigger() {
+        isAddingCustomTrigger = false;
+        newTriggerName = "";
+        newTriggerArgs = [];
+    }
+
+    function addNewTriggerArg() {
+        newTriggerArgs = [
+            ...newTriggerArgs,
+            { name: `arg${newTriggerArgs.length + 1}`, type: "string" },
+        ];
+    }
+
+    function removeNewTriggerArg(index: number) {
+        newTriggerArgs.splice(index, 1);
+        newTriggerArgs = [...newTriggerArgs];
+    }
+
+    function saveCustomTrigger() {
+        if (!newTriggerName.trim()) return;
+        // Register globally so it's visible in the palette
+        try {
+            sceneStore.addCustomEvent(
+                newTriggerName,
+                newTriggerArgs.map((a) => ({ name: a.name, type: a.type }))
+            );
+        } catch {}
+        const trig = {
+            id: `${Date.now()}-${Math.random()}`,
+            type: "custom",
+            name: newTriggerName,
+            event: newTriggerName,
+            args: newTriggerArgs.map((a) => ({ name: a.name, type: a.type })),
+            enabled: true,
+        } as any;
+        activeTriggers = [...activeTriggers, trig] as any[];
+        closeAddCustomTrigger();
+    }
 </script>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
@@ -361,23 +416,15 @@
 
                 <!-- Triggers Drop Zone -->
                 <div class="p-3">
-                    <div class="text-[#ccc] text-sm font-medium mb-2 flex items-center justify-between gap-2">
+                    <div
+                        class="text-[#ccc] text-sm font-medium mb-2 flex items-center justify-between gap-2"
+                    >
                         <span>Triggers</span>
                         <div class="flex items-center gap-2">
-                            <button class="text-xs border border-[#2e2e2e] rounded px-2 py-1" onclick={() => {
-                                activeTriggers = [
-                                    ...activeTriggers,
-                                    {
-                                        id: `${Date.now()}-${Math.random()}`,
-                                        type: 'custom',
-                                        name: 'Custom Event',
-                                        event: 'customEvent',
-                                        args: [],
-                                        enabled: true,
-                                    }
-                                ];
-                            }}>+ Custom</button>
-                            <span class="text-xs text-muted-foreground">... or drop from palette</span>
+                            <button
+                                class="text-xs border border-[#2e2e2e] rounded px-2 py-1"
+                                onclick={openAddCustomTrigger}>+ Custom</button
+                            >
                         </div>
                     </div>
                     <div
@@ -411,22 +458,56 @@
                                             t === "onStart"
                                                 ? "start"
                                                 : t === "onUpdate"
-                                                ? "update"
-                                                : t === "onKeyPress"
-                                                ? "keydown"
-                                                : "custom";
+                                                  ? "update"
+                                                  : t === "onKeyPress"
+                                                    ? "keydown"
+                                                    : "custom";
                                         const type = mapType(trigger.type);
                                         const defaultArgs =
                                             type === "update"
-                                                ? [{ name: "deltatime", type: "number" }]
+                                                ? [
+                                                      {
+                                                          name: "deltatime",
+                                                          type: "number",
+                                                      },
+                                                  ]
                                                 : type === "keydown"
-                                                ? [{ name: "key", type: "string" }]
-                                                : [];
+                                                  ? [
+                                                        {
+                                                            name: "key",
+                                                            type: "string",
+                                                        },
+                                                    ]
+                                                  : [];
                                         const newTrigger = {
                                             id: `${Date.now()}-${Math.random()}`,
                                             type,
                                             name: trigger.name || trigger.type,
                                             args: defaultArgs,
+                                            enabled: true,
+                                        } as any;
+                                        activeTriggers = [
+                                            ...activeTriggers,
+                                            newTrigger,
+                                        ] as any[];
+                                    } else if (
+                                        trigger.type === "custom" &&
+                                        !source
+                                    ) {
+                                        const newTrigger = {
+                                            id: `${Date.now()}-${Math.random()}`,
+                                            type: "custom",
+                                            name: trigger.name,
+                                            event:
+                                                trigger.event || trigger.name,
+                                            args: Array.isArray(trigger.args)
+                                                ? trigger.args.map(
+                                                      (a: any) => ({
+                                                          name: a.name,
+                                                          type: a.type,
+                                                      })
+                                                  )
+                                                : [],
                                             enabled: true,
                                         } as any;
                                         activeTriggers = [
@@ -475,43 +556,82 @@
                                         ondrop={(e) => handleTriggerDrop(e, i)}
                                         ondragend={handleDragEnd}
                                     >
-                                        <div class="flex items-center justify-between">
-                                            <div class="font-semibold flex items-center gap-2">
-                                                <Diamond class="w-4 h-4 inline mr-1 text-gray-500 -translate-y-0.5" />
-                                                <Input class="bg-transparent border-b border-[#2e2e2e] focus:border-blue-500 outline-none text-sm" value={trigger.name} oninput={(e) => { trigger.name = (e.target as HTMLInputElement).value; activeTriggers = [...activeTriggers]; }} />
-                                                <span class="ml-2 text-xs text-muted-foreground">({trigger.type}{trigger.event ? `:${trigger.event}` : ''})</span>
+                                        <div
+                                            class="flex items-center justify-between"
+                                        >
+                                            <div
+                                                class="font-semibold flex items-center gap-2"
+                                            >
+                                                <Diamond
+                                                    class="w-4 h-4 inline mr-1 text-gray-500 -translate-y-0.5"
+                                                />
+                                                <span
+                                                    class="text-[#ccc] text-sm"
+                                                    >{trigger.name}</span
+                                                >
+                                                <span
+                                                    class="ml-2 text-xs text-muted-foreground"
+                                                    >({trigger.type}{trigger.event
+                                                        ? `:${trigger.event}`
+                                                        : ""})</span
+                                                >
                                             </div>
-                                            <div class="text-xs text-muted-foreground flex items-center gap-2">
-                                                {#if trigger.type === 'update'}
-                                                    args: [{trigger.args?.[0]?.name || 'deltatime'}: number]
-                                                {:else if trigger.type === 'keydown'}
-                                                    args: [{trigger.args?.[0]?.name || 'key'}: string]
-                                                {:else if trigger.type === 'mousedown' || trigger.type === 'mouseup'}
-                                                    args: [{trigger.args?.[0]?.name || 'button'}: string]
-                                                {:else if trigger.type === 'mousemove'}
-                                                    args: [{trigger.args?.[0]?.name || 'mouseX'}: number, {trigger.args?.[1]?.name || 'mouseY'}: number]
-                                                {:else if trigger.type === 'custom'}
-                                                    <span>event:</span>
-                                                    <input class="bg-transparent border-b border-[#2e2e2e] focus:border-blue-500 outline-none text-xs w-40" value={trigger.event || ''} oninput={(e) => { trigger.event = (e.target as HTMLInputElement).value; activeTriggers = [...activeTriggers]; }} />
+                                            <div
+                                                class="text-xs text-muted-foreground flex items-center gap-2"
+                                            >
+                                                {#if trigger.type === "update"}
+                                                    args: [{trigger.args?.[0]
+                                                        ?.name || "deltatime"}:
+                                                    number]
+                                                {:else if trigger.type === "keydown"}
+                                                    args: [{trigger.args?.[0]
+                                                        ?.name || "key"}:
+                                                    string]
+                                                {:else if trigger.type === "mousedown" || trigger.type === "mouseup"}
+                                                    args: [{trigger.args?.[0]
+                                                        ?.name || "button"}:
+                                                    string]
+                                                {:else if trigger.type === "mousemove"}
+                                                    args: [{trigger.args?.[0]
+                                                        ?.name || "mouseX"}:
+                                                    number, {trigger.args?.[1]
+                                                        ?.name || "mouseY"}:
+                                                    number]
+                                                {:else if trigger.type === "custom"}
+                                                    <span
+                                                        >event: {trigger.event ||
+                                                            "(unset)"}</span
+                                                    >
                                                 {/if}
                                             </div>
                                         </div>
-                                        {#if trigger.type !== 'start'}
-                                            <div class="mt-2 flex flex-wrap gap-2 items-center">
+                                        {#if trigger.type !== "start"}
+                                            <div
+                                                class="mt-2 flex flex-wrap gap-2 items-center"
+                                            >
                                                 {#each trigger.args || [] as arg, ai}
-                                                    <div class="flex items-center gap-1 bg-[#1f1f1f] rounded px-2 py-1">
-                                                        <span class="text-xs text-muted-foreground mr-1">arg</span>
-                                                        <Input class="text-xs w-28 outline-none" value={arg.name} oninput={(e) => updateTriggerArg(i, ai, 'name', (e.target as HTMLInputElement).value)} />
-                                                        <select class="text-xs border border-[#2e2e2e] rounded px-1" bind:value={arg.type} onchange={(e) => updateTriggerArg(i, ai, 'type', (e.target as HTMLSelectElement).value)}>
-                                                            <option value="string">string</option>
-                                                            <option value="number">number</option>
-                                                            <option value="boolean">boolean</option>
-                                                            <option value="object">object</option>
-                                                        </select>
-                                                        <button class="text-red-400 text-xs" onclick={() => removeTriggerArg(i, ai)}><X class="w-4 h-4" /></button>
+                                                    <div
+                                                        class="flex items-center gap-1 bg-[#1f1f1f] rounded px-2 py-1"
+                                                    >
+                                                        <span
+                                                            class="text-xs text-muted-foreground mr-1"
+                                                            >arg</span
+                                                        >
+                                                        <Input
+                                                            class="text-xs w-28 outline-none"
+                                                            value={arg.name}
+                                                            oninput={(e) =>
+                                                                updateTriggerArg(
+                                                                    i,
+                                                                    ai,
+                                                                    "name",
+                                                                    (
+                                                                        e.target as HTMLInputElement
+                                                                    ).value
+                                                                )}
+                                                        />
                                                     </div>
                                                 {/each}
-                                                <button class="text-xs border border-[#2e2e2e] rounded px-2 py-1" onclick={() => addTriggerArg(i)}>+ arg</button>
                                             </div>
                                         {/if}
                                     </div>
@@ -654,3 +774,78 @@
         </div>
     </div>
 </div>
+
+<!-- Add Custom Trigger Modal -->
+<Dialog.Root bind:open={isAddingCustomTrigger}>
+    <Dialog.Content class="max-w-md">
+        <Dialog.Header>
+            <Dialog.Title>Add Custom Event</Dialog.Title>
+            <Dialog.Description>
+                Define a custom event and its argument variable names.
+            </Dialog.Description>
+        </Dialog.Header>
+
+        <div class="space-y-4 py-4">
+            <div class="space-y-2">
+                <label class="text-sm font-medium" for="customEventName"
+                    >Event Name</label
+                >
+                <Input
+                    id="customEventName"
+                    bind:value={newTriggerName}
+                    placeholder="e.g. enemySpawned"
+                    class="w-full"
+                />
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label class="text-sm font-medium" for="customEventArgs"
+                        >Arguments</label
+                    >
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onclick={addNewTriggerArg}>+ Arg</Button
+                    >
+                </div>
+                <div id="customEventArgs" class="flex flex-col gap-2">
+                    {#each newTriggerArgs as a, i}
+                        <div class="flex items-center gap-2">
+                            <Input
+                                class="text-xs w-40"
+                                placeholder="name"
+                                bind:value={a.name}
+                            />
+                            <select
+                                class="text-xs border border-[#2e2e2e] rounded px-1"
+                                bind:value={a.type}
+                            >
+                                <option value="string">string</option>
+                                <option value="number">number</option>
+                                <option value="boolean">boolean</option>
+                                <option value="object">object</option>
+                            </select>
+                            <button
+                                class="text-red-400 text-xs"
+                                onclick={() => removeNewTriggerArg(i)}
+                            >
+                                <X class="w-4 h-4" />
+                            </button>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        </div>
+
+        <Dialog.Footer>
+            <Button variant="outline" onclick={closeAddCustomTrigger}
+                >Cancel</Button
+            >
+            <Button
+                onclick={saveCustomTrigger}
+                disabled={!newTriggerName.trim()}>Add Event</Button
+            >
+        </Dialog.Footer>
+    </Dialog.Content>
+</Dialog.Root>

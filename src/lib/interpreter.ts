@@ -243,7 +243,12 @@ export class CodeInterpreter {
         }
 
         const buttonPressed = runtimeStore.getMouseButton(button || "left");
-        runtimeStore.setVariable(variable, buttonPressed.toString());
+        runtimeStore.setVariable(
+            variable,
+            buttonPressed.toString(),
+            "local",
+            context.script?.id
+        );
     }
 
     private async executeKeyPress(item: any, context: RuntimeContext) {
@@ -264,7 +269,12 @@ export class CodeInterpreter {
         }
 
         const keyPressed = runtimeStore.getKey(key);
-        runtimeStore.setVariable(variable, keyPressed.toString());
+        runtimeStore.setVariable(
+            variable,
+            keyPressed.toString(),
+            "local",
+            context.script?.id
+        );
     }
 
     private async executeMousePosition(item: any, context: RuntimeContext) {
@@ -274,11 +284,21 @@ export class CodeInterpreter {
         const mousePos = runtimeStore.getMousePosition();
 
         if (variableX) {
-            runtimeStore.setVariable(variableX, mousePos.x.toString());
+            runtimeStore.setVariable(
+                variableX,
+                mousePos.x.toString(),
+                "local",
+                context.script?.id
+            );
         }
 
         if (variableY) {
-            runtimeStore.setVariable(variableY, mousePos.y.toString());
+            runtimeStore.setVariable(
+                variableY,
+                mousePos.y.toString(),
+                "local",
+                context.script?.id
+            );
         }
     }
 
@@ -561,7 +581,12 @@ export class CodeInterpreter {
             console.log(gameObjectManager?.getAllGameObjects());
 
             // Store the cloned object's ID in the specified variable
-            runtimeStore.setVariable(variableName, `@id:${clonedObject.id}`);
+            runtimeStore.setVariable(
+                variableName,
+                `@id:${clonedObject.id}`,
+                "local",
+                context.script?.id
+            );
 
             console.log(
                 `Cloned object ${targetGameObject.bObject.id} to ${clonedObject.id}, stored in variable '${variableName}'`

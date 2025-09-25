@@ -81,27 +81,31 @@ export class ScriptComponent extends Component {
                     break;
                 }
                 case "update": {
-                    const off = runtimeStore.on(
-                        "update",
-                        (dt: number) => {
-                            // Provide dt in configured arg name or default
-                            const varName = trig.args?.[0]?.name || "deltatime";
-                            runtimeStore.setVariable(varName, dt);
-                            this.interpreter?.run(context);
-                        }
-                    );
+                    const off = runtimeStore.on("update", (dt: number) => {
+                        // Provide dt in configured arg name or default
+                        const varName = trig.args?.[0]?.name || "deltatime";
+                        runtimeStore.setVariable(
+                            varName,
+                            dt,
+                            "local",
+                            this.script.id
+                        );
+                        this.interpreter?.run(context);
+                    });
                     this.unsubscribers.push(off);
                     break;
                 }
                 case "keydown": {
-                    const off = runtimeStore.on(
-                        "keydown",
-                        (key: string) => {
-                            const varName = trig.args?.[0]?.name || "key";
-                            runtimeStore.setVariable(varName, key);
-                            this.interpreter?.run(context);
-                        }
-                    );
+                    const off = runtimeStore.on("keydown", (key: string) => {
+                        const varName = trig.args?.[0]?.name || "key";
+                        runtimeStore.setVariable(
+                            varName,
+                            key,
+                            "local",
+                            this.script.id
+                        );
+                        this.interpreter?.run(context);
+                    });
                     this.unsubscribers.push(off);
                     break;
                 }
@@ -110,7 +114,12 @@ export class ScriptComponent extends Component {
                         "mousedown",
                         (button: string) => {
                             const varName = trig.args?.[0]?.name || "button";
-                            runtimeStore.setVariable(varName, button);
+                            runtimeStore.setVariable(
+                                varName,
+                                button,
+                                "local",
+                                this.script.id
+                            );
                             this.interpreter?.run(context);
                         }
                     );
@@ -118,14 +127,16 @@ export class ScriptComponent extends Component {
                     break;
                 }
                 case "mouseup": {
-                    const off = runtimeStore.on(
-                        "mouseup",
-                        (button: string) => {
-                            const varName = trig.args?.[0]?.name || "button";
-                            runtimeStore.setVariable(varName, button);
-                            this.interpreter?.run(context);
-                        }
-                    );
+                    const off = runtimeStore.on("mouseup", (button: string) => {
+                        const varName = trig.args?.[0]?.name || "button";
+                        runtimeStore.setVariable(
+                            varName,
+                            button,
+                            "local",
+                            this.script.id
+                        );
+                        this.interpreter?.run(context);
+                    });
                     this.unsubscribers.push(off);
                     break;
                 }
@@ -135,8 +146,18 @@ export class ScriptComponent extends Component {
                         (x: number, y: number) => {
                             const xName = trig.args?.[0]?.name || "mouseX";
                             const yName = trig.args?.[1]?.name || "mouseY";
-                            runtimeStore.setVariable(xName, x);
-                            runtimeStore.setVariable(yName, y);
+                            runtimeStore.setVariable(
+                                xName,
+                                x,
+                                "local",
+                                this.script.id
+                            );
+                            runtimeStore.setVariable(
+                                yName,
+                                y,
+                                "local",
+                                this.script.id
+                            );
                             this.interpreter?.run(context);
                         }
                     );
@@ -152,11 +173,18 @@ export class ScriptComponent extends Component {
                             (trig.args || []).forEach((a, i) => {
                                 runtimeStore.setVariable(
                                     a.name,
-                                    args[i]
+                                    args[i],
+                                    "local",
+                                    this.script.id
                                 );
                             });
                             // Also expose raw array
-                            runtimeStore.setVariable("args", args);
+                            runtimeStore.setVariable(
+                                "args",
+                                args,
+                                "local",
+                                this.script.id
+                            );
                             this.interpreter?.run(context);
                         }
                     );

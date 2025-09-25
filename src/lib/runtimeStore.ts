@@ -63,6 +63,9 @@ class RuntimeManager {
     public scriptEvents: Map<string, ScriptEvent>;
     public scriptEventListeners: Map<string, Set<(..._args: any[]) => void>>;
     public threeScene: THREE.Scene | null = null;
+    // Per-script local variables; key is script id
+    public localVariables: Map<string, Map<string, RuntimeVariable>> =
+        new Map();
 
     // Cache processed mesh data for convex hull generation
     // Key: asset ID, Value: processed mesh data (centered points + original center)
@@ -262,7 +265,8 @@ class RuntimeManager {
     setVariable(
         name: string,
         value: any,
-        scope: "global" | "local" = "global"
+        scope: "global" | "local" = "global",
+        scriptId?: string
     ): void {
         const variable: RuntimeVariable = {
             name,
@@ -271,17 +275,45 @@ class RuntimeManager {
             scope,
         };
 
-        console.log("SETTING VARIABLE", name, value);
+        console.log("SETTING VARIABLE", name, value, scope, scriptId);
 
+        // If a scriptId is provided and a local var with the same name exists,
+        // prefer updating the local (script-scoped) variable to override global.
+        if (scriptId && this.localVariables.get(scriptId)?.has(name)) {
+            this.localVariables.get(scriptId)!.set(name, {
+                ...variable,
+                scope: "local",
+            });
+            return;
+        }
+
+        if (scope === "local" && scriptId) {
+            if (!this.localVariables.has(scriptId)) {
+                this.localVariables.set(scriptId, new Map());
+            }
+            this.localVariables.get(scriptId)!.set(name, variable);
+            return;
+        }
+
+        // Fallback/global
         this.variables.set(name, variable);
     }
 
-    getVariable(name: string): RuntimeVariable | undefined {
+    getVariable(name: string, scriptId?: string): RuntimeVariable | undefined {
+        if (scriptId) {
+            const locals = this.localVariables.get(scriptId);
+            const localVar = locals?.get(name);
+            if (localVar !== undefined) return localVar;
+        }
         return this.variables.get(name);
     }
 
     getAllVariables(): RuntimeVariable[] {
         return Array.from(this.variables.values());
+    }
+
+    clearLocalVariables(scriptId: string): void {
+        this.localVariables.delete(scriptId);
     }
 
     addRunningScript(id: string, name: string): void {
@@ -545,14 +577,15 @@ function createRuntimeStore() {
         setVariable: (
             name: string,
             value: any,
-            scope: "global" | "local" = "global"
+            scope: "global" | "local" = "global",
+            scriptId?: string
         ) => {
-            manager.setVariable(name, value, scope);
+            manager.setVariable(name, value, scope, scriptId);
             update((m) => m);
         },
 
-        getVariable: (name: string) => {
-            return manager.getVariable(name);
+        getVariable: (name: string, scriptId?: string) => {
+            return manager.getVariable(name, scriptId);
         },
 
         getAllVariables: () => {
@@ -695,10 +728,7 @@ function createRuntimeStore() {
             update((m) => m);
             return off;
         },
-        off: (
-            eventName: string,
-            listener: (...args: any[]) => void
-        ): void => {
+        off: (eventName: string, listener: (...args: any[]) => void): void => {
             manager.removeEventListener(eventName, listener);
             update((m) => m);
         },

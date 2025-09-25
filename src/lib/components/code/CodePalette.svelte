@@ -10,6 +10,9 @@
     import { sceneStore } from "$lib/sceneStore.js";
     import { slide, fade } from "svelte/transition";
 
+    // Props
+    let { selectedScript = $bindable(null) } = $props();
+
     // Available code block templates - generated from config
     let availableBlocks = $state(generateAvailableBlocks());
     // Available chip templates - generated from config
@@ -40,7 +43,8 @@
 
     // Variable editing modal state
     let isEditingVariable = $state(false);
-    let editingVariable: null | { name: string; type: string; value: any } = $state(null);
+    let editingVariable: null | { name: string; type: string; value: any } =
+        $state(null);
 
     // Search functionality
     let searchQuery = $state("");
@@ -66,6 +70,22 @@
             chip.type.toLowerCase().includes(searchQuery.toLowerCase())
         )
     );
+
+    // Custom triggers are global across the project
+    const customTriggers: Array<{
+        id: string;
+        name: string;
+        args: Array<{ name: string; type: string }>;
+    }> = $derived([...$sceneStore.customEvents]);
+
+    function updateCustomTriggerName(id: string, name: string) {
+        if (!name.trim()) return;
+        sceneStore.updateCustomEvent(id, { name });
+    }
+
+    function deleteCustomTrigger(id: string) {
+        sceneStore.deleteCustomEvent(id);
+    }
 
     function openAddVariableModal() {
         isAddingVariable = true;
@@ -244,12 +264,17 @@
                 >
                     <div class="flex items-center justify-between gap-2">
                         <div>
-                            <Diamond class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5" />
+                            <Diamond
+                                class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5"
+                            />
                             {trigger.name}
                         </div>
                         {#if trigger.args && trigger.args.length}
                             <div class="text-xs text-muted-foreground">
-                                [{#each trigger.args as a, i}{a.name}: {a.type}{i < trigger.args.length - 1 ? ', ' : ''}{/each}]
+                                [{#each trigger.args as a, i}{a.name}: {a.type}{i <
+                                    trigger.args.length - 1
+                                        ? ", "
+                                        : ""}{/each}]
                             </div>
                         {/if}
                     </div>
@@ -258,6 +283,89 @@
             {#if filteredTriggers.length === 0}
                 <div class="text-[#666] text-xs text-center py-4">
                     No triggers found
+                </div>
+            {/if}
+        </div>
+    </div>
+
+    <!-- Custom Triggers (from selected script) -->
+    <div
+        class="bg-[#1e1e1e] border border-[#2e2e2e] rounded-md shadow-lg flex-1"
+    >
+        <div
+            class="bg-[#252525] border-b border-[#2e2e2e] px-3 py-2 rounded-t-md"
+        >
+            <span class="text-[#ccc] text-sm font-medium">Custom Events</span>
+        </div>
+        <div class="p-3 space-y-2 max-h-48 overflow-y-auto">
+            {#each customTriggers as trig (trig.id)}
+                <ContextMenu.Root>
+                    <ContextMenu.Trigger>
+                        <div
+                            transition:slide={{ duration: 200 }}
+                            class="border-l-6 hover:border-l-12 border-emerald-500 bg-muted text-white px-3 py-2 rounded text-sm font-medium cursor-grab transition-all shadow-sm"
+                            role="button"
+                            tabindex="0"
+                            draggable="true"
+                            ondragstart={(e) => {
+                                const dt = e.dataTransfer;
+                                if (!dt) return;
+                                dt.setData(
+                                    "text/plain",
+                                    JSON.stringify({
+                                        id: trig.id,
+                                        type: "custom",
+                                        name: trig.name,
+                                        event: trig.name,
+                                        args: trig.args || [],
+                                    })
+                                );
+                                dt.effectAllowed = "copy";
+                            }}
+                        >
+                            <div
+                                class="flex items-center justify-between gap-2"
+                            >
+                                <div>
+                                    <Diamond
+                                        class="w-4 h-4 mr-1 inline-block text-gray-500 -translate-y-0.5"
+                                    />
+                                    {trig.name}
+                                </div>
+                                {#if trig.args && trig.args.length}
+                                    <div class="text-xs text-muted-foreground">
+                                        [{#each trig.args as a, i}{a.name}: {a.type}{i <
+                                            trig.args.length - 1
+                                                ? ", "
+                                                : ""}{/each}]
+                                    </div>
+                                {/if}
+                            </div>
+                        </div>
+                    </ContextMenu.Trigger>
+                    <ContextMenu.Content>
+                        <ContextMenu.Item
+                            onclick={() =>
+                                updateCustomTriggerName(
+                                    trig.id,
+                                    prompt("Rename event", trig.name) ||
+                                        trig.name
+                                )}
+                        >
+                            Rename
+                        </ContextMenu.Item>
+                        <ContextMenu.Item
+                            onclick={() => deleteCustomTrigger(trig.id)}
+                            class="text-red-600"
+                        >
+                            Delete
+                        </ContextMenu.Item>
+                    </ContextMenu.Content>
+                </ContextMenu.Root>
+            {/each}
+            {#if customTriggers.length === 0}
+                <div class="text-[#666] text-xs text-center py-4">
+                    No custom events in this script
                 </div>
             {/if}
         </div>
@@ -334,7 +442,10 @@
                                     "application/json",
                                     JSON.stringify(variableChip)
                                 );
-                                dt.setData("application/x-chip-source", "palette");
+                                dt.setData(
+                                    "application/x-chip-source",
+                                    "palette"
+                                );
                                 dt.effectAllowed = "copy";
                             }}
                         >
@@ -520,3 +631,6 @@
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
+
+
+
