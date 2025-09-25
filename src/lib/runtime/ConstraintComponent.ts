@@ -35,6 +35,9 @@ export class ConstraintComponent extends Component {
             const manager = runtimeStore.getGameObjectManager();
             const partA = constraintNode.partA;
             const partB = constraintNode.partB;
+            if (!partA || !partB) {
+                throw new Error("ConstraintComponent: partA or partB is not set on BConstraint");
+            }
             const goA = manager?.getGameObject(partA.id);
             const goB = manager?.getGameObject(partB.id);
             if (!goA || !goB) {
@@ -81,18 +84,96 @@ export class ConstraintComponent extends Component {
                 posA.z - posB.z
             ).applyQuaternion(qBInv);
 
-            // Create joint with calculated local frames
-            const params = RAPIER.JointData.fixed(
-                { x: 0.0, y: 0.0, z: 0.0 },
-                { w: 1.0, x: 0.0, y: 0.0, z: 0.0 },
-                { x: delta.x, y: delta.y, z: delta.z },
-                {
-                    w: rot2Three.w,
-                    x: rot2Three.x,
-                    y: rot2Three.y,
-                    z: rot2Three.z,
-                }
+            // We'll build the appropriate joint descriptor based on the selected type.
+            let params: RAPIER.JointData | undefined;
+
+            // Common anchors: keep body A's anchor at its local origin, and place body B's
+            // anchor so both coincide in world space at creation time.
+            const anchorA = { x: 0.0, y: 0.0, z: 0.0 } as const;
+            const anchorB = { x: delta.x, y: delta.y, z: delta.z } as const;
+
+            // Compute a couple of default axes we may use for joints.
+            // World X as a robust default.
+            const worldXAxis = new THREE.Vector3(1, 0, 0);
+            // World direction from A to B (fallback to X if degenerate).
+            const dirABWorld = new THREE.Vector3(
+                posB.x - posA.x,
+                posB.y - posA.y,
+                posB.z - posA.z
             );
+            if (dirABWorld.lengthSq() < 1e-6) dirABWorld.copy(worldXAxis);
+            dirABWorld.normalize();
+
+            if (constraintNode.constraintType === "fixed") {
+                params = RAPIER.JointData.fixed(
+                    anchorA,
+                    { w: 1.0, x: 0.0, y: 0.0, z: 0.0 },
+                    anchorB,
+                    {
+                        w: rot2Three.w,
+                        x: rot2Three.x,
+                        y: rot2Three.y,
+                        z: rot2Three.z,
+                    }
+                );
+            } else if (constraintNode.constraintType === "spherical") {
+                params = RAPIER.JointData.spherical(
+                    anchorA,
+                    anchorB,
+                );
+            } else if (constraintNode.constraintType === "revolute") {
+                // Revolute axis: default to world X.
+                const axis = { x: worldXAxis.x, y: worldXAxis.y, z: worldXAxis.z } as const;
+                params = RAPIER.JointData.revolute(
+                    anchorA,
+                    anchorB,
+                    axis
+                );
+            } else if (constraintNode.constraintType === "prismatic") {
+                // Prismatic axis: along the line from A to B.
+                const axis = { x: dirABWorld.x, y: dirABWorld.y, z: dirABWorld.z } as const;
+                params = RAPIER.JointData.prismatic(
+                    anchorA,
+                    anchorB,
+                    axis
+                );
+                // Apply limits if enabled
+                if (constraintNode.prismaticLimitsEnabled) {
+                    // The signed distance is (anchor2 - anchor1) dot axis1 per Rapier docs.
+                    // Here we just pass the configured limits.
+                    // Types are permissive on JointData so we can mutate flags/limits directly.
+                    (params as any).limitsEnabled = true;
+                    (params as any).limits = [
+                        constraintNode.prismaticLimitsMin,
+                        constraintNode.prismaticLimitsMax,
+                    ];
+                }
+            } else if (constraintNode.constraintType === "spring") {
+                // Calculate distance between the two bodies to use as rest length for a spring joint
+                const restLength = delta.length();
+                params = RAPIER.JointData.spring(
+                    restLength,
+                    constraintNode.stiffness ?? 100.0,
+                    constraintNode.damping ?? 0.3,
+                    anchorA,
+                    anchorB
+                );
+            } else {
+                // Fallback to fixed if type is unknown or unsupported.
+                params = RAPIER.JointData.fixed(
+                    anchorA,
+                    { w: 1.0, x: 0.0, y: 0.0, z: 0.0 },
+                    anchorB,
+                    {
+                        w: rot2Three.w,
+                        x: rot2Three.x,
+                        y: rot2Three.y,
+                        z: rot2Three.z,
+                    }
+                );
+            }
+
+            if (!params) return; // nothing to create
             this.joint = physicsWorld.createImpulseJoint(
                 params,
                 physA.body,
@@ -101,7 +182,7 @@ export class ConstraintComponent extends Component {
             );
 
             runtimeStore.info(
-                `Created joint between ${partA.id} and ${partB.id}`,
+                `Created ${constraintNode.constraintType} joint between ${partA.id} and ${partB.id}`,
                 "ConstraintComponent"
             );
 

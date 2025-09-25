@@ -693,20 +693,39 @@ class BLight extends BNode3D {
 
 // Represents a constraint between two physical objects
 class BConstraint extends BObject {
-    partA: BPart;
-    partB: BPart;
+    partA?: BPart;
+    partB?: BPart;
+
+    constraintType: "fixed" | "spherical" | "revolute" | "prismatic" | "motor" | "spring";
+    
+    stiffness: number; // For spring and motor
+    damping: number; // For spring and motor
+
+    // Prismatic constraint limits
+    prismaticLimitsEnabled: boolean;
+    prismaticLimitsMin: number;
+    prismaticLimitsMax: number;
 
     constructor(
         name: string | null,
         id: string | null,
         parent: BObject | null,
-        partA: BPart,
-        partB: BPart
+        partA?: BPart,
+        partB?: BPart
     ) {
         super(name, id, parent);
         this.type = "constraint";
         this.partA = partA;
         this.partB = partB;
+
+        this.constraintType = "fixed";
+
+        this.stiffness = 10.0;
+        this.damping = 1.0;
+
+        this.prismaticLimitsEnabled = false;
+        this.prismaticLimitsMin = -3.0;
+        this.prismaticLimitsMax = 3.0;
     }
 }
 
