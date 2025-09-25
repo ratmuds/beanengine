@@ -63,6 +63,8 @@ class RuntimeManager {
     public scriptEvents: Map<string, ScriptEvent>;
     public scriptEventListeners: Map<string, Set<(..._args: any[]) => void>>;
     public threeScene: THREE.Scene | null = null;
+    // Runtime-only property overrides: objectId -> (key -> value)
+    public propertyOverrides: Map<string, Map<string, unknown>> = new Map();
     // Per-script local variables; key is script id
     public localVariables: Map<string, Map<string, RuntimeVariable>> =
         new Map();
@@ -169,6 +171,52 @@ class RuntimeManager {
                 },
             ],
         });
+    }
+
+    // --- Runtime Property Overrides ---
+    /**
+     * Set a runtime-only override for a property on a specific object.
+     * Does not mutate editor BObjects; components should read overrides first.
+     */
+    setPropertyOverride(objectId: string, key: string, value: unknown): void {
+        let map = this.propertyOverrides.get(objectId);
+        if (!map) {
+            map = new Map<string, unknown>();
+            this.propertyOverrides.set(objectId, map);
+        }
+        map.set(key, value);
+    }
+
+    /**
+     * Get a runtime-only override value for an object's property if present.
+     */
+    getPropertyOverride<T = unknown>(
+        objectId: string,
+        key: string
+    ): T | undefined {
+        return this.propertyOverrides.get(objectId)?.get(key) as T | undefined;
+    }
+
+    /**
+     * Remove an override for a specific property or all overrides for the object when key omitted.
+     */
+    clearPropertyOverride(objectId: string, key?: string): void {
+        if (!this.propertyOverrides.has(objectId)) return;
+        if (key === undefined) {
+            this.propertyOverrides.delete(objectId);
+        } else {
+            const m = this.propertyOverrides.get(objectId);
+            if (!m) return;
+            m.delete(key);
+            if (m.size === 0) this.propertyOverrides.delete(objectId);
+        }
+    }
+
+    /**
+     * Clear all overrides for all objects.
+     */
+    clearAllPropertyOverrides(): void {
+        this.propertyOverrides.clear();
     }
 
     // --- Simple Event Bus ---
@@ -695,6 +743,27 @@ function createRuntimeStore() {
 
         setThreeScene: (scene: THREE.Scene | null) => {
             manager.setThreeScene(scene);
+            update((m) => m);
+        },
+
+        // Runtime property overrides API (public)
+        setPropertyOverride: (
+            objectId: string,
+            key: string,
+            value: unknown
+        ) => {
+            manager.setPropertyOverride(objectId, key, value);
+            update((m) => m);
+        },
+        getPropertyOverride: (objectId: string, key: string) => {
+            return manager.getPropertyOverride(objectId, key);
+        },
+        clearPropertyOverride: (objectId: string, key?: string) => {
+            manager.clearPropertyOverride(objectId, key);
+            update((m) => m);
+        },
+        clearAllPropertyOverrides: () => {
+            manager.clearAllPropertyOverrides();
             update((m) => m);
         },
 

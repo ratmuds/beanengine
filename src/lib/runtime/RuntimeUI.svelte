@@ -141,6 +141,8 @@
     import { onMount } from "svelte";
     let overlayStyle =
         "position: fixed; inset: 0; pointer-events: none; z-index: 1000;";
+    // Trigger rerenders when runtime store updates (e.g., property overrides)
+    let uiVersion = 0;
 
     function updateOverlayRect() {
         const el = (runtimeStore as any).inputState
@@ -161,6 +163,9 @@
     onMount(() => {
         updateOverlayRect();
         updateUIRoots();
+        const unsub = runtimeStore.subscribe(() => {
+            uiVersion += 1;
+        });
         const onResize = () => updateOverlayRect();
         const onScroll = () => updateOverlayRect();
         window.addEventListener("resize", onResize);
@@ -170,6 +175,7 @@
             updateUIRoots();
         }, 200);
         return () => {
+            unsub?.();
             window.removeEventListener("resize", onResize);
             window.removeEventListener("scroll", onScroll);
             window.clearInterval(interval);
@@ -186,7 +192,7 @@
 <div class="runtime-ui-overlay" style={overlayStyle}>
     <!-- Render each root under UIStorage -->
     {#each uiRoots as root (root.id)}
-        <RuntimeUIElement node={root} />
+        <RuntimeUIElement node={root} version={uiVersion} />
     {/each}
 </div>
 

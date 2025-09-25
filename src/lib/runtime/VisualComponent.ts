@@ -310,6 +310,39 @@ export class VisualComponent extends Component {
         void delta;
         this.updateMeshTransform();
         this.updateLightTransform();
+
+        // Apply runtime property overrides without mutating editor BObjects
+        const getOv = (key: string) =>
+            runtimeStore.getPropertyOverride?.(this.gameObject.bObject.id, key);
+
+        // Visibility override for meshes
+        const vis = getOv("visible");
+        if (this.mesh && typeof vis === "boolean") {
+            this.mesh.visible = vis;
+        }
+
+        // Shadow flags overrides
+        const cast = getOv("castShadows");
+        const recv = getOv("receiveShadows");
+        if (this.mesh && (cast !== undefined || recv !== undefined)) {
+            this.mesh.traverse((obj: THREE.Object3D) => {
+                const m = obj as THREE.Mesh;
+                if (m.isMesh) {
+                    if (typeof cast === "boolean") m.castShadow = cast;
+                    if (typeof recv === "boolean") m.receiveShadow = recv;
+                }
+            });
+        }
+
+        // Light overrides: color, intensity, visibility
+        if (this.light) {
+            const lvis = getOv("visible");
+            if (typeof lvis === "boolean") this.light.visible = lvis;
+            const color = getOv("color");
+            if (typeof color === "string") this.light.color.set(color);
+            const intensity = getOv("intensity");
+            if (typeof intensity === "number") this.light.intensity = intensity;
+        }
     }
 
     onEnable(): void {

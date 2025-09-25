@@ -100,6 +100,8 @@
     });
 
     onMount(async () => {
+        // Reset runtime-only overrides at start of play mode
+        runtimeStore.clearAllPropertyOverrides?.();
         // Create a separate scene for game runtime
         runtimeStore.info("Starting ThreeJS scene...", "GameRuntime");
         gameScene = new THREE.Scene();
@@ -189,6 +191,8 @@
     }
 
     onDestroy(() => {
+        // Clear overrides on stop as well
+        runtimeStore.clearAllPropertyOverrides?.();
         if (animationId) {
             cancelAnimationFrame(animationId);
         }

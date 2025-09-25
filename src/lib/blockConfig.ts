@@ -102,7 +102,7 @@ export const blockConfig: Record<string, BlockConfig> = {
                 bind: "index",
                 placeholder: "index variable (optional)",
                 icon: Variable,
-            }
+            },
         ],
         info: "Loops through each item in the specified array and assigns it to the item variable",
         end: "do",
@@ -124,7 +124,7 @@ export const blockConfig: Record<string, BlockConfig> = {
                 bind: "index",
                 placeholder: "index variable (optional)",
                 icon: Variable,
-            }
+            },
         ],
         info: "Loops for the specified number of times",
         end: "do",
@@ -143,6 +143,26 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Pauses execution for a duration",
+    },
+
+    set: {
+        color: colorMap.gray,
+        label: "Set",
+        fields: [
+            {
+                type: "text",
+                bind: "property",
+                placeholder: "property name",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "value",
+                placeholder: "value",
+                icon: Hash,
+            },
+        ],
+        info: "Sets a property of the object this script is on to a specified value. Use camelCase for properties (e.g., position, backgroundColor, etc.)",
     },
 
     move: {

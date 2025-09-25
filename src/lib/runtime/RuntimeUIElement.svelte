@@ -1,7 +1,18 @@
 <script lang="ts">
     import * as Types from "$lib/types";
+    import { runtimeStore } from "$lib/runtimeStore";
     import type { GameObject } from "$lib/runtime";
-    let { node } = $props();
+    import RuntimeUIElement from "$lib/runtime/RuntimeUIElement.svelte";
+    let { node, version = 0 } = $props();
+
+    // Helper to read runtime override for a given bObject id
+    function ov<T>(key: string, fallback: T): T {
+        const id = node?.bObject?.id as string;
+        const v = (runtimeStore as any).getPropertyOverride?.(id, key) as
+            | T
+            | undefined;
+        return v === undefined ? fallback : v;
+    }
 
     // Compute base inline styles for the UI node
     function computeStyles(ui: Types.BUI): Record<string, string> {
@@ -32,16 +43,26 @@
             style.height = `calc(${sizeY}% + ${sizeOffY}px)`;
         }
 
-        if (ui.rotation) style.transform = `rotate(${ui.rotation}deg)`;
-        style["z-index"] = String(ui.zIndex ?? 0);
-        style.padding = `${ui.padding.y}px ${ui.padding.x}px`;
-        style.margin = `${ui.margin.y}px ${ui.margin.x}px`;
-        style.display = ui.visible ? "block" : "none";
+        const rotation = ov<number | undefined>("rotation", ui.rotation);
+        if (rotation) style.transform = `rotate(${rotation}deg)`;
+        style["z-index"] = String(
+            ov<number | undefined>("zIndex", ui.zIndex) ?? 0
+        );
+        const pad = ov<{ x: number; y: number }>("padding", ui.padding);
+        const mar = ov<{ x: number; y: number }>("margin", ui.margin);
+        style.padding = `${pad.y}px ${pad.x}px`;
+        style.margin = `${mar.y}px ${mar.x}px`;
+        const vis = ov<boolean>("visible", ui.visible);
+        style.display = vis ? "block" : "none";
 
         if (ui instanceof Types.BContainerUI) {
-            style["background-color"] = ui.backgroundColor;
-            style["border"] = `${ui.borderSize}px solid ${ui.borderColor}`;
-            style["border-radius"] = `${ui.borderRadius}px`;
+            const bg = ov<string>("backgroundColor", ui.backgroundColor);
+            const borderColor = ov<string>("borderColor", ui.borderColor);
+            const borderSize = ov<number>("borderSize", ui.borderSize);
+            const radius = ov<number>("borderRadius", ui.borderRadius);
+            style["background-color"] = bg;
+            style["border"] = `${borderSize}px solid ${borderColor}`;
+            style["border-radius"] = `${radius}px`;
             const scroll = ui.scroll;
             if (scroll === "both") style.overflow = "auto";
             else if (scroll === "horizontal") {
@@ -54,11 +75,11 @@
         }
 
         if (ui instanceof Types.BTextUI) {
-            style.color = ui.color;
-            style["font-size"] = `${ui.fontSize}px`;
-            style["font-family"] = ui.fontFamily;
-            style["font-weight"] = `${ui.fontWeight}`;
-            style["text-align"] = ui.textAlign;
+            style.color = ov<string>("color", ui.color);
+            style["font-size"] = `${ov<number>("fontSize", ui.fontSize)}px`;
+            style["font-family"] = ov<string>("fontFamily", ui.fontFamily);
+            style["font-weight"] = `${ov<number>("fontWeight", ui.fontWeight)}`;
+            style["text-align"] = ov<any>("textAlign", ui.textAlign);
         }
 
         return style;
@@ -75,23 +96,33 @@
             .join("; ");
     }
     const b = () => node?.bObject as Types.BUI;
-    let styles = $derived(styleString(computeStyles(b())));
+    let styles = $state(styleString(computeStyles(b())));
     let children = $derived(getChildren(node));
+    $effect(() => {
+        void version;
+        styles = styleString(computeStyles(b()));
+    });
     // No transitions for now
 </script>
 
 {#if b().type === "button"}
     <button class="ui-absolute button-reset" style={styles}>
-        {b() instanceof Types.BTextUI ? (b() as Types.BTextUI).text : b().name}
+        {#if b() instanceof Types.BTextUI}
+            {ov<string>("text", (b() as Types.BTextUI).text)}
+        {:else}
+            {ov<string>("name", b().name)}
+        {/if}
         {#each children as c (c.id)}
-            <svelte:self node={c} />
+            <RuntimeUIElement node={c} {version} />
         {/each}
     </button>
 {:else}
     <div class="ui-absolute" style={styles}>
-        {b() instanceof Types.BTextUI ? (b() as Types.BTextUI).text : null}
+        {#if b() instanceof Types.BTextUI}
+            {ov<string>("text", (b() as Types.BTextUI).text)}
+        {/if}
         {#each children as c (c.id)}
-            <svelte:self node={c} />
+            <RuntimeUIElement node={c} {version} />
         {/each}
     </div>
 {/if}
