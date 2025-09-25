@@ -154,16 +154,14 @@
     function handleMaterialChange(value: string) {
         if (!object || !(object instanceof Types.BPart)) return;
 
-        const updatedObject = object.clone();
-        updatedObject.material = value;
-        onPropertyChange(updatedObject);
+        object.material = value;
+        onPropertyChange(object);
     }
 
     function handleAxisLockChange(event: any) {
         if (!object || !(object instanceof Types.BPart)) return;
 
-        const updatedObject = event.detail.object.clone();
-        onPropertyChange(updatedObject);
+        onPropertyChange(event.detail.object);
     }
 
     // Get all BPart objects from the scene for constraint selection
@@ -238,15 +236,8 @@
             .objects.find((obj) => obj.id === value);
         if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
 
-        // Create a new constraint with the updated partA
-        const updatedObject = new Types.BConstraint(
-            object.name,
-            object.id,
-            object.parent,
-            selectedPart,
-            object.partB
-        );
-        onPropertyChange(updatedObject);
+        object.partA = selectedPart;
+        onPropertyChange(object);
     }
 
     function handlePartBChange(value: string) {
@@ -257,15 +248,8 @@
             .objects.find((obj) => obj.id === value);
         if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
 
-        // Create a new constraint with the updated partB
-        const updatedObject = new Types.BConstraint(
-            object.name,
-            object.id,
-            object.parent,
-            object.partA,
-            selectedPart
-        );
-        onPropertyChange(updatedObject);
+        object.partB = selectedPart;
+        onPropertyChange(object);
     }
 </script>
 
@@ -335,9 +319,8 @@
                         onchange={(e) => {
                             const target = e.target as HTMLInputElement;
                             if (target && target.value !== undefined) {
-                                const updatedObject = (object as any).clone();
-                                updatedObject.name = target.value;
-                                onPropertyChange(updatedObject);
+                                object.name = target.value;
+                                onPropertyChange(object);
                             }
                         }}
                     />
@@ -369,9 +352,8 @@
                         label="Position"
                         bind:value={object.position}
                         on:change={(e) => {
-                            const updatedObject = object.clone();
-                            updatedObject.position = e.detail.value;
-                            onPropertyChange(updatedObject);
+                            (object as Types.BNode3D).position = e.detail.value;
+                            onPropertyChange(object);
                         }}
                     />
                     <Vector3Input
@@ -379,18 +361,16 @@
                         bind:value={object.rotation}
                         on:change={(e) => {
                             // Keep Euler angles for BNode3D (user-facing)
-                            const updatedObject = object.clone();
-                            updatedObject.rotation = e.detail.value;
-                            onPropertyChange(updatedObject);
+                            (object as Types.BNode3D).rotation = e.detail.value;
+                            onPropertyChange(object);
                         }}
                     />
                     <Vector3Input
                         label="Scale"
                         bind:value={object.scale}
                         on:change={(e) => {
-                            const updatedObject = object.clone();
-                            updatedObject.scale = e.detail.value;
-                            onPropertyChange(updatedObject);
+                            (object as Types.BNode3D).scale = e.detail.value;
+                            onPropertyChange(object);
                         }}
                     />
 
@@ -572,14 +552,8 @@
                             <Switch
                                 checked={object.autoLayout}
                                 onCheckedChange={(v) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).autoLayout = v;
-                                    onPropertyChange(updated);
+                                    (object as Types.BUI).autoLayout = v;
+                                    onPropertyChange(object);
                                 }}
                             />
                         </div>
@@ -588,58 +562,34 @@
                             label="Position Percent (0-1)"
                             bind:value={object.positionPercent}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).positionPercent =
+                                (object as Types.BUI).positionPercent =
                                     e.detail.value;
-                                onPropertyChange(updated);
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector2Input
                             label="Position Offset (px)"
                             bind:value={object.positionOffset}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).positionOffset =
+                                (object as Types.BUI).positionOffset =
                                     e.detail.value;
-                                onPropertyChange(updated);
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector2Input
                             label="Size Percent (0-1)"
                             bind:value={object.sizePercent}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).sizePercent = e.detail.value;
-                                onPropertyChange(updated);
+                                (object as Types.BUI).sizePercent = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector2Input
                             label="Size Offset (px)"
                             bind:value={object.sizeOffset}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).sizeOffset = e.detail.value;
-                                onPropertyChange(updated);
+                                (object as Types.BUI).sizeOffset = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
 
@@ -652,17 +602,11 @@
                                 type="number"
                                 value={object.rotation}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).rotation =
+                                    (object as Types.BUI).rotation =
                                         parseFloat(
                                             (e.target as HTMLInputElement).value
                                         ) || 0;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                                 class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
                             />
@@ -678,14 +622,8 @@
                                 <Select.Root
                                     bind:value={positionXAnchorValue}
                                     onValueChange={(val) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).positionXAnchor = val;
-                                        onPropertyChange(updated);
+                                        (object as Types.BUI).positionXAnchor = val as "left" | "center" | "right";
+                                        onPropertyChange(object);
                                     }}
                                     type="single"
                                 >
@@ -711,14 +649,8 @@
                                 <Select.Root
                                     bind:value={positionYAnchorValue}
                                     onValueChange={(val) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).positionYAnchor = val;
-                                        onPropertyChange(updated);
+                                        (object as Types.BUI).positionYAnchor = val as "top" | "center" | "bottom";
+                                        onPropertyChange(object);
                                     }}
                                     type="single"
                                 >
@@ -749,14 +681,8 @@
                                 <Switch
                                     checked={object.visible}
                                     onCheckedChange={(v) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).visible = v;
-                                        onPropertyChange(updated);
+                                        (object as Types.BUI).visible = v;
+                                        onPropertyChange(object);
                                     }}
                                 />
                             </div>
@@ -769,18 +695,12 @@
                                     type="number"
                                     value={object.zIndex}
                                     onchange={(e) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).zIndex =
+                                        (object as Types.BUI).zIndex =
                                             parseInt(
                                                 (e.target as HTMLInputElement)
                                                     .value
                                             ) || 0;
-                                        onPropertyChange(updated);
+                                        onPropertyChange(object);
                                     }}
                                     class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
                                 />
@@ -792,28 +712,16 @@
                             label="Padding (px)"
                             bind:value={object.padding}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).padding = e.detail.value;
-                                onPropertyChange(updated);
+                                (object as Types.BUI).padding = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector2Input
                             label="Margin (px)"
                             bind:value={object.margin}
                             on:change={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).margin = e.detail.value;
-                                onPropertyChange(updated);
+                                (object as Types.BUI).margin = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
 
@@ -827,14 +735,8 @@
                                 <Select.Root
                                     bind:value={transitionValue}
                                     onValueChange={(val) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).transition = val;
-                                        onPropertyChange(updated);
+                                        (object as Types.BUI).transition = val as "none" | "blur" | "crossfade" | "draw" | "fade" | "fly" | "scale" | "slide";
+                                        onPropertyChange(object);
                                     }}
                                     type="single"
                                 >
@@ -870,18 +772,12 @@
                                     type="number"
                                     value={(object as any).transitionDuration}
                                     onchange={(e) => {
-                                        const updated = Object.assign(
-                                            Object.create(
-                                                Object.getPrototypeOf(object)
-                                            ),
-                                            object
-                                        );
-                                        (updated as any).transitionDuration =
+                                        (object as Types.BUI).transitionDuration =
                                             parseInt(
                                                 (e.target as HTMLInputElement)
                                                     .value
                                             ) || 0;
-                                        onPropertyChange(updated);
+                                        onPropertyChange(object);
                                     }}
                                     class="bg-muted/30 border-border/40 text-foreground h-10 px-3 rounded-lg"
                                 />
@@ -909,16 +805,10 @@
                                 type="text"
                                 value={(object as any).backgroundColor}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).backgroundColor = (
+                                    (object as Types.BContainerUI).backgroundColor = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                                 placeholder="rgba(0,0,0,0) or #rrggbb"
                             />
@@ -931,16 +821,10 @@
                                 type="text"
                                 value={(object as any).borderColor}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).borderColor = (
+                                    (object as Types.BContainerUI).borderColor = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                                 placeholder="rgba(0,0,0,0) or #rrggbb"
                             />
@@ -955,17 +839,11 @@
                                 type="number"
                                 value={(object as any).borderSize}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).borderSize =
+                                    (object as Types.BContainerUI).borderSize =
                                         parseInt(
                                             (e.target as HTMLInputElement).value
                                         ) || 0;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -977,17 +855,11 @@
                                 type="number"
                                 value={(object as any).borderRadius}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).borderRadius =
+                                    (object as Types.BContainerUI).borderRadius =
                                         parseInt(
                                             (e.target as HTMLInputElement).value
                                         ) || 0;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -998,14 +870,8 @@
                             <Select.Root
                                 bind:value={scrollValue}
                                 onValueChange={(val) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).scroll = val;
-                                    onPropertyChange(updated);
+                                    (object as Types.BContainerUI).scroll = val as "none" | "both" | "horizontal" | "vertical";
+                                    onPropertyChange(object);
                                 }}
                                 type="single"
                             >
@@ -1040,16 +906,10 @@
                             type="text"
                             value={(object as any).text}
                             onchange={(e) => {
-                                const updated = Object.assign(
-                                    Object.create(
-                                        Object.getPrototypeOf(object)
-                                    ),
-                                    object
-                                );
-                                (updated as any).text = (
+                                (object as Types.BTextUI).text = (
                                     e.target as HTMLInputElement
                                 ).value;
-                                onPropertyChange(updated);
+                                onPropertyChange(object);
                             }}
                         />
                     </label>
@@ -1062,17 +922,11 @@
                                 type="number"
                                 value={(object as any).fontSize}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).fontSize =
+                                    (object as Types.BTextUI).fontSize =
                                         parseInt(
                                             (e.target as HTMLInputElement).value
                                         ) || 12;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -1084,16 +938,10 @@
                                 type="text"
                                 value={(object as any).fontFamily}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).fontFamily = (
+                                    (object as Types.BTextUI).fontFamily = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -1107,17 +955,11 @@
                                 type="number"
                                 value={(object as any).fontWeight}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).fontWeight =
+                                    (object as Types.BTextUI).fontWeight =
                                         parseInt(
                                             (e.target as HTMLInputElement).value
                                         ) || 400;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -1129,16 +971,10 @@
                                 type="text"
                                 value={(object as any).color}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).color = (
+                                    (object as Types.BTextUI).color = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -1151,14 +987,8 @@
                             <Select.Root
                                 bind:value={textAlignValue}
                                 onValueChange={(val) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).textAlign = val;
-                                    onPropertyChange(updated);
+                                    (object as Types.BTextUI).textAlign = val as "left" | "center" | "right";
+                                    onPropertyChange(object);
                                 }}
                                 type="single"
                             >
@@ -1181,14 +1011,8 @@
                             <Select.Root
                                 bind:value={textVerticalAlignValue}
                                 onValueChange={(val) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).textVerticalAlign = val;
-                                    onPropertyChange(updated);
+                                    (object as Types.BTextUI).textVerticalAlign = val as "top" | "center" | "bottom";
+                                    onPropertyChange(object);
                                 }}
                                 type="single"
                             >
@@ -1211,14 +1035,8 @@
                             <Select.Root
                                 bind:value={overflowValue}
                                 onValueChange={(val) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).overflow = val;
-                                    onPropertyChange(updated);
+                                    (object as Types.BTextUI).overflow = val as "none" | "wrap" | "ellipsis";
+                                    onPropertyChange(object);
                                 }}
                                 type="single"
                             >
@@ -1253,16 +1071,10 @@
                                 type="text"
                                 value={(object as any).hoverColor}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).hoverColor = (
+                                    (object as Types.BButtonUI).hoverColor = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>
@@ -1274,16 +1086,10 @@
                                 type="text"
                                 value={(object as any).pressedColor}
                                 onchange={(e) => {
-                                    const updated = Object.assign(
-                                        Object.create(
-                                            Object.getPrototypeOf(object)
-                                        ),
-                                        object
-                                    );
-                                    (updated as any).pressedColor = (
+                                    (object as Types.BButtonUI).pressedColor = (
                                         e.target as HTMLInputElement
                                     ).value;
-                                    onPropertyChange(updated);
+                                    onPropertyChange(object);
                                 }}
                             />
                         </label>

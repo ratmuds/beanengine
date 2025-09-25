@@ -2,21 +2,20 @@
     import { createEventDispatcher } from "svelte";
     import { Switch } from "$lib/components/ui/switch/index.ts";
     import { Lock, Unlock, Move, RotateCcw } from "lucide-svelte";
+    import * as Types from "$lib/types";
 
-    export let object;
+    export let object: Types.BPart;
     
     const dispatch = createEventDispatcher();
 
-    function handlePositionLockChange(value) {
-        const updatedObject = object.clone();
-        updatedObject.positionLocked = value;
-        dispatch('change', { object: updatedObject });
+    function handlePositionLockChange(value: boolean) {
+        object.positionLocked = value;
+        dispatch('change', { object: object });
     }
 
-    function handleRotationLockChange(value) {
-        const updatedObject = object.clone();
-        updatedObject.rotationLocked = value;
-        dispatch('change', { object: updatedObject });
+    function handleRotationLockChange(value: boolean) {
+        object.rotationLocked = value;
+        dispatch('change', { object: object });
     }
 </script>
 
