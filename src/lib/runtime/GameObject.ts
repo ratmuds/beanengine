@@ -132,6 +132,31 @@ export class GameObject {
     }
 
     /**
+     * Get a property value, checking for runtime overrides first.
+     * This allows components or scripts to override properties like color, intensity, etc.
+     */
+    getProperty(propName: string): any {
+        // Check if property has override in runtimeStore
+        const override = runtimeStore.getPropertyOverride(this.id, propName);
+
+        if (override !== undefined) {
+            return override;
+        }
+
+        // Otherwise, return the property from the underlying bObject
+        return (this.bObject as any)[propName];
+    }
+
+    /**
+     * Set a property value, storing it as an override in runtimeStore.
+     * This does not modify the underlying bObject.
+     */
+    setProperty(propName: string, value: any): void {
+        // Set property override in runtimeStore
+        runtimeStore.setPropertyOverride(this.id, propName, value);
+    }
+
+    /**
      * Updates the world matrix of this GameObject and all its children.
      */
     updateWorldMatrix(): void {

@@ -207,6 +207,48 @@ export const blockConfig: Record<string, BlockConfig> = {
         info: "Moves the target object to a specific position. If no target is provided, it moves the object this script is on.",
     },
 
+    rotate: {
+        color: colorMap.green,
+        label: "Rotate",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "angle",
+                label: "by",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Rotates the target object by the specified angle. If no target is provided, it rotates the object this script is on.",
+    },
+
+    lookat: {
+        color: colorMap.green,
+        label: "Look At",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "position",
+                label: "to",
+                placeholder: "x, y, z",
+                icon: Move3D,
+            },
+        ],
+        info: "Moves the target object to a specific position. If no target is provided, it moves the object this script is on.",
+    },
+
     directionalforce: {
         color: colorMap.green,
         label: "Directional Force",
@@ -287,44 +329,24 @@ export const blockConfig: Record<string, BlockConfig> = {
         info: "Sets the variable provided to 'true' or 'false' if the mouse button is pressed.",
     },
 
-    keypress: {
+    valueset: {
         color: colorMap.purple,
-        label: "Key Press",
+        label: "Value Set",
         fields: [
             {
                 type: "text",
-                bind: "key",
-                placeholder: "key name (a, w, s, d, Space, etc.)",
+                bind: "target",
+                placeholder: "target (value obj)",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "value",
+                placeholder: "value",
                 icon: Type,
             },
-            {
-                type: "text",
-                bind: "variable",
-                placeholder: "variable name",
-                icon: Variable,
-            },
         ],
-        info: "Sets the variable provided to 'true' or 'false' if the specified key is pressed.",
-    },
-
-    mouseposition: {
-        color: colorMap.purple,
-        label: "Mouse Position",
-        fields: [
-            {
-                type: "text",
-                bind: "variableX",
-                placeholder: "x variable name",
-                icon: Variable,
-            },
-            {
-                type: "text",
-                bind: "variableY",
-                placeholder: "y variable name",
-                icon: Variable,
-            },
-        ],
-        info: "Sets the X and Y variables to the current mouse position on the canvas.",
+        info: "Sets the specified Value object to the provided value.",
     },
 
     log: {

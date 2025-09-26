@@ -136,12 +136,6 @@ export class CodeInterpreter {
                 case "mousebutton":
                     await this.executeMouseButton(item, context);
                     break;
-                case "keypress":
-                    await this.executeKeyPress(item, context);
-                    break;
-                case "mouseposition":
-                    await this.executeMousePosition(item, context);
-                    break;
                 case "wait":
                     await this.executeWait(item, context);
                     break;
@@ -150,6 +144,15 @@ export class CodeInterpreter {
                     break;
                 case "moveto":
                     await this.executeMoveTo(item, context);
+                    break;
+                case "rotate":
+                    await this.executeRotate(item, context);
+                    break;
+                case "lookat":
+                    await this.executeLookAt(item, context);
+                    break;
+                case "valueset":
+                    await this.executeValueSet(item, context);
                     break;
                 case "directionalforce":
                     await this.executeDirectionalForce(item, context);
@@ -249,57 +252,6 @@ export class CodeInterpreter {
             "local",
             context.script?.id
         );
-    }
-
-    private async executeKeyPress(item: any, context: RuntimeContext) {
-        const variable = await context.evaluateChip(item.variable, context);
-        const key = await context.evaluateChip(item.key, context);
-
-        if (!variable) {
-            runtimeStore.warn(
-                "Key press block missing variable",
-                "Interpreter"
-            );
-            return;
-        }
-
-        if (!key) {
-            runtimeStore.warn("Key press block missing key", "Interpreter");
-            return;
-        }
-
-        const keyPressed = runtimeStore.getKey(key);
-        runtimeStore.setVariable(
-            variable,
-            keyPressed.toString(),
-            "local",
-            context.script?.id
-        );
-    }
-
-    private async executeMousePosition(item: any, context: RuntimeContext) {
-        const variableX = await context.evaluateChip(item.variableX, context);
-        const variableY = await context.evaluateChip(item.variableY, context);
-
-        const mousePos = runtimeStore.getMousePosition();
-
-        if (variableX) {
-            runtimeStore.setVariable(
-                variableX,
-                mousePos.x.toString(),
-                "local",
-                context.script?.id
-            );
-        }
-
-        if (variableY) {
-            runtimeStore.setVariable(
-                variableY,
-                mousePos.y.toString(),
-                "local",
-                context.script?.id
-            );
-        }
     }
 
     private async executeWait(item: any, context: RuntimeContext) {
@@ -723,6 +675,119 @@ export class CodeInterpreter {
                 `Error emitting event '${name}': ${e}`,
                 "Interpreter"
             );
+        }
+    }
+
+    private async executeRotate(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const rotation = await context.evaluateChip(item.rotation, context);
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `Rotate target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "Rotate block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            targetGameObject.setRotation(rotation);
+        } catch (error) {
+            runtimeStore.error(
+                `Error rotating object: ${error}`,
+                "Interpreter"
+            );
+        }
+    }
+
+    private async executeLookAt(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const lookAtPosition = await context.evaluateChip(
+            item.position,
+            context
+        );
+
+        // Resolve target object
+        let targetGameObject = context.gameObject; // Default to current object
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `LookAt target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "LookAt block: no target object available. Does this script have a parent?",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            targetGameObject.lookAt(lookAtPosition);
+        } catch (error) {
+            runtimeStore.error(
+                `Error looking at position: ${error}`,
+                "Interpreter"
+            );
+        }
+    }
+
+    private async executeValueSet(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const value = await context.evaluateChip(item.value, context);
+
+        // Resolve target object
+        let targetGameObject;
+
+        if (targetRef) {
+            const resolvedTarget = resolveTargetGameObject(targetRef, context);
+            if (resolvedTarget) {
+                targetGameObject = resolvedTarget;
+            } else {
+                const error = getTargetResolutionError(targetRef, context);
+                runtimeStore.warn(
+                    `ValueSet target resolution failed: ${error}. Target: '${targetRef}'`,
+                    "Interpreter"
+                );
+                return;
+            }
+        } else {
+            runtimeStore.warn(
+                "ValueSet block: no target specified",
+                "Interpreter"
+            );
+            return;
+        }
+
+        try {
+            targetGameObject.setProperty("value", value);
+        } catch (error) {
+            runtimeStore.error(`Error setting value: ${error}`, "Interpreter");
         }
     }
 }

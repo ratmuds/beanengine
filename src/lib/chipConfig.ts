@@ -256,6 +256,57 @@ export const chipConfig: Record<string, ChipConfig> = {
         },
     },
 
+    valueGet: {
+        color: "orange-500",
+        label: "Value Get",
+        info: "Returns the value of the Value object specified",
+        fields: [
+            {
+                type: "number",
+                bind: "target",
+                label: "Target",
+                placeholder: "target",
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const targetRef = await context.evaluateChip(
+                compiled.target,
+                context
+            );
+
+            // Resolve target object
+            let targetGameObject;
+
+            if (targetRef) {
+                const resolvedTarget = resolveTargetGameObject(
+                    targetRef,
+                    context
+                );
+                if (resolvedTarget) {
+                    targetGameObject = resolvedTarget;
+                } else {
+                    const error = getTargetResolutionError(targetRef, context);
+                    runtimeStore.warn(
+                        `Value Get chip target resolution failed: ${error}`,
+                        "Chip"
+                    );
+                    return null;
+                }
+            }
+
+            if (!targetGameObject) {
+                runtimeStore.warn(
+                    "Value Get chip: no target object available",
+                    "Chip"
+                );
+                return null;
+            }
+
+            // Return the value of the target game object's specified field
+            return targetGameObject.getProperty("value") ?? null;
+        },
+    },
+
     add: {
         color: "orange-500",
         label: "Add",
@@ -476,6 +527,47 @@ export const chipConfig: Record<string, ChipConfig> = {
                 "Interpreter"
             );
 
+            return 0;
+        },
+    },
+
+    abs: {
+        color: "orange-500",
+        label: "Absolute",
+        info: "Returns the absolute value of a number",
+        fields: [
+            {
+                type: "number",
+                bind: "value",
+                label: "Value",
+                placeholder: "Value",
+                defaultValue: 0,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const value = await context.evaluateChip(compiled.value, context);
+
+            if (typeof value === "number") {
+                return Math.abs(value);
+            }
+
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+            if (isVec(value)) {
+                const x = Number(value.x) || 0;
+                const y = Number(value.y) || 0;
+                const z = Number(value.z) || 0;
+                return new Types.BVector3(
+                    Math.abs(x),
+                    Math.abs(y),
+                    Math.abs(z)
+                );
+            }
+
+            runtimeStore.warn(
+                `Absolute chip: unsupported input type: ${typeof value}. Returning 0.`,
+                "Interpreter"
+            );
             return 0;
         },
     },
