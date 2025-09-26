@@ -674,6 +674,33 @@ class BPart extends BNode3D {
     }
 }
 
+// Represents a group of waypoints as a path. Waypoints should be children to WaypointPaths
+class BWaypointPath extends BObject {
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent)
+    }
+}
+
+// Represents a waypoint for pathfinding
+class BWaypoint extends BNode3D {
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent)
+    }
+}
+
+// Represents a navigator that moves the parent object along the waypoints
+class BWaypointNavigator extends BObject {
+
+}
+
 // Represents a light source in the scene
 class BLight extends BNode3D {
     color: string; // e.g., '#ffffff'

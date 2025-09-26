@@ -20,6 +20,7 @@ export class PhysicsComponent extends Component {
     private previousRotation: THREE.Quaternion;
     private previousScale: THREE.Vector3;
     private hasConvexHullCollider = false;
+    private previousCanCollide: boolean | null = null;
 
     constructor(gameObject: GameObject) {
         super(gameObject);
@@ -41,6 +42,8 @@ export class PhysicsComponent extends Component {
             this.createInitialColliderDesc(),
             this.body
         );
+
+        this.applyCollisionSettings();
 
         // Apply initial position and rotation from GameObject
         this.body.setTranslation(
@@ -138,6 +141,31 @@ export class PhysicsComponent extends Component {
             physicsWorld.removeCollider(this.collider, true);
         }
         this.collider = physicsWorld.createCollider(desc, this.body);
+        this.applyCollisionSettings();
+    }
+
+    private applyCollisionSettings(): void {
+        if (!(this.gameObject.bObject instanceof Types.BPart)) return;
+        if (!this.collider) return;
+
+        const partObject = this.gameObject.bObject as Types.BPart;
+        this.previousCanCollide = partObject.canCollide;
+
+        this.collider.setSensor(!partObject.canCollide);
+    }
+
+    private ensureCollisionSettingsSynced(): void {
+        if (!(this.gameObject.bObject instanceof Types.BPart)) return;
+        const partObject = this.gameObject.bObject as Types.BPart;
+
+        if (this.previousCanCollide === null) {
+            this.applyCollisionSettings();
+            return;
+        }
+
+        if (partObject.canCollide !== this.previousCanCollide) {
+            this.applyCollisionSettings();
+        }
     }
 
     // Build a convex-hull collider from the asset mesh for more accurate physics
@@ -444,6 +472,8 @@ export class PhysicsComponent extends Component {
     update(delta: number): void {
         void delta;
 
+        this.ensureCollisionSettingsSynced();
+
         this.syncPositionWithPhysics();
         this.syncRotationWithPhysics();
         this.updateWorldMatrix();
@@ -575,6 +605,7 @@ export class PhysicsComponent extends Component {
             this.createInitialColliderDesc(),
             this.body
         );
+        this.applyCollisionSettings();
         this.body.setTranslation(
             new RAPIER.Vector3(
                 this.gameObject.transform.position.x,

@@ -3,7 +3,7 @@
  */
 
 import { type RuntimeContext } from "./chipConfig.js";
-import type { GameObject } from "./runtime/GameObject.js";
+import { RotationUtils, type GameObject } from "./runtime/GameObject.js";
 import { runtimeStore } from "$lib/runtimeStore";
 import { InterpreterScriptError } from "./types.js";
 import * as Types from "./types.js";
@@ -129,6 +129,15 @@ export class CodeInterpreter {
                     break;
                 case "forever":
                     await this.executeForeverLoop(item, context);
+                    break;
+                case "loopFor":
+                    await this.executeLoopFor(item, context);
+                    break;
+                case "loopThrough":
+                    await this.executeLoopThrough(item, context);
+                    break;
+                case "set":
+                    await this.executeSet(item, context);
                     break;
                 case "log":
                     await this.executeLog(item, context);
@@ -268,6 +277,236 @@ export class CodeInterpreter {
         const ms = parseFloat(duration) * 1000;
         await this.sleep(ms);
         if (this.stopped) return;
+    }
+
+    private async executeLoopFor(item: any, context: RuntimeContext) {
+        const timesRaw = await context.evaluateChip(item.times, context);
+        const iterations = Math.max(0, Math.floor(Number(timesRaw)));
+
+        if (!Number.isFinite(iterations)) {
+            runtimeStore.warn(
+                `Loop For block received invalid iteration count '${timesRaw}'. Skipping loop.`,
+                "Interpreter"
+            );
+            return;
+        }
+
+        const indexNameRaw = await context.evaluateChip(item.index, context);
+        const indexName =
+            typeof indexNameRaw === "string" && indexNameRaw.trim().length > 0
+                ? indexNameRaw.trim()
+                : null;
+
+        const scriptId = context.script?.id;
+
+        for (let i = 0; i < iterations && !this.stopped; i++) {
+            if (indexName && scriptId) {
+                runtimeStore.setVariable(indexName, i, "local", scriptId);
+            }
+
+            if (item.children && Array.isArray(item.children)) {
+                for (const child of item.children) {
+                    if (this.stopped) break;
+                    await this.executeItem(child, context);
+                }
+            }
+        }
+    }
+
+    private async executeLoopThrough(item: any, context: RuntimeContext) {
+        const arrayValue = await context.evaluateChip(item.array, context);
+        const iterable = Array.isArray(arrayValue)
+            ? arrayValue
+            : arrayValue && typeof arrayValue === "object"
+              ? Object.values(arrayValue)
+              : [];
+
+        if (!Array.isArray(iterable)) {
+            runtimeStore.warn(
+                "Loop Through block received a non-iterable value. Skipping loop.",
+                "Interpreter"
+            );
+            return;
+        }
+
+        const itemNameRaw = await context.evaluateChip(item.item, context);
+        const itemName =
+            typeof itemNameRaw === "string" && itemNameRaw.trim().length > 0
+                ? itemNameRaw.trim()
+                : null;
+        if (!itemName) {
+            runtimeStore.warn(
+                "Loop Through block missing item variable name.",
+                "Interpreter"
+            );
+            return;
+        }
+
+        const indexNameRaw = await context.evaluateChip(item.index, context);
+        const indexName =
+            typeof indexNameRaw === "string" && indexNameRaw.trim().length > 0
+                ? indexNameRaw.trim()
+                : null;
+
+        const scriptId = context.script?.id;
+
+        for (let i = 0; i < iterable.length && !this.stopped; i++) {
+            if (scriptId) {
+                runtimeStore.setVariable(itemName, iterable[i], "local", scriptId);
+                if (indexName) {
+                    runtimeStore.setVariable(indexName, i, "local", scriptId);
+                }
+            }
+
+            if (item.children && Array.isArray(item.children)) {
+                for (const child of item.children) {
+                    if (this.stopped) break;
+                    await this.executeItem(child, context);
+                }
+            }
+        }
+    }
+
+    private async executeSet(item: any, context: RuntimeContext) {
+        const propertyRaw = await context.evaluateChip(item.property, context);
+        const value = await context.evaluateChip(item.value, context);
+
+        const propertyName =
+            propertyRaw !== undefined && propertyRaw !== null
+                ? String(propertyRaw).trim()
+                : "";
+
+        if (!propertyName) {
+            runtimeStore.warn(
+                "Set block missing property name",
+                "Interpreter"
+            );
+            return;
+        }
+
+        const targetGameObject = context.gameObject;
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                "Set block: no target GameObject available",
+                "Interpreter"
+            );
+            return;
+        }
+
+        const parts = propertyName.split(".");
+        const root = parts[0];
+
+        try {
+            switch (root) {
+                case "position": {
+                    if (parts.length === 1) {
+                        const pos = this.parseVector3(value);
+                        targetGameObject.transform.position.set(pos.x, pos.y, pos.z);
+                    } else if (parts.length === 2) {
+                        const component = parts[1];
+                        if (!/[xyz]/.test(component)) {
+                            runtimeStore.warn(
+                                `Set block: unknown position component '${component}'`,
+                                "Interpreter"
+                            );
+                        } else {
+                            const num = Number(value);
+                            if (Number.isNaN(num)) {
+                                runtimeStore.warn(
+                                    `Set block: position component '${component}' requires a numeric value`,
+                                    "Interpreter"
+                                );
+                            } else {
+                                (targetGameObject.transform.position as any)[component] = num;
+                            }
+                        }
+                    }
+                    targetGameObject.updateWorldMatrix();
+                    return;
+                }
+                case "scale": {
+                    if (parts.length === 1) {
+                        const scl = this.parseVector3(value);
+                        targetGameObject.transform.scale.set(scl.x, scl.y, scl.z);
+                    } else if (parts.length === 2) {
+                        const component = parts[1];
+                        if (!/[xyz]/.test(component)) {
+                            runtimeStore.warn(
+                                `Set block: unknown scale component '${component}'`,
+                                "Interpreter"
+                            );
+                        } else {
+                            const num = Number(value);
+                            if (Number.isNaN(num)) {
+                                runtimeStore.warn(
+                                    `Set block: scale component '${component}' requires a numeric value`,
+                                    "Interpreter"
+                                );
+                            } else {
+                                (targetGameObject.transform.scale as any)[component] = num;
+                            }
+                        }
+                    }
+                    targetGameObject.updateWorldMatrix();
+                    return;
+                }
+                case "rotation": {
+                    if (parts.length === 1) {
+                        const rotVec = this.parseVector3(value);
+                        const quaternion = RotationUtils.eulerToNormalizedQuaternion(rotVec);
+                        targetGameObject.transform.rotation.copy(quaternion);
+                    } else if (parts.length === 2) {
+                        const component = parts[1];
+                        if (!/[xyz]/.test(component)) {
+                            runtimeStore.warn(
+                                `Set block: unknown rotation component '${component}'`,
+                                "Interpreter"
+                            );
+                        } else {
+                            const num = Number(value);
+                            if (Number.isNaN(num)) {
+                                runtimeStore.warn(
+                                    `Set block: rotation component '${component}' requires a numeric value`,
+                                    "Interpreter"
+                                );
+                            } else {
+                                const currentEuler = RotationUtils.quaternionToEuler(
+                                    targetGameObject.transform.rotation.clone()
+                                );
+                                const updatedEuler = new Types.BVector3(
+                                    currentEuler.x,
+                                    currentEuler.y,
+                                    currentEuler.z
+                                );
+                                (updatedEuler as any)[component] = num;
+                                const quaternion =
+                                    RotationUtils.eulerToNormalizedQuaternion(updatedEuler);
+                                targetGameObject.transform.rotation.copy(quaternion);
+                            }
+                        }
+                    }
+                    targetGameObject.updateWorldMatrix();
+                    return;
+                }
+                default:
+                    break;
+            }
+
+            if (parts.length > 1) {
+                runtimeStore.warn(
+                    `Set block: nested property path '${propertyName}' is not supported.`,
+                    "Interpreter"
+                );
+                return;
+            }
+
+            targetGameObject.setProperty(propertyName, value);
+        } catch (error) {
+            runtimeStore.error(
+                `Error setting property '${propertyName}': ${error}`,
+                "Interpreter"
+            );
+        }
     }
 
     private async executeMove(item: any, context: RuntimeContext) {

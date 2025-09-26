@@ -34,6 +34,7 @@ export interface ChipField {
     label?: string;
     placeholder: string;
     defaultValue?: any;
+    options?: Array<{ label: string; value: string }>;
 
     // Type specific getters
     getDropdownOptions?: () => string[];
@@ -144,6 +145,293 @@ export const chipConfig: Record<string, ChipConfig> = {
         },
     },
 
+    numberliteral: {
+        color: "orange-500",
+        label: "Number",
+        fields: [
+            {
+                type: "number",
+                bind: "value",
+                label: "Value",
+                placeholder: "0",
+                defaultValue: 0,
+            },
+        ],
+        info: "Outputs a numeric literal value",
+        evaluate: async (compiled, context) => {
+            const value = await context.evaluateChip(compiled.value, context);
+            const num = Number(value);
+            if (Number.isNaN(num)) {
+                runtimeStore.warn(
+                    `Number chip: unable to convert value '${value}' to a number. Returning 0.`,
+                    "Chip"
+                );
+                return 0;
+            }
+            return num;
+        },
+    },
+
+    booleanliteral: {
+        color: "orange-500",
+        label: "Boolean",
+        fields: [
+            {
+                type: "dropdown",
+                bind: "value",
+                label: "Value",
+                placeholder: "true",
+                defaultValue: "true",
+                options: [
+                    { label: "True", value: "true" },
+                    { label: "False", value: "false" },
+                ],
+            },
+        ],
+        info: "Outputs a boolean literal (true or false)",
+        evaluate: async (compiled, context) => {
+            const value = await context.evaluateChip(compiled.value, context);
+            if (typeof value === "boolean") return value;
+            if (typeof value === "string") {
+                const lower = value.toLowerCase();
+                if (lower === "true") return true;
+                if (lower === "false") return false;
+            }
+            return Boolean(value);
+        },
+    },
+
+    equals: {
+        color: "purple-500",
+        label: "Equals",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if A and B are equal",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+
+            if (isVec(a) && isVec(b)) {
+                return (
+                    Number(a.x) === Number(b.x) &&
+                    Number(a.y) === Number(b.y) &&
+                    Number(a.z) === Number(b.z)
+                );
+            }
+
+            return a === b;
+        },
+    },
+
+    notequals: {
+        color: "purple-500",
+        label: "Not Equals",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if A and B are not equal",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            const isVec = (v: any) =>
+                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+
+            if (isVec(a) && isVec(b)) {
+                return !(
+                    Number(a.x) === Number(b.x) &&
+                    Number(a.y) === Number(b.y) &&
+                    Number(a.z) === Number(b.z)
+                );
+            }
+
+            return a !== b;
+        },
+    },
+
+    greaterthan: {
+        color: "purple-500",
+        label: "Greater Than",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if A is greater than B",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            const aNum = Number(a);
+            const bNum = Number(b);
+
+            if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+                runtimeStore.warn(
+                    `Greater Than chip: unable to compare non-numeric values '${a}' and '${b}'. Returning false.`,
+                    "Chip"
+                );
+                return false;
+            }
+
+            return aNum > bNum;
+        },
+    },
+
+    lessthan: {
+        color: "purple-500",
+        label: "Less Than",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if A is less than B",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            const b = await context.evaluateChip(compiled.b, context);
+
+            const aNum = Number(a);
+            const bNum = Number(b);
+
+            if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
+                runtimeStore.warn(
+                    `Less Than chip: unable to compare non-numeric values '${a}' and '${b}'. Returning false.`,
+                    "Chip"
+                );
+                return false;
+            }
+
+            return aNum < bNum;
+        },
+    },
+
+    logicaland: {
+        color: "purple-500",
+        label: "And",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if both A and B are truthy",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            if (!a) return false;
+            const b = await context.evaluateChip(compiled.b, context);
+            return Boolean(b);
+        },
+    },
+
+    logicalor: {
+        color: "purple-500",
+        label: "Or",
+        fields: [
+            {
+                type: "text",
+                bind: "a",
+                label: "A",
+                placeholder: "value A",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "b",
+                label: "B",
+                placeholder: "value B",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns true if either A or B is truthy",
+        evaluate: async (compiled, context) => {
+            const a = await context.evaluateChip(compiled.a, context);
+            if (a) return true;
+            const b = await context.evaluateChip(compiled.b, context);
+            return Boolean(b);
+        },
+    },
+
+    logicalnot: {
+        color: "purple-500",
+        label: "Not",
+        fields: [
+            {
+                type: "text",
+                bind: "value",
+                label: "Value",
+                placeholder: "value",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns the logical NOT of the given value",
+        evaluate: async (compiled, context) => {
+            const value = await context.evaluateChip(compiled.value, context);
+            return !Boolean(value);
+        },
+    },
+
     position: {
         color: "blue-500",
         label: "Position",
@@ -203,6 +491,8 @@ export const chipConfig: Record<string, ChipConfig> = {
                 type: "text",
                 bind: "target",
                 label: "Target",
+                placeholder: "(self)",
+                defaultValue: "",
             },
         ],
         info: "Gets the rotation of a target object",
@@ -581,6 +871,7 @@ export const chipConfig: Record<string, ChipConfig> = {
                 type: "dropdown",
                 bind: "button",
                 label: "Button",
+                placeholder: "mouse button",
                 defaultValue: "left",
                 options: [
                     { label: "Left", value: "left" },
