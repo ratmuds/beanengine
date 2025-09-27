@@ -52,6 +52,10 @@ export interface ChipConfig {
     ) => Promise<any> | any;
 }
 
+// Helper: vector-like guard
+const isVecLike = (v: any): v is { x: any; y: any; z: any } =>
+    v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+
 // Chip configurations
 export const chipConfig: Record<string, ChipConfig> = {
     variable: {
@@ -68,9 +72,7 @@ export const chipConfig: Record<string, ChipConfig> = {
         ],
         info: "References a variable value",
         evaluate: (compiled, context) => {
-            // compiled.name should be a string in the new flattened structure
             const variableName = compiled.name;
-
             return (
                 runtimeStore.getVariable(variableName, context.script?.id)
                     ?.value ?? "null"
@@ -106,15 +108,13 @@ export const chipConfig: Record<string, ChipConfig> = {
         ],
         info: "Supplies a 3D vector with X, Y, and Z components",
         evaluate: async (compiled, context) => {
-            // Evaluate each field and return a vector value
             const x = await context.evaluateChip(compiled.x, context);
             const y = await context.evaluateChip(compiled.y, context);
             const z = await context.evaluateChip(compiled.z, context);
-
             return new Types.BVector3(
-                parseFloat(x) || 0,
-                parseFloat(y) || 0,
-                parseFloat(z) || 0
+                Number(x) || 0,
+                Number(y) || 0,
+                Number(z) || 0
             );
         },
     },
@@ -133,16 +133,27 @@ export const chipConfig: Record<string, ChipConfig> = {
         ],
         info: "Returns the magnitude (length) of a 3D vector",
         evaluate: async (compiled, context) => {
-            const vector = await context.evaluateChip(compiled.vector, context);
-            const [x, y, z] = vector
-                .toString()
-                .match(/-?\d+(\.\d+)?/g)
-                ?.map(Number) || [0, 0, 0];
+            const v = await context.evaluateChip(compiled.vector, context);
 
-            const threeVector = new THREE.Vector3(x, y, z);
-            console.log(threeVector, threeVector.length(), x, y, z);
+            let x = 0,
+                y = 0,
+                z = 0;
+            if (isVecLike(v)) {
+                x = Number(v.x) || 0;
+                y = Number(v.y) || 0;
+                z = Number(v.z) || 0;
+            } else if (Array.isArray(v) && v.length >= 3) {
+                x = Number(v[0]) || 0;
+                y = Number(v[1]) || 0;
+                z = Number(v[2]) || 0;
+            } else if (typeof v === "string") {
+                const nums = v.match(/-?\d+(?:\.\d+)?/g)?.map(Number) || [];
+                x = Number(nums[0]) || 0;
+                y = Number(nums[1]) || 0;
+                z = Number(nums[2]) || 0;
+            }
 
-            return threeVector.length();
+            return new THREE.Vector3(x, y, z).length();
         },
     },
 
@@ -166,7 +177,7 @@ export const chipConfig: Record<string, ChipConfig> = {
             },
         ],
         info: "Generates a random integer between min and max",
-        evaluate: (compiled, context) => {
+        evaluate: (compiled, _context) => {
             const min = parseInt(compiled.min);
             const max = parseInt(compiled.max);
             return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -253,17 +264,13 @@ export const chipConfig: Record<string, ChipConfig> = {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
 
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-
-            if (isVec(a) && isVec(b)) {
+            if (isVecLike(a) && isVecLike(b)) {
                 return (
                     Number(a.x) === Number(b.x) &&
                     Number(a.y) === Number(b.y) &&
                     Number(a.z) === Number(b.z)
                 );
             }
-
             return a === b;
         },
     },
@@ -292,17 +299,13 @@ export const chipConfig: Record<string, ChipConfig> = {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
 
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-
-            if (isVec(a) && isVec(b)) {
+            if (isVecLike(a) && isVecLike(b)) {
                 return !(
                     Number(a.x) === Number(b.x) &&
                     Number(a.y) === Number(b.y) &&
                     Number(a.z) === Number(b.z)
                 );
             }
-
             return a !== b;
         },
     },
@@ -330,10 +333,8 @@ export const chipConfig: Record<string, ChipConfig> = {
         evaluate: async (compiled, context) => {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
-
             const aNum = Number(a);
             const bNum = Number(b);
-
             if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
                 runtimeStore.warn(
                     `Greater Than chip: unable to compare non-numeric values '${a}' and '${b}'. Returning false.`,
@@ -341,7 +342,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 );
                 return false;
             }
-
             return aNum > bNum;
         },
     },
@@ -369,10 +369,8 @@ export const chipConfig: Record<string, ChipConfig> = {
         evaluate: async (compiled, context) => {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
-
             const aNum = Number(a);
             const bNum = Number(b);
-
             if (Number.isNaN(aNum) || Number.isNaN(bNum)) {
                 runtimeStore.warn(
                     `Less Than chip: unable to compare non-numeric values '${a}' and '${b}'. Returning false.`,
@@ -380,7 +378,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 );
                 return false;
             }
-
             return aNum < bNum;
         },
     },
@@ -456,7 +453,7 @@ export const chipConfig: Record<string, ChipConfig> = {
         info: "Returns the logical NOT of the given value",
         evaluate: async (compiled, context) => {
             const value = await context.evaluateChip(compiled.value, context);
-            return !Boolean(value);
+            return !value;
         },
     },
 
@@ -506,7 +503,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 return null;
             }
 
-            // Return the position of the target game object
             return targetGameObject.transform.position;
         },
     },
@@ -557,7 +553,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 return null;
             }
 
-            // Return the rotation of the target game object
             return targetGameObject.transform.rotation;
         },
     },
@@ -568,8 +563,7 @@ export const chipConfig: Record<string, ChipConfig> = {
         info: "Gets the look vector of the player",
         fields: [],
         evaluate: (compiled, context) => {
-            let gameObject = context.gameObject as GameObject;
-
+            const gameObject = context.gameObject as GameObject;
             return gameObject.getLookVector();
         },
     },
@@ -592,9 +586,7 @@ export const chipConfig: Record<string, ChipConfig> = {
                 context
             );
 
-            // Resolve target object
             let targetGameObject;
-
             if (targetRef) {
                 const resolvedTarget = resolveTargetGameObject(
                     targetRef,
@@ -620,7 +612,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 return null;
             }
 
-            // Return the value of the target game object's specified field
             return targetGameObject.getProperty("value") ?? null;
         },
     },
@@ -652,22 +643,15 @@ export const chipConfig: Record<string, ChipConfig> = {
             if (typeof a === "number" && typeof b === "number") {
                 return a + b;
             }
-
             if (typeof a === "string" && typeof b === "string") {
                 return a + b;
             }
-
-            // Vector-like addition: supports Types.BVector3 or plain objects with x,y,z
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-            if (isVec(a) && isVec(b)) {
-                const ax = Number(a.x) || 0;
-                const ay = Number(a.y) || 0;
-                const az = Number(a.z) || 0;
-                const bx = Number(b.x) || 0;
-                const by = Number(b.y) || 0;
-                const bz = Number(b.z) || 0;
-                return new Types.BVector3(ax + bx, ay + by, az + bz);
+            if (isVecLike(a) && isVecLike(b)) {
+                return new Types.BVector3(
+                    (Number(a.x) || 0) + (Number(b.x) || 0),
+                    (Number(a.y) || 0) + (Number(b.y) || 0),
+                    (Number(a.z) || 0) + (Number(b.z) || 0)
+                );
             }
 
             runtimeStore.warn(
@@ -678,7 +662,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 )} B type: ${typeof b}. Returning 0.`,
                 "Interpreter"
             );
-
             return 0;
         },
     },
@@ -707,23 +690,15 @@ export const chipConfig: Record<string, ChipConfig> = {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
 
-            console.log("Subtracting", a, b);
-
             if (typeof a === "number" && typeof b === "number") {
                 return a - b;
             }
-
-            // Vector-like subtraction: supports Types.BVector3 or plain objects with x,y,z
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-            if (isVec(a) && isVec(b)) {
-                const ax = Number(a.x) || 0;
-                const ay = Number(a.y) || 0;
-                const az = Number(a.z) || 0;
-                const bx = Number(b.x) || 0;
-                const by = Number(b.y) || 0;
-                const bz = Number(b.z) || 0;
-                return new Types.BVector3(ax - bx, ay - by, az - bz);
+            if (isVecLike(a) && isVecLike(b)) {
+                return new Types.BVector3(
+                    (Number(a.x) || 0) - (Number(b.x) || 0),
+                    (Number(a.y) || 0) - (Number(b.y) || 0),
+                    (Number(a.z) || 0) - (Number(b.z) || 0)
+                );
             }
 
             runtimeStore.warn(
@@ -734,7 +709,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 )} B type: ${typeof b}. Returning 0.`,
                 "Interpreter"
             );
-
             return 0;
         },
     },
@@ -766,18 +740,12 @@ export const chipConfig: Record<string, ChipConfig> = {
             if (typeof a === "number" && typeof b === "number") {
                 return a * b;
             }
-
-            // Vector-like component-wise multiplication
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-            if (isVec(a) && isVec(b)) {
-                const ax = Number(a.x) || 0;
-                const ay = Number(a.y) || 0;
-                const az = Number(a.z) || 0;
-                const bx = Number(b.x) || 0;
-                const by = Number(b.y) || 0;
-                const bz = Number(b.z) || 0;
-                return new Types.BVector3(ax * bx, ay * by, az * bz);
+            if (isVecLike(a) && isVecLike(b)) {
+                return new Types.BVector3(
+                    (Number(a.x) || 0) * (Number(b.x) || 0),
+                    (Number(a.y) || 0) * (Number(b.y) || 0),
+                    (Number(a.z) || 0) * (Number(b.z) || 0)
+                );
             }
 
             runtimeStore.warn(
@@ -788,7 +756,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 )} B type: ${typeof b}. Returning 0.`,
                 "Interpreter"
             );
-
             return 0;
         },
     },
@@ -824,14 +791,7 @@ export const chipConfig: Record<string, ChipConfig> = {
                 }
                 return a / b;
             }
-
-            // Vector-like component-wise division
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-            if (isVec(a) && isVec(b)) {
-                const ax = Number(a.x) || 0;
-                const ay = Number(a.y) || 0;
-                const az = Number(a.z) || 0;
+            if (isVecLike(a) && isVecLike(b)) {
                 const bx = Number(b.x) || 0;
                 const by = Number(b.y) || 0;
                 const bz = Number(b.z) || 0;
@@ -839,14 +799,17 @@ export const chipConfig: Record<string, ChipConfig> = {
                     runtimeStore.warn("Divide by zero", "Interpreter");
                     return new Types.BVector3(0, 0, 0);
                 }
-                return new Types.BVector3(ax / bx, ay / by, az / bz);
+                return new Types.BVector3(
+                    (Number(a.x) || 0) / bx,
+                    (Number(a.y) || 0) / by,
+                    (Number(a.z) || 0) / bz
+                );
             }
 
             runtimeStore.warn(
                 `Divide chip: unsupported input types. A: ${typeof a}, B: ${typeof b}. Returning 0.`,
                 "Interpreter"
             );
-
             return 0;
         },
     },
@@ -854,7 +817,7 @@ export const chipConfig: Record<string, ChipConfig> = {
     abs: {
         color: "orange-500",
         label: "Absolute",
-        info: "Returns the absolute value of a number",
+        info: "Returns the absolute value of a number or vector",
         fields: [
             {
                 type: "number",
@@ -870,17 +833,11 @@ export const chipConfig: Record<string, ChipConfig> = {
             if (typeof value === "number") {
                 return Math.abs(value);
             }
-
-            const isVec = (v: any) =>
-                v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
-            if (isVec(value)) {
-                const x = Number(value.x) || 0;
-                const y = Number(value.y) || 0;
-                const z = Number(value.z) || 0;
+            if (isVecLike(value)) {
                 return new Types.BVector3(
-                    Math.abs(x),
-                    Math.abs(y),
-                    Math.abs(z)
+                    Math.abs(Number(value.x) || 0),
+                    Math.abs(Number(value.y) || 0),
+                    Math.abs(Number(value.z) || 0)
                 );
             }
 
@@ -910,8 +867,7 @@ export const chipConfig: Record<string, ChipConfig> = {
                 ],
             },
         ],
-
-        evaluate: (compiled, context) => {
+        evaluate: (compiled, _context) => {
             const button = compiled.button || "left";
             return runtimeStore.getMouseButton(button);
         },
@@ -936,7 +892,6 @@ export const chipConfig: Record<string, ChipConfig> = {
                 context
             );
 
-            // Resolve target object
             let targetGameObject = context.gameObject; // Default to current object
             if (targetRef) {
                 const resolvedTarget = resolveTargetGameObject(
@@ -973,11 +928,9 @@ export function generateAvailableChips() {
     return Object.keys(chipConfig).map((type) => ({
         id: type,
         type,
-        // Copy all config properties
         color: chipConfig[type].color,
         label: chipConfig[type].label,
         info: chipConfig[type].info,
-        // Initialize field values to defaults
         ...Object.fromEntries(
             chipConfig[type].fields.map((field) => [
                 field.bind,
@@ -1004,11 +957,9 @@ export function generateChip(
     return {
         id: `${chipType}-${Date.now()}-${Math.random()}`,
         type: chipType,
-        // Copy all config properties
         color: config.color,
         label: config.label,
         info: config.info,
-        // Initialize field values to defaults, then override with prefilled values
         ...Object.fromEntries(
             config.fields.map((field) => [
                 field.bind,
