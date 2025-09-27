@@ -147,12 +147,9 @@ export class WaypointNavigatorComponent extends Component {
 
             // Prefer querying the scene for children by parentId to be robust
             // even if parent.children wasn't populated correctly.
-            const waypointChildren = (sceneStore
-                .getChildrenOf(obj.id)
-                .filter(Boolean) || [])
-                .filter(
-                (c): c is Types.BWaypoint => c instanceof Types.BWaypoint
-            );
+            const waypointChildren = (
+                sceneStore.getChildrenOf(obj.id).filter(Boolean) || []
+            ).filter((c): c is Types.BWaypoint => c instanceof Types.BWaypoint);
 
             // Use their world positions (editor-space at play start) as waypoint positions
             for (const w of waypointChildren) {
