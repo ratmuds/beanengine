@@ -6,6 +6,7 @@ import {
     getTargetResolutionError,
 } from "$lib/services/targetResolver.js";
 import type { GameObject } from "./runtime/GameObject.js";
+import * as THREE from "three";
 
 export interface RuntimeContext {
     variables: Record<
@@ -115,6 +116,33 @@ export const chipConfig: Record<string, ChipConfig> = {
                 parseFloat(y) || 0,
                 parseFloat(z) || 0
             );
+        },
+    },
+
+    vector3Size: {
+        color: "green-500",
+        label: "Vector3 Size",
+        fields: [
+            {
+                type: "text",
+                bind: "vector",
+                label: "Vector",
+                placeholder: "(x, y, z)",
+                defaultValue: "",
+            },
+        ],
+        info: "Returns the magnitude (length) of a 3D vector",
+        evaluate: async (compiled, context) => {
+            const vector = await context.evaluateChip(compiled.vector, context);
+            const [x, y, z] = vector
+                .toString()
+                .match(/-?\d+(\.\d+)?/g)
+                ?.map(Number) || [0, 0, 0];
+
+            const threeVector = new THREE.Vector3(x, y, z);
+            console.log(threeVector, threeVector.length(), x, y, z);
+
+            return threeVector.length();
         },
     },
 
@@ -678,6 +706,8 @@ export const chipConfig: Record<string, ChipConfig> = {
         evaluate: async (compiled, context) => {
             const a = await context.evaluateChip(compiled.a, context);
             const b = await context.evaluateChip(compiled.b, context);
+
+            console.log("Subtracting", a, b);
 
             if (typeof a === "number" && typeof b === "number") {
                 return a - b;

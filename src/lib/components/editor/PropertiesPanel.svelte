@@ -7,7 +7,7 @@
 
     import * as Select from "$lib/components/ui/select/index.js";
     import {
-        ChevronDown,
+        Navigation,
         Box,
         Search,
         Hexagon,
@@ -249,6 +249,36 @@
         if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
 
         object.partB = selectedPart;
+        onPropertyChange(object);
+    }
+
+    // Waypoint Navigator: Path selector reactive variables
+    const pathOptions = $derived(() => {
+        if (!object || !(object instanceof Types.BWaypointNavigator)) return [];
+        const allObjects = $sceneStore.getScene().objects;
+        const paths = allObjects.filter(
+            (obj) => obj instanceof Types.BWaypointPath
+        ) as Types.BWaypointPath[];
+        return paths.map((path) => ({
+            value: path.id,
+            label: path.name,
+            data: { path },
+        }));
+    });
+
+    let pathSelectorValue: string = $state("");
+
+    $effect(() => {
+        if (!object || !(object instanceof Types.BWaypointNavigator)) {
+            pathSelectorValue = "";
+            return;
+        }
+        pathSelectorValue = (object as any).waypointPath || "";
+    });
+
+    function handlePathChange(value: string) {
+        if (!object || !(object instanceof Types.BWaypointNavigator)) return;
+        (object as any).waypointPath = value || "";
         onPropertyChange(object);
     }
 </script>
@@ -1609,6 +1639,50 @@
                                     </span>
                                 {/if}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Waypoint Navigator Properties -->
+            {#if object instanceof Types.BWaypointNavigator}
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <Navigation class="w-4 h-4 text-purple-400" />
+                        <h3 class="font-medium text-sm text-foreground">
+                            Waypoint Navigator
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3 px-1">
+                        <!-- Path Selector -->
+                        <div class="space-y-1.5">
+                            <div class="text-xs text-muted-foreground">
+                                Path
+                            </div>
+                            <Select.Root
+                                bind:value={pathSelectorValue}
+                                onValueChange={handlePathChange}
+                            >
+                                <Select.Trigger class="w-full">
+                                    <Select.Value placeholder="Select a path" />
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#if pathOptions().length === 0}
+                                        <div
+                                            class="px-2 py-2 text-xs text-muted-foreground"
+                                        >
+                                            No Waypoint Paths in scene
+                                        </div>
+                                    {:else}
+                                        {#each pathOptions() as opt (opt.value)}
+                                            <Select.Item value={opt.value}>
+                                                {opt.label}
+                                            </Select.Item>
+                                        {/each}
+                                    {/if}
+                                </Select.Content>
+                            </Select.Root>
                         </div>
                     </div>
                 </div>

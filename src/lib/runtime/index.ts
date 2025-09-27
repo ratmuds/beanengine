@@ -9,3 +9,4 @@ export { ConstraintComponent } from "./ConstraintComponent";
 export { GameObjectManager } from "./GameObjectManager";
 export { CameraComponent } from "./CameraComponent";
 export { PlayerControllerComponent } from "./PlayerControllerComponent";
+export { WaypointNavigatorComponent } from "./WaypointNavigatorComponent";

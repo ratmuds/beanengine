@@ -681,7 +681,8 @@ class BWaypointPath extends BObject {
         id: string | null,
         parent: BObject | null
     ) {
-        super(name, id, parent)
+        super(name, id, parent);
+        this.type = "waypointpath";
     }
 }
 
@@ -692,13 +693,31 @@ class BWaypoint extends BNode3D {
         id: string | null,
         parent: BObject | null
     ) {
-        super(name, id, parent)
+        super(name, id, parent);
+        this.type = "waypoint";
     }
 }
 
 // Represents a navigator that moves the parent object along the waypoints
 class BWaypointNavigator extends BObject {
+    waypointPath?: string; // ID of the waypoint path
+    speed: number; // Movement speed
+    loop: boolean; // Whether to loop the path
+    waitTime: number; // Time to wait at each waypoint
 
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "waypointnavigator";
+
+        // Default values
+        this.speed = 1.0;
+        this.loop = false;
+        this.waitTime = 0;
+    }
 }
 
 // Represents a light source in the scene
@@ -723,8 +742,14 @@ class BConstraint extends BObject {
     partA?: BPart;
     partB?: BPart;
 
-    constraintType: "fixed" | "spherical" | "revolute" | "prismatic" | "motor" | "spring";
-    
+    constraintType:
+        | "fixed"
+        | "spherical"
+        | "revolute"
+        | "prismatic"
+        | "motor"
+        | "spring";
+
     stiffness: number; // For spring and motor
     damping: number; // For spring and motor
 
@@ -1123,6 +1148,9 @@ export {
     BVector2,
     BNode3D,
     BPart,
+    BWaypointPath,
+    BWaypoint,
+    BWaypointNavigator,
     BPlayerController,
     BCamera,
     BLight,

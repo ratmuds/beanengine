@@ -249,6 +249,20 @@ class SceneManager {
                 );
                 break;
             }
+            case "waypointpath":
+                newObject = new Types.BWaypointPath(name, null, null);
+                break;
+            case "waypoint":
+                newObject = new Types.BWaypoint(name, null, null);
+                if (newObject instanceof Types.BWaypoint) {
+                    newObject.position =
+                        options?.position || new Types.BVector3(0, 0, 0);
+                    newObject.scale = new Types.BVector3(1, 1, 1);
+                }
+                break;
+            case "waypointnavigator":
+                newObject = new Types.BWaypointNavigator(name, null, null);
+                break;
             case "value":
                 newObject = new Types.BValue(name, null, null);
                 break;
@@ -643,13 +657,20 @@ class SceneManager {
             }
         }
 
-        // Second pass: Wire parent-child relationships
+        // Second pass: Wire parent-child relationships (populate parent.children correctly)
         for (const objData of data.objects) {
             if (objData.parentId) {
                 const child = objectMap.get(objData.id);
                 const parent = objectMap.get(objData.parentId);
                 if (child && parent) {
-                    child.parent = parent;
+                    // Use addChild to ensure both the child's parent and the parent's
+                    // children array are updated consistently.
+                    if (typeof (parent as any).addChild === "function") {
+                        (parent as any).addChild(child);
+                    } else {
+                        // Fallback: set parent reference if addChild is unavailable
+                        (child as any).parent = parent;
+                    }
                 }
             }
         }
@@ -758,6 +779,15 @@ class SceneManager {
         switch (data.type) {
             case "part":
                 obj = new Types.BPart(data.name, data.id, null);
+                break;
+            case "waypointpath":
+                obj = new Types.BWaypointPath(data.name, data.id, null);
+                break;
+            case "waypoint":
+                obj = new Types.BWaypoint(data.name, data.id, null);
+                break;
+            case "waypointnavigator":
+                obj = new Types.BWaypointNavigator(data.name, data.id, null);
                 break;
             case "playercontroller":
                 obj = new Types.BPlayerController(data.name, data.id, null);

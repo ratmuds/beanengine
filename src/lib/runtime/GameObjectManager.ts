@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from "three";
 import { GameObject } from "./GameObject";
 import { VisualComponent } from "./VisualComponent";
@@ -9,6 +10,7 @@ import { ConstraintComponent } from "./ConstraintComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { CameraComponent } from "./CameraComponent";
 import { runtimeStore } from "$lib/runtimeStore";
+import { WaypointNavigatorComponent } from "./WaypointNavigatorComponent";
 
 /**
  * GameObjectManager handles the lifecycle of all GameObjects in the scene
@@ -358,6 +360,23 @@ export class GameObjectManager {
             !gameObject.getComponent(ConstraintComponent)
         ) {
             gameObject.addComponent(new ConstraintComponent(gameObject));
+        }
+
+        // Add WaypointNavigatorComponent when encountering a BWaypointNavigator
+        // Attach the runtime component to the parent Part's GameObject so it moves the Part
+        if (bObject instanceof Types.BWaypointNavigator) {
+            console.log("Adding navigator component to parent");
+            const parentGO = gameObject.getParent();
+            if (
+                parentGO &&
+                !parentGO.getComponent(WaypointNavigatorComponent)
+            ) {
+                const comp = parentGO.addComponent(
+                    new WaypointNavigatorComponent(parentGO, bObject)
+                );
+                // Respect Storage state
+                comp.setEnabled(!parentGO.isUnderStorage());
+            }
         }
     }
 

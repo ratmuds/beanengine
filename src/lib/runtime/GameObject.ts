@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as THREE from "three";
 import * as Types from "$lib/types";
 import { Component } from "./Component";
@@ -7,6 +8,7 @@ import { PhysicsComponent } from "./PhysicsComponent";
 import { ConstraintComponent } from "./ConstraintComponent";
 import { CameraComponent } from "./CameraComponent";
 import { PlayerControllerComponent } from "./PlayerControllerComponent";
+import { WaypointNavigatorComponent } from "./WaypointNavigatorComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { runtimeStore } from "$lib/runtimeStore";
 
@@ -369,6 +371,8 @@ export class GameObject {
                 cloneGO.addComponent(new ConstraintComponent(cloneGO));
             } else if (comp instanceof CameraComponent) {
                 cloneGO.addComponent(new CameraComponent(cloneGO));
+            } else if (comp instanceof WaypointNavigatorComponent) {
+                cloneGO.addComponent(new WaypointNavigatorComponent(cloneGO));
             } else {
                 runtimeStore.warn(
                     `Unrecognized component type: ${comp.constructor.name}`,

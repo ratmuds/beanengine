@@ -148,6 +148,12 @@
                 return Lightbulb;
             case "constraint":
                 return Clipboard;
+            case "waypointpath":
+                return FolderTree;
+            case "waypoint":
+                return Hash;
+            case "waypointnavigator":
+                return Navigation;
             case "storage":
                 return Folder;
             case "uistorage":
@@ -547,6 +553,38 @@
                                 </Command.Item>
                             </Command.Group>
                             <Command.Separator />
+                            <Command.Group heading="Navigation">
+                                <Command.Item
+                                    value="waypointpath"
+                                    onSelect={() =>
+                                        handleAddObjectType("WaypointPath")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <FolderTree class="w-4 h-4 mr-2" />
+                                    Waypoint Path
+                                </Command.Item>
+                                <Command.Item
+                                    value="waypoint"
+                                    onSelect={() =>
+                                        handleAddObjectType("Waypoint")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Hash class="w-4 h-4 mr-2" />
+                                    Waypoint
+                                </Command.Item>
+                                <Command.Item
+                                    value="waypointnavigator"
+                                    onSelect={() =>
+                                        handleAddObjectType(
+                                            "WaypointNavigator"
+                                        )}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Navigation class="w-4 h-4 mr-2" />
+                                    Waypoint Navigator
+                                </Command.Item>
+                            </Command.Group>
+                            <Command.Separator />
                             <Command.Group heading="UI">
                                 <Command.Item
                                     value="containerui"
@@ -600,7 +638,9 @@
             options={["Default"]}
             defaultOption="Default"
         >
-            <FolderOpen class="w-4 h-4" />
+            {#snippet children()}
+                <FolderOpen class="w-4 h-4" />
+            {/snippet}
         </ItemSwitcher>
 
         <!-- Search -->
@@ -647,29 +687,24 @@
                 dispatch("selectObject", { id: -1 });
             }
         }}
+        onkeydown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                if (e.target === e.currentTarget) {
+                    selectedObject = -1;
+                    dispatch("selectObject", { id: -1 });
+                }
+            }
+        }}
         oncontextmenu={(e) => {
             // Right click on empty space shows paste option
             if (e.target === e.currentTarget) {
                 handleRightClick(e, null);
             }
         }}
+        role="tree"
+        tabindex="0"
     >
-        <div
-            class="space-y-1"
-            onclick={(e) => {
-                // Unselect when clicking on empty space within the list
-                if (e.target === e.currentTarget) {
-                    selectedObject = -1;
-                    dispatch("selectObject", { id: -1 });
-                }
-            }}
-            oncontextmenu={(e) => {
-                // Right click on empty space within the list shows paste option
-                if (e.target === e.currentTarget) {
-                    handleRightClick(e, null);
-                }
-            }}
-        >
+        <div class="space-y-1">
             {#each filteredObjects as obj (obj.id)}
                 {@const Icon = getObjectIcon(obj)}
                 {@const hasChildren = obj.hasChildren}
@@ -682,8 +717,13 @@
                           : 'hover:shadow-sm'} min-h-[44px]"
                     style="margin-left: {obj.depth * 16}px"
                     onclick={() => handleObjectClick(obj.id)}
+                    onkeydown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            handleObjectClick(obj.id);
+                        }
+                    }}
                     oncontextmenu={(e) => handleRightClick(e, obj.id)}
-                    draggable={obj.type !== "storage" ||
+                    draggable={obj.type !== "storage" &&
                         obj.type !== "uistorage"}
                     ondragstart={(e) => handleDragStart(e, obj.id)}
                     ondragend={handleDragEnd}
@@ -802,9 +842,10 @@
         style="left: {contextMenu.x}px; top: {contextMenu.y}px;"
     >
         {#if contextMenu.objectId}
+            {@const cm = contextMenu!}
             {@const ctxObj = $sceneStore
                 .getScene()
-                .objects.find((o: any) => o.id === contextMenu.objectId)}
+                .objects.find((o: any) => o.id === cm.objectId)}
             {@const isStorage = ctxObj && ctxObj.type === "storage"}
             <!-- Object-specific context menu -->
             {#if !isStorage}

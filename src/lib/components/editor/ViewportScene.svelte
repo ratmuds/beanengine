@@ -12,6 +12,7 @@
     import { sceneStore } from "$lib/sceneStore";
     import { T, useTask } from "@threlte/core";
     import { onMount } from "svelte";
+    import * as SkeletonUtils from "three/addons/utils/SkeletonUtils.js";
 
     let {
         selectedObject = $bindable(-1),
@@ -50,7 +51,6 @@
         resetTransformControlsState();
     });
 
-    // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
     // TODO: handle objects having children (local position)
     console.warn("TODO: handle objects having children (local position)");
@@ -159,7 +159,10 @@
                     )}
                     {#if asset?.url}
                         {#await useGltf(asset.url) then gltf}
-                            <T is={gltf.scene} />
+                            {@const clonedScene = SkeletonUtils.clone(
+                                gltf.scene
+                            )}
+                            <T is={clonedScene} />
                         {/await}
                     {/if}
                 {/if}
@@ -195,7 +198,6 @@
             >
                 <T.SphereGeometry args={[0.3, 16, 16]} />
                 <T.MeshBasicMaterial color={object.color || "#ffffff"} />
-
                 {#if selectedObject === object.id}
                     <Outlines color="#00aaff" />
                 {/if}
