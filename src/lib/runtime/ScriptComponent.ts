@@ -164,6 +164,87 @@ export class ScriptComponent extends Component {
                     this.unsubscribers.push(off);
                     break;
                 }
+                case "collisionenter": {
+                    const off = runtimeStore.on(
+                        "collisionenter",
+                        (a: string, b: string) => {
+                            const selfId = this.gameObject.bObject.id;
+                            if (a !== selfId && b !== selfId) return;
+                            const otherId = a === selfId ? b : a;
+                            const selfName = trig.args?.[0]?.name || "self";
+                            const otherName = trig.args?.[1]?.name || "other";
+                            runtimeStore.setVariable(
+                                selfName,
+                                selfId,
+                                "local",
+                                this.script.id
+                            );
+                            runtimeStore.setVariable(
+                                otherName,
+                                otherId,
+                                "local",
+                                this.script.id
+                            );
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "collisionexit": {
+                    const off = runtimeStore.on(
+                        "collisionexit",
+                        (a: string, b: string) => {
+                            const selfId = this.gameObject.bObject.id;
+                            if (a !== selfId && b !== selfId) return;
+                            const otherId = a === selfId ? b : a;
+                            const selfName = trig.args?.[0]?.name || "self";
+                            const otherName = trig.args?.[1]?.name || "other";
+                            runtimeStore.setVariable(
+                                selfName,
+                                selfId,
+                                "local",
+                                this.script.id
+                            );
+                            runtimeStore.setVariable(
+                                otherName,
+                                otherId,
+                                "local",
+                                this.script.id
+                            );
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
+                case "collisionstay": {
+                    const off = runtimeStore.on(
+                        "collisionstay",
+                        (a: string, b: string) => {
+                            const selfId = this.gameObject.bObject.id;
+                            if (a !== selfId && b !== selfId) return;
+                            const otherId = a === selfId ? b : a;
+                            const selfName = trig.args?.[0]?.name || "self";
+                            const otherName = trig.args?.[1]?.name || "other";
+                            runtimeStore.setVariable(
+                                selfName,
+                                selfId,
+                                "local",
+                                this.script.id
+                            );
+                            runtimeStore.setVariable(
+                                otherName,
+                                otherId,
+                                "local",
+                                this.script.id
+                            );
+                            this.interpreter?.run(context);
+                        }
+                    );
+                    this.unsubscribers.push(off);
+                    break;
+                }
                 case "custom": {
                     if (!trig.event) break;
                     const off = runtimeStore.on(

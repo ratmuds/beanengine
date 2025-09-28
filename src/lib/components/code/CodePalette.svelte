@@ -33,6 +33,33 @@
             name: "On Key Press",
             args: [{ name: "key", type: "string" }],
         },
+        {
+            id: "trigger4",
+            type: "onCollisionEnter",
+            name: "On Collision Enter",
+            args: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
+            ],
+        },
+        {
+            id: "trigger5",
+            type: "onCollisionExit",
+            name: "On Collision Exit",
+            args: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
+            ],
+        },
+        {
+            id: "trigger6",
+            type: "onCollisionStay",
+            name: "On Collision Stay",
+            args: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
+            ],
+        },
     ]);
 
     // Variable creation modal state
@@ -166,7 +193,9 @@
     }
 </script>
 
-<div class="w-full p-5 relative z-10 flex flex-col gap-4 h-full overflow-y-auto">
+<div
+    class="w-full p-5 relative z-10 flex flex-col gap-4 h-full overflow-y-auto"
+>
     <div class="flex items-center gap-3">
         <div class="p-2 bg-blue-500/10 rounded-lg">
             <Code class="w-5 h-5 text-blue-400" />
@@ -631,6 +660,3 @@
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>
-
-
-

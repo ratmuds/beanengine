@@ -461,7 +461,14 @@
                                                   ? "update"
                                                   : t === "onKeyPress"
                                                     ? "keydown"
-                                                    : "custom";
+                                                    : t === "onCollisionEnter"
+                                                      ? "collisionenter"
+                                                      : t === "onCollisionExit"
+                                                        ? "collisionexit"
+                                                        : t ===
+                                                            "onCollisionStay"
+                                                          ? "collisionstay"
+                                                          : "custom";
                                         const type = mapType(trigger.type);
                                         const defaultArgs =
                                             type === "update"
@@ -478,7 +485,24 @@
                                                             type: "string",
                                                         },
                                                     ]
-                                                  : [];
+                                                  : type === "collisionenter" ||
+                                                      type ===
+                                                          "collisionexit" ||
+                                                      type === "collisionstay"
+                                                    ? trigger.args &&
+                                                      trigger.args.length > 0
+                                                        ? trigger.args
+                                                        : [
+                                                              {
+                                                                  name: "self",
+                                                                  type: "string",
+                                                              },
+                                                              {
+                                                                  name: "other",
+                                                                  type: "string",
+                                                              },
+                                                          ]
+                                                    : [];
                                         const newTrigger = {
                                             id: `${Date.now()}-${Math.random()}`,
                                             type,

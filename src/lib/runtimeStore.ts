@@ -1,8 +1,22 @@
 // src/lib/runtimeStore.ts
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
+/* eslint-disable no-console */
 import { writable } from "svelte/store";
 import type { GameObjectManager } from "$lib/runtime/GameObjectManager";
 import { nanoid } from "nanoid";
 import * as THREE from "three";
+
+// Ensure we have a global slot to persist the runtime canvas across HMR/module reloads
+declare global {
+    // eslint-disable-next-line @typescript-eslint/no-namespace
+    namespace NodeJS {
+        interface Global {}
+    }
+    interface Window {
+        __beanengineCanvas?: HTMLCanvasElement | null;
+    }
+}
 
 export type LogLevel = "info" | "warn" | "error";
 
@@ -68,6 +82,11 @@ class RuntimeManager {
     // Per-script local variables; key is script id
     public localVariables: Map<string, Map<string, RuntimeVariable>> =
         new Map();
+    // Physics handle mappings for collision/event resolution
+    public colliderHandleToObjectId: Map<number, string> = new Map();
+    public bodyHandleToObjectId: Map<number, string> = new Map();
+    // Active collision pairs (normalized key `${min}|${max}`)
+    public activeCollisionPairs: Set<string> = new Set();
 
     // Cache processed mesh data for convex hull generation
     // Key: asset ID, Value: processed mesh data (centered points + original center)
@@ -169,6 +188,30 @@ class RuntimeManager {
                     name: "key",
                     type: "string",
                 },
+            ],
+        });
+
+        this.scriptEvents.set("collisionenter", {
+            name: "collisionenter",
+            params: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
+            ],
+        });
+
+        this.scriptEvents.set("collisionexit", {
+            name: "collisionexit",
+            params: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
+            ],
+        });
+
+        this.scriptEvents.set("collisionstay", {
+            name: "collisionstay",
+            params: [
+                { name: "self", type: "string" },
+                { name: "other", type: "string" },
             ],
         });
     }
@@ -463,7 +506,20 @@ class RuntimeManager {
         return { ...this.inputState.mouseDelta };
     }
 
-    resetInputState(): void {
+    resetInputState(preserveCanvas = true): void {
+        const currentCanvas = preserveCanvas
+            ? this.inputState.canvasElement
+            : null;
+        let center = { x: 0, y: 0 };
+        if (currentCanvas) {
+            try {
+                const rect = currentCanvas.getBoundingClientRect();
+                center = { x: rect.width / 2, y: rect.height / 2 };
+            } catch {
+                // ignore
+            }
+        }
+
         this.inputState = {
             mouseButtons: {
                 left: false,
@@ -473,8 +529,8 @@ class RuntimeManager {
             keys: new Map(),
             mousePosition: { x: 0, y: 0 },
             mouseDelta: { x: 0, y: 0 },
-            canvasCenter: { x: 0, y: 0 },
-            canvasElement: null,
+            canvasCenter: center,
+            canvasElement: currentCanvas,
             mouseCaptured: false,
         };
     }
@@ -484,7 +540,15 @@ class RuntimeManager {
     }
 
     setCanvasElement(canvas: HTMLCanvasElement | null): void {
+        console.log("Setting canvas element", canvas);
         this.inputState.canvasElement = canvas;
+        try {
+            if (typeof window !== "undefined") {
+                window.__beanengineCanvas = canvas;
+            }
+        } catch {
+            // ignore
+        }
         if (canvas) {
             const rect = canvas.getBoundingClientRect();
             this.inputState.canvasCenter = {
@@ -492,6 +556,61 @@ class RuntimeManager {
                 y: rect.height / 2,
             };
         }
+    }
+
+    getCanvasElement(): HTMLCanvasElement | null {
+        // yeah so multiple ways of getting canvas bc sometimes the store loses it??? yeah idk prob not good but yeah
+
+        let canvas = this.inputState.canvasElement;
+        if (!canvas) {
+            // Try global singleton (helps when multiple runtimeStore instances exist)
+            try {
+                if (
+                    typeof window !== "undefined" &&
+                    window.__beanengineCanvas
+                ) {
+                    canvas = window.__beanengineCanvas;
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        // Last resort: probe DOM for a canvas element
+        if (!canvas) {
+            try {
+                if (typeof document !== "undefined") {
+                    const found = document.querySelector(
+                        "canvas"
+                    ) as HTMLCanvasElement | null;
+                    if (found) {
+                        this.inputState.canvasElement = found;
+                        try {
+                            if (typeof window !== "undefined") {
+                                window.__beanengineCanvas = found;
+                            }
+                        } catch {
+                            // ignore
+                        }
+                        canvas = found;
+                    }
+                }
+            } catch {
+                // ignore
+            }
+        }
+
+        console.log("Getting canvas element", canvas);
+        return canvas ?? null;
+    }
+
+    getCanvasSize(): { width: number; height: number } {
+        const canvas = this.getCanvasElement();
+        if (!canvas) {
+            return { width: 0, height: 0 };
+        }
+        const rect = canvas.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
     }
 
     getMousePositionFromCenter(): { x: number; y: number } {
@@ -577,6 +696,62 @@ class RuntimeManager {
 
     setThreeScene(scene: THREE.Scene | null): void {
         this.threeScene = scene;
+    }
+
+    registerBodyHandle(handle: number, objectId: string): void {
+        this.bodyHandleToObjectId.set(handle, objectId);
+    }
+
+    unregisterBodyHandle(handle: number): void {
+        this.bodyHandleToObjectId.delete(handle);
+    }
+
+    registerColliderHandle(handle: number, objectId: string): void {
+        this.colliderHandleToObjectId.set(handle, objectId);
+    }
+
+    unregisterColliderHandle(handle: number): void {
+        this.colliderHandleToObjectId.delete(handle);
+    }
+
+    getObjectIdForColliderHandle(handle: number): string | null {
+        return this.colliderHandleToObjectId.get(handle) ?? null;
+    }
+
+    /**
+     * Handle a collision event emitted by Rapier's EventQueue.
+     */
+    handleCollisionEvent(
+        colliderHandle1: number,
+        colliderHandle2: number,
+        started: boolean
+    ): void {
+        const idA = this.colliderHandleToObjectId.get(colliderHandle1);
+        const idB = this.colliderHandleToObjectId.get(colliderHandle2);
+        if (!idA || !idB) return;
+
+        const [self, other] = idA <= idB ? [idA, idB] : [idB, idA];
+        const key = `${self}|${other}`;
+
+        if (started) {
+            if (!this.activeCollisionPairs.has(key)) {
+                this.activeCollisionPairs.add(key);
+                this.emitEvent("collisionenter", self, other);
+            }
+        } else {
+            if (this.activeCollisionPairs.delete(key)) {
+                this.emitEvent("collisionexit", self, other);
+            }
+        }
+    }
+
+    /** Emit collisionstay for all currently active collision pairs. */
+    emitCollisionStayFrame(): void {
+        if (this.activeCollisionPairs.size === 0) return;
+        for (const key of this.activeCollisionPairs) {
+            const [a, b] = key.split("|");
+            this.emitEvent("collisionstay", a, b);
+        }
     }
 }
 
@@ -714,6 +889,14 @@ function createRuntimeStore() {
             update((m) => m);
         },
 
+        getCanvasElement: () => {
+            return manager.getCanvasElement();
+        },
+
+        getCanvasSize: () => {
+            return manager.getCanvasSize();
+        },
+
         getMousePositionFromCenter: () => {
             return manager.getMousePositionFromCenter();
         },
@@ -803,6 +986,35 @@ function createRuntimeStore() {
         },
         emit: (eventName: string, ...args: any[]) => {
             manager.emitEvent(eventName, ...args);
+        },
+        registerBodyHandle: (handle: number, objectId: string) => {
+            manager.registerBodyHandle(handle, objectId);
+        },
+        unregisterBodyHandle: (handle: number) => {
+            manager.unregisterBodyHandle(handle);
+        },
+        registerColliderHandle: (handle: number, objectId: string) => {
+            manager.registerColliderHandle(handle, objectId);
+        },
+        unregisterColliderHandle: (handle: number) => {
+            manager.unregisterColliderHandle(handle);
+        },
+        getObjectIdForColliderHandle: (handle: number) => {
+            return manager.getObjectIdForColliderHandle(handle);
+        },
+        handleCollisionEvent: (
+            colliderHandle1: number,
+            colliderHandle2: number,
+            started: boolean
+        ) => {
+            manager.handleCollisionEvent(
+                colliderHandle1,
+                colliderHandle2,
+                started
+            );
+        },
+        emitCollisionStayFrame: () => {
+            manager.emitCollisionStayFrame();
         },
     };
 }

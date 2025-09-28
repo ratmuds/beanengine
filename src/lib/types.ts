@@ -846,6 +846,9 @@ class BScript extends BObject {
             | "mousedown"
             | "mouseup"
             | "mousemove"
+            | "collisionenter"
+            | "collisionexit"
+            | "collisionstay"
             | "custom";
         name: string; // display name in editor
         event?: string; // for custom events: event name to subscribe to

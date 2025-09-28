@@ -1,3 +1,6 @@
+// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import * as Types from "$lib/types";
 import type { CompiledItem } from "./compiler.js";
 import { runtimeStore } from "$lib/runtimeStore";
@@ -7,6 +10,11 @@ import {
 } from "$lib/services/targetResolver.js";
 import type { GameObject } from "./runtime/GameObject.js";
 import * as THREE from "three";
+import {
+    raycast,
+    rayFromCamera,
+    overlapSphere,
+} from "$lib/runtime/PhysicsQueries";
 
 export interface RuntimeContext {
     variables: Record<
@@ -55,6 +63,88 @@ export interface ChipConfig {
 // Helper: vector-like guard
 const isVecLike = (v: any): v is { x: any; y: any; z: any } =>
     v && typeof v === "object" && "x" in v && "y" in v && "z" in v;
+
+const toThreeVector = (value: any, fallback?: THREE.Vector3): THREE.Vector3 => {
+    if (value instanceof THREE.Vector3) return value.clone();
+    if (value instanceof Types.BVector3)
+        return new THREE.Vector3(value.x, value.y, value.z);
+    if (isVecLike(value)) {
+        return new THREE.Vector3(
+            Number(value.x) || 0,
+            Number(value.y) || 0,
+            Number(value.z) || 0
+        );
+    }
+    if (Array.isArray(value) && value.length >= 3) {
+        return new THREE.Vector3(
+            Number(value[0]) || 0,
+            Number(value[1]) || 0,
+            Number(value[2]) || 0
+        );
+    }
+    if (typeof value === "string") {
+        const nums = value.match(/-?\d+(?:\.\d+)?/g)?.map((n) => Number(n)) || [
+            0, 0, 0,
+        ];
+        return new THREE.Vector3(nums[0] || 0, nums[1] || 0, nums[2] || 0);
+    }
+    return fallback ? fallback.clone() : new THREE.Vector3();
+};
+
+const evaluateField = async (
+    field: any,
+    context: RuntimeContext
+): Promise<any> => {
+    if (field && typeof field === "object" && "type" in field) {
+        return context.evaluateChip(field, context);
+    }
+    return field;
+};
+
+const toNumber = (value: any, fallback: number): number => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+};
+
+const performRaycast = async (compiled: any, context: RuntimeContext) => {
+    const originRaw = await evaluateField(compiled.origin, context);
+    const directionRaw = await evaluateField(compiled.direction, context);
+    const maxRaw = await evaluateField(compiled.maxDistance, context);
+    const originVec = toThreeVector(originRaw);
+    const directionVec = toThreeVector(
+        directionRaw,
+        new THREE.Vector3(0, -1, 0)
+    );
+    if (directionVec.lengthSq() === 0) {
+        directionVec.set(0, -1, 0);
+    }
+    const maxDistance = toNumber(maxRaw ?? compiled.maxDistance ?? 1000, 1000);
+    return raycast(originVec, directionVec, maxDistance);
+};
+
+const performCameraRaycast = async (compiled: any, context: RuntimeContext) => {
+    const mouseXRaw = await evaluateField(compiled.mouseX, context);
+    const mouseYRaw = await evaluateField(compiled.mouseY, context);
+    const maxRaw = await evaluateField(compiled.maxDistance, context);
+
+    const mouseX =
+        mouseXRaw === undefined || mouseXRaw === ""
+            ? undefined
+            : toNumber(mouseXRaw, NaN);
+    const mouseY =
+        mouseYRaw === undefined || mouseYRaw === ""
+            ? undefined
+            : toNumber(mouseYRaw, NaN);
+    const maxDistance = toNumber(maxRaw ?? compiled.maxDistance ?? 1000, 1000);
+
+    console.log("performCameraRaycast", { mouseX, mouseY, maxDistance });
+
+    return rayFromCamera(
+        Number.isFinite(mouseX) ? mouseX : undefined,
+        Number.isFinite(mouseY) ? mouseY : undefined,
+        maxDistance
+    );
+};
 
 // Chip configurations
 export const chipConfig: Record<string, ChipConfig> = {
@@ -870,6 +960,237 @@ export const chipConfig: Record<string, ChipConfig> = {
         evaluate: (compiled, _context) => {
             const button = compiled.button || "left";
             return runtimeStore.getMouseButton(button);
+        },
+    },
+
+    raycastdistance: {
+        color: "blue-600",
+        label: "Raycast Distance",
+        info: "Casts a ray and returns the hit distance (0 if no hit)",
+        fields: [
+            {
+                type: "text",
+                bind: "origin",
+                label: "Origin",
+                placeholder: "(self position)",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "direction",
+                label: "Direction",
+                placeholder: "(direction vector)",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const hit = await performRaycast(compiled, context);
+            return hit.hit ? hit.distance : 0;
+        },
+    },
+
+    raycastpoint: {
+        color: "blue-600",
+        label: "Raycast Point",
+        info: "Casts a ray and returns the hit point as a Vector3 (null if no hit)",
+        fields: [
+            {
+                type: "text",
+                bind: "origin",
+                label: "Origin",
+                placeholder: "(self position)",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "direction",
+                label: "Direction",
+                placeholder: "(direction vector)",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const hit = await performRaycast(compiled, context);
+            if (!hit.hit || !hit.point) return null;
+            return new Types.BVector3(hit.point.x, hit.point.y, hit.point.z);
+        },
+    },
+
+    raycastobject: {
+        color: "blue-600",
+        label: "Raycast Object",
+        info: "Casts a ray and returns the hit object id (empty string if no hit)",
+        fields: [
+            {
+                type: "text",
+                bind: "origin",
+                label: "Origin",
+                placeholder: "(self position)",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "direction",
+                label: "Direction",
+                placeholder: "(direction vector)",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const hit = await performRaycast(compiled, context);
+            return hit.hit && hit.objectId ? hit.objectId : "";
+        },
+    },
+
+    cameraraydistance: {
+        color: "blue-500",
+        label: "Camera Ray Distance",
+        info: "Raycasts from the active camera through the mouse and returns distance (0 if no hit)",
+        fields: [
+            {
+                type: "text",
+                bind: "mouseX",
+                label: "Mouse X (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "mouseY",
+                label: "Mouse Y (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            void context; // context not needed beyond helpers
+            const hit = await performCameraRaycast(compiled, context);
+            return hit.hit ? hit.distance : 0;
+        },
+    },
+
+    cameraraypoint: {
+        color: "blue-500",
+        label: "Camera Ray Point",
+        info: "Raycasts from the active camera through the mouse and returns the hit point",
+        fields: [
+            {
+                type: "text",
+                bind: "mouseX",
+                label: "Mouse X (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "mouseY",
+                label: "Mouse Y (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const hit = await performCameraRaycast(compiled, context);
+            if (!hit.hit || !hit.point) return null;
+            return new Types.BVector3(hit.point.x, hit.point.y, hit.point.z);
+        },
+    },
+
+    camerarayobject: {
+        color: "blue-500",
+        label: "Camera Ray Object",
+        info: "Raycasts from the active camera through the mouse and returns the hit object id",
+        fields: [
+            {
+                type: "text",
+                bind: "mouseX",
+                label: "Mouse X (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "text",
+                bind: "mouseY",
+                label: "Mouse Y (optional)",
+                placeholder: "",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "maxDistance",
+                label: "Max Dist",
+                placeholder: "1000",
+                defaultValue: 1000,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const hit = await performCameraRaycast(compiled, context);
+            console.log("RAYCAST", hit);
+            return hit.hit && hit.objectId ? hit.objectId : "";
+        },
+    },
+
+    overlapsphere: {
+        color: "blue-400",
+        label: "Overlap Sphere",
+        info: "Returns ids of colliders within a radius around a point",
+        fields: [
+            {
+                type: "text",
+                bind: "center",
+                label: "Center",
+                placeholder: "(self position)",
+                defaultValue: "",
+            },
+            {
+                type: "number",
+                bind: "radius",
+                label: "Radius",
+                placeholder: "5",
+                defaultValue: 5,
+            },
+        ],
+        evaluate: async (compiled, context) => {
+            const centerRaw = await evaluateField(compiled.center, context);
+            const radiusRaw = await evaluateField(compiled.radius, context);
+            const centerVec = toThreeVector(centerRaw);
+            const radius = toNumber(radiusRaw ?? compiled.radius ?? 1, 1);
+            return overlapSphere(centerVec, radius);
         },
     },
 

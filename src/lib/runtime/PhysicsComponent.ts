@@ -21,6 +21,11 @@ export class PhysicsComponent extends Component {
     private previousScale: THREE.Vector3;
     private hasConvexHullCollider = false;
     private previousCanCollide: boolean | null = null;
+    private currentCollisionGroups: number | null = null;
+    private currentSolverGroups: number | null = null;
+    private currentActiveCollisionTypes: number | null = null;
+    private currentActiveEvents: number | null = null;
+    private currentActiveHooks: number | null = null;
 
     constructor(gameObject: GameObject) {
         super(gameObject);
@@ -42,6 +47,9 @@ export class PhysicsComponent extends Component {
             this.createInitialColliderDesc(),
             this.body
         );
+
+        this.registerHandles();
+        this.enableCollisionEvents();
 
         this.applyCollisionSettings();
 
@@ -138,10 +146,14 @@ export class PhysicsComponent extends Component {
             this.collider &&
             physicsWorld.colliders.contains(this.collider.handle)
         ) {
+            this.unregisterColliderHandle();
             physicsWorld.removeCollider(this.collider, true);
         }
         this.collider = physicsWorld.createCollider(desc, this.body);
+        this.registerColliderHandle();
+        this.enableCollisionEvents();
         this.applyCollisionSettings();
+        this.applyRuntimeColliderOverrides();
     }
 
     private applyCollisionSettings(): void {
@@ -473,6 +485,7 @@ export class PhysicsComponent extends Component {
         void delta;
 
         this.ensureCollisionSettingsSynced();
+        this.applyRuntimeColliderOverrides();
 
         this.syncPositionWithPhysics();
         this.syncRotationWithPhysics();
@@ -587,6 +600,120 @@ export class PhysicsComponent extends Component {
         }
     }
 
+    private enableCollisionEvents(): void {
+        if (!this.collider) return;
+        const defaultEvents = RAPIER.ActiveEvents.COLLISION_EVENTS;
+        const defaultTypes =
+            RAPIER.ActiveCollisionTypes.DEFAULT |
+            RAPIER.ActiveCollisionTypes.KINEMATIC_FIXED |
+            RAPIER.ActiveCollisionTypes.KINEMATIC_KINEMATIC;
+        this.collider.setActiveEvents(defaultEvents);
+        this.collider.setActiveCollisionTypes(defaultTypes);
+        this.currentActiveEvents = defaultEvents;
+        this.currentActiveCollisionTypes = defaultTypes;
+    }
+
+    private applyRuntimeColliderOverrides(): void {
+        if (!this.collider) return;
+        const objectId = this.gameObject.bObject.id;
+
+        const collisionGroups = runtimeStore.getPropertyOverride<number>(
+            objectId,
+            "collisionGroups"
+        );
+        if (
+            collisionGroups !== undefined &&
+            collisionGroups !== this.currentCollisionGroups
+        ) {
+            this.collider.setCollisionGroups(collisionGroups);
+            this.currentCollisionGroups = collisionGroups;
+        }
+
+        const solverGroups = runtimeStore.getPropertyOverride<number>(
+            objectId,
+            "solverGroups"
+        );
+        if (
+            solverGroups !== undefined &&
+            solverGroups !== this.currentSolverGroups
+        ) {
+            this.collider.setSolverGroups(solverGroups);
+            this.currentSolverGroups = solverGroups;
+        }
+
+        const activeTypes = runtimeStore.getPropertyOverride<number>(
+            objectId,
+            "activeCollisionTypes"
+        );
+        if (
+            activeTypes !== undefined &&
+            activeTypes !== this.currentActiveCollisionTypes
+        ) {
+            this.collider.setActiveCollisionTypes(activeTypes);
+            this.currentActiveCollisionTypes = activeTypes;
+        }
+
+        const activeEvents = runtimeStore.getPropertyOverride<number>(
+            objectId,
+            "activeEvents"
+        );
+        if (
+            activeEvents !== undefined &&
+            activeEvents !== this.currentActiveEvents
+        ) {
+            this.collider.setActiveEvents(activeEvents);
+            this.currentActiveEvents = activeEvents;
+        }
+
+        const activeHooks = runtimeStore.getPropertyOverride<number>(
+            objectId,
+            "activeHooks"
+        );
+        if (
+            activeHooks !== undefined &&
+            activeHooks !== this.currentActiveHooks
+        ) {
+            this.collider.setActiveHooks(activeHooks);
+            this.currentActiveHooks = activeHooks;
+        }
+    }
+
+    private registerHandles(): void {
+        this.registerBodyHandle();
+        this.registerColliderHandle();
+    }
+
+    private registerBodyHandle(): void {
+        if (!this.body) return;
+        runtimeStore.registerBodyHandle?.(
+            this.body.handle,
+            this.gameObject.bObject.id
+        );
+    }
+
+    private registerColliderHandle(): void {
+        if (!this.collider) return;
+        runtimeStore.registerColliderHandle?.(
+            this.collider.handle,
+            this.gameObject.bObject.id
+        );
+    }
+
+    private unregisterHandles(): void {
+        this.unregisterColliderHandle();
+        this.unregisterBodyHandle();
+    }
+
+    private unregisterColliderHandle(): void {
+        if (!this.collider) return;
+        runtimeStore.unregisterColliderHandle?.(this.collider.handle);
+    }
+
+    private unregisterBodyHandle(): void {
+        if (!this.body) return;
+        runtimeStore.unregisterBodyHandle?.(this.body.handle);
+    }
+
     /**
      * Clean up physics resources when component is destroyed
      */
@@ -605,6 +732,8 @@ export class PhysicsComponent extends Component {
             this.createInitialColliderDesc(),
             this.body
         );
+        this.registerHandles();
+        this.enableCollisionEvents();
         this.applyCollisionSettings();
         this.body.setTranslation(
             new RAPIER.Vector3(
@@ -624,6 +753,7 @@ export class PhysicsComponent extends Component {
             true
         );
         this.applyLocks();
+        this.applyRuntimeColliderOverrides();
         void this.tryBuildConvexHullCollider();
     }
 
@@ -634,6 +764,7 @@ export class PhysicsComponent extends Component {
 
     private cleanup(): void {
         const physicsWorld = sceneStore.getPhysicsWorld();
+        this.unregisterHandles();
         if (
             physicsWorld &&
             this.collider &&
@@ -652,5 +783,10 @@ export class PhysicsComponent extends Component {
         // Clear references
         this.collider = null;
         this.body = null;
+        this.currentCollisionGroups = null;
+        this.currentSolverGroups = null;
+        this.currentActiveCollisionTypes = null;
+        this.currentActiveEvents = null;
+        this.currentActiveHooks = null;
     }
 }

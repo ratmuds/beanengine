@@ -2,6 +2,7 @@
     import { useTask, useThrelte } from "@threlte/core";
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
+    import RAPIER from "@dimforge/rapier3d-compat";
     import { GameObjectManager } from "$lib/runtime";
     import { sceneStore } from "$lib/sceneStore";
     import { runtimeStore } from "$lib/runtimeStore";
@@ -13,6 +14,7 @@
     let gameObjectManager: GameObjectManager;
     let physicsInitialized = false;
     let canvasElement: HTMLCanvasElement;
+    let eventQueue: RAPIER.EventQueue | null = null;
 
     // Compute aspect from canvas and propagate it to cameras
     function updateAspectFromCanvas() {
@@ -87,7 +89,23 @@
 
         // Step physics world
         if (physicsInitialized) {
-            sceneStore?.getPhysicsWorld()?.step();
+            const world = sceneStore?.getPhysicsWorld();
+            if (world) {
+                if (!eventQueue) {
+                    eventQueue = new RAPIER.EventQueue(true);
+                }
+                world.step(eventQueue);
+                eventQueue.drainCollisionEvents(
+                    (handle1: number, handle2: number, started: boolean) => {
+                        runtimeStore.handleCollisionEvent(
+                            handle1,
+                            handle2,
+                            started
+                        );
+                    }
+                );
+                runtimeStore.emitCollisionStayFrame();
+            }
         }
 
         // Update game objects
