@@ -344,9 +344,8 @@
                         onchange={(e) => {
                             const target = e.target as HTMLInputElement;
                             if (target && target.value !== undefined) {
-                                const updatedObject = (object as any).clone();
-                                updatedObject.name = target.value;
-                                onPropertyChange(updatedObject);
+                                object.name = target.value;
+                                onPropertyChange(object);
                             }
                         }}
                     />
@@ -375,9 +374,8 @@
                             label="Position"
                             bind:value={object.position}
                             on:change={(e) => {
-                                const updatedObject = object.clone();
-                                updatedObject.position = e.detail.value;
-                                onPropertyChange(updatedObject);
+                                object.position = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector3Input
@@ -385,18 +383,16 @@
                             bind:value={object.rotation}
                             on:change={(e) => {
                                 // Keep Euler angles for BNode3D (user-facing)
-                                const updatedObject = object.clone();
-                                updatedObject.rotation = e.detail.value;
-                                onPropertyChange(updatedObject);
+                                object.rotation = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
                         <Vector3Input
                             label="Scale"
                             bind:value={object.scale}
                             on:change={(e) => {
-                                const updatedObject = object.clone();
-                                updatedObject.scale = e.detail.value;
-                                onPropertyChange(updatedObject);
+                                object.scale = e.detail.value;
+                                onPropertyChange(object);
                             }}
                         />
 

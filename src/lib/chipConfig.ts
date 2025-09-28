@@ -1181,7 +1181,7 @@ export const chipConfig: Record<string, ChipConfig> = {
                 type: "number",
                 bind: "radius",
                 label: "Radius",
-                placeholder: "5",
+                placeholder: "Radius",
                 defaultValue: 5,
             },
         ],
