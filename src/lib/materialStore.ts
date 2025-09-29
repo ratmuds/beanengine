@@ -32,8 +32,8 @@ class MaterialManager {
         });
     }
 
-    async addMaterial(name: string, builtin: boolean): Promise<BMaterial> {
-        const material = new BMaterial(name);
+    async addMaterial(name: string, builtin: boolean, type: string = "basic"): Promise<BMaterial> {
+        const material = new BMaterial(name, type);
 
         if (builtin) {
             material.builtin = true;
@@ -221,7 +221,7 @@ class MaterialManager {
         }>
     ): void {
         for (const s of serialized) {
-            const mat = new BMaterial(s.name);
+            const mat = new BMaterial(s.name, s.type || "basic");
             mat.id = s.id; // preserve id
             mat.color = s.color || "#ffffff";
             mat.textures = {

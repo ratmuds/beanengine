@@ -125,9 +125,9 @@
             type="text"
             placeholder="Search or create class..."
             class="bg-gray-800/50 border-gray-700/30 text-gray-200 text-sm pr-10 focus:border-blue-500 focus:outline-none"
-            on:keydown={handleKeydown}
-            on:focus={handleFocus}
-            on:blur={handleBlur}
+            onkeydown={handleKeydown}
+            onfocus={handleFocus}
+            onblur={handleBlur}
         />
         <Button
             variant="ghost"

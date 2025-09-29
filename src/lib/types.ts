@@ -1040,6 +1040,7 @@ class BAssetCollection {
 class BMaterial {
     id: string;
     name: string;
+    type: string; // Material type (e.g., "basic", "pbr", "phong")
     color: string; // Color (default white)
     builtin: boolean; // If this material is provided by the engine
     textures: {
@@ -1053,9 +1054,10 @@ class BMaterial {
     threeMaterial: any; // THREE.js material reference
     threlteTexture: any; // Threlte texture reference
 
-    constructor(name: string) {
+    constructor(name: string, type: string = "basic") {
         this.id = nanoid();
         this.name = name;
+        this.type = type;
         this.color = "#ffffff";
         this.builtin = false;
         this.textures = {

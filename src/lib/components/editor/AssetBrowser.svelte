@@ -33,7 +33,7 @@
     // Local state for search and filter
     let searchQuery = $state('');
     let filterType = $state('all');
-    let selectedAssets = $state([]);
+    let selectedAssets: any[] = $state([]);
     
     // Get reactive data from store
     let allAssets = $derived($assetStore.getAllAssets());
