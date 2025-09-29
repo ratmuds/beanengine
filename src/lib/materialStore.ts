@@ -3,10 +3,11 @@ import { writable } from "svelte/store";
 import { BMaterial } from "$lib/types";
 import * as THREE from "three";
 import { runtimeStore } from "./runtimeStore";
+import { assetStore } from "./assetStore";
 
 class MaterialManager {
     public materials: Map<string, BMaterial>;
-    private threeTextureLoader: THREE.TextureLoader = new THREE.TextureLoader();
+    private threeTextureLoader = new THREE.TextureLoader();
 
     constructor() {
         this.materials = new Map();
@@ -14,9 +15,7 @@ class MaterialManager {
         // Initialize built-in materials
         this.initializeBuiltInMaterials();
 
-        setTimeout(() => {
-            console.log(this.getAllMaterials());
-        }, 1000);
+        // Optionally inspect loaded materials during development
     }
 
     async initializeBuiltInMaterials() {
@@ -39,7 +38,7 @@ class MaterialManager {
             material.builtin = true;
             material.id = "builtin_" + name.toLowerCase();
 
-            console.log("ADDED BUILTIN MATERIAL", material.id);
+            runtimeStore.info?.(`Added builtin material ${material.id}`);
         }
 
         this.materials.set(material.id, material);
@@ -55,18 +54,26 @@ class MaterialManager {
         }
     }
 
-    private async loadMaterial(material: BMaterial): Promise<THREE.Material> {
+    private async loadMaterial(material: BMaterial): Promise<void> {
         // Intialize material
         const threeMaterial = new THREE.MeshStandardMaterial({});
 
-        if (material.textures.color) {
+        // Helper to resolve a texture reference which may be a URL/path or an asset ID
+        const resolveRef = (ref?: string): string | undefined => {
+            if (!ref) return undefined;
+            // Treat strings containing '/' or ':' as URLs/paths; otherwise assume asset ID
+            if (ref.includes("/") || ref.includes(":")) return ref;
+            const asset = assetStore.getAsset?.(ref);
+            return asset?.url;
+        };
+
+        const colorUrl = resolveRef(material.textures.color);
+        if (colorUrl) {
             try {
-                const texture = await this.threeTextureLoader.load(
-                    material.textures.color
-                );
+                const texture = await this.threeTextureLoader.load(colorUrl);
                 threeMaterial.map = texture;
             } catch {
-                console.warn(
+                runtimeStore.warn(
                     `Failed to load color texture for material ${material.name}`,
                     "MaterialManager"
                 );
@@ -75,56 +82,52 @@ class MaterialManager {
             threeMaterial.color = new THREE.Color(material.color);
         }
 
-        if (material.textures.displacement) {
+        const dispUrl = resolveRef(material.textures.displacement);
+        if (dispUrl) {
             try {
-                const texture = await this.threeTextureLoader.load(
-                    material.textures.displacement
-                );
+                const texture = await this.threeTextureLoader.load(dispUrl);
                 threeMaterial.displacementMap = texture;
             } catch {
-                console.warn(
+                runtimeStore.warn(
                     `Failed to load displacement texture for material ${material.name}`,
                     "MaterialManager"
                 );
             }
         }
 
-        if (material.textures.normal) {
+        const normalUrl = resolveRef(material.textures.normal);
+        if (normalUrl) {
             try {
-                const texture = await this.threeTextureLoader.load(
-                    material.textures.normal
-                );
+                const texture = await this.threeTextureLoader.load(normalUrl);
                 threeMaterial.normalMap = texture;
             } catch {
-                console.warn(
+                runtimeStore.warn(
                     `Failed to load normal texture for material ${material.name}`,
                     "MaterialManager"
                 );
             }
         }
 
-        if (material.textures.roughness) {
+        const roughUrl = resolveRef(material.textures.roughness);
+        if (roughUrl) {
             try {
-                const texture = await this.threeTextureLoader.load(
-                    material.textures.roughness
-                );
+                const texture = await this.threeTextureLoader.load(roughUrl);
                 threeMaterial.roughnessMap = texture;
             } catch {
-                console.warn(
+                runtimeStore.warn(
                     `Failed to load roughness texture for material ${material.name}`,
                     "MaterialManager"
                 );
             }
         }
 
-        if (material.textures.metallic) {
+        const metalUrl = resolveRef(material.textures.metallic);
+        if (metalUrl) {
             try {
-                const texture = await this.threeTextureLoader.load(
-                    material.textures.metallic
-                );
+                const texture = await this.threeTextureLoader.load(metalUrl);
                 threeMaterial.metallicMap = texture;
             } catch {
-                console.warn(
+                runtimeStore.warn(
                     `Failed to load metallic texture for material ${material.name}`,
                     "MaterialManager"
                 );
@@ -136,12 +139,13 @@ class MaterialManager {
 
         // Now load the Threlte texture (just the color map as this is for viewport and doesn't need everything)
         try {
-            const threlteTexture = this.threeTextureLoader.load(
-                material.textures.color
-            );
+            const txUrl = colorUrl;
+            const threlteTexture = txUrl
+                ? this.threeTextureLoader.load(txUrl)
+                : undefined;
             material.threlteTexture = threlteTexture;
         } catch (error) {
-            console.warn(
+            runtimeStore.warn(
                 `Failed to load Threlte texture for material ${material.name}: ${error}`,
                 "MaterialManager"
             );

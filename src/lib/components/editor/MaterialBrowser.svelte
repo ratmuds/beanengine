@@ -5,6 +5,7 @@
     import { Badge } from "$lib/components/ui/badge";
     import * as DropdownMenu from "$lib/components/ui/dropdown-menu";
     import * as Dialog from "$lib/components/ui/dialog";
+    import * as Select from "$lib/components/ui/select/index.js";
     import { materialStore } from "$lib/materialStore";
     import { assetStore } from "$lib/assetStore";
     import { BMaterial } from "$lib/types";
@@ -28,11 +29,15 @@
     // viewMode removed
     let showCreateDialog = $state(false);
     let newMaterialName = $state("");
-    let newMaterialType: "basic" | "pbr" = $state("basic");
+    // New material texture selections (store asset IDs)
+    let selColor = $state("");
+    let selDisplacement = $state("");
+    let selNormal = $state("");
+    let selRoughness = $state("");
+    let selMetallic = $state("");
 
     // Local state for search and filter
     let searchQuery = $state("");
-    let filterType = $state("all");
     let selectedMaterials = $state<BMaterial[]>([]);
 
     // Get reactive data from store
@@ -43,9 +48,6 @@
                 searchQuery &&
                 !material.name.toLowerCase().includes(searchQuery.toLowerCase())
             ) {
-                return false;
-            }
-            if (filterType !== "all" && material.type !== filterType) {
                 return false;
             }
             return true;
@@ -96,10 +98,6 @@
         searchQuery = target.value;
     };
 
-    const handleFilterChange = (type: string) => {
-        filterType = type;
-    };
-
     // Material actions
     const handleDeleteSelected = () => {
         let count = 0;
@@ -116,14 +114,29 @@
         if (!newMaterialName.trim()) return;
 
         try {
-            await materialStore.addMaterial(
-                newMaterialName.trim(),
-                newMaterialType
-            );
+            const mat = await materialStore.addMaterial(newMaterialName.trim());
+            // Update texture maps with selected asset IDs (empty string for none)
+            materialStore.updateMaterialProperty(mat.id, {
+                textures: {
+                    color: selColor || "",
+                    displacement: selDisplacement || "",
+                    normal: selNormal || "",
+                    roughness: selRoughness || "",
+                    metallic: selMetallic || "",
+                },
+            });
+            // Load material textures so previews/runtime get updated
+            await materialStore.loadAllMaterials();
+
+            // Reset dialog state
             newMaterialName = "";
-            newMaterialType = "basic";
+            selColor =
+                selDisplacement =
+                selNormal =
+                selRoughness =
+                selMetallic =
+                    "";
             showCreateDialog = false;
-            console.log(`Created material: ${newMaterialName}`);
         } catch (error) {
             console.error("Failed to create material:", error);
         }
@@ -135,6 +148,16 @@
         const asset = assetStore.getAsset(assetId);
         return asset?.url;
     };
+
+    const textureAssets = $derived(
+        $assetStore
+            .getAllAssets()
+            .filter((asset) => asset.metadata.type === "texture")
+            .map((asset) => ({
+                value: asset.metadata.id, // use asset ID as value
+                label: asset.metadata.name,
+            }))
+    );
 </script>
 
 <div
@@ -175,38 +198,6 @@
                     class="pl-10 h-8"
                 />
             </div>
-
-            <!-- Filter dropdown -->
-            <DropdownMenu.Root>
-                <DropdownMenu.Trigger>
-                    <Button variant="outline" size="sm" class="h-8 px-3">
-                        <Filter class="w-4 h-4 mr-1" />
-                        {filterType === "all"
-                            ? "All"
-                            : filterType.toUpperCase()}
-                    </Button>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content>
-                    <DropdownMenu.Item
-                        onclick={() => handleFilterChange("all")}
-                    >
-                        All Materials
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Separator />
-                    <DropdownMenu.Item
-                        onclick={() => handleFilterChange("basic")}
-                    >
-                        <Circle class="w-4 h-4 mr-2" />
-                        Basic Materials
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item
-                        onclick={() => handleFilterChange("pbr")}
-                    >
-                        <Sparkles class="w-4 h-4 mr-2" />
-                        PBR Materials
-                    </DropdownMenu.Item>
-                </DropdownMenu.Content>
-            </DropdownMenu.Root>
         </div>
 
         <!-- Stats and actions -->
@@ -272,7 +263,6 @@
                 class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3"
             >
                 {#each filteredMaterials as material (material.id)}
-                    {@const IconComponent = getMaterialIcon(material.type)}
                     {@const isSelected = selectedMaterials.some(
                         (m) => m.id === material.id
                     )}
@@ -281,7 +271,17 @@
                         class="group relative bg-card border border-border rounded-lg p-3 cursor-pointer transition-all hover:border-primary/50 hover:shadow-md"
                         class:ring-2={isSelected}
                         class:ring-primary={isSelected}
+                        role="button"
+                        tabindex="0"
                         onclick={(e) => handleMaterialClick(material, e)}
+                        onkeydown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                handleMaterialClick(
+                                    material,
+                                    e as unknown as MouseEvent
+                                );
+                            }
+                        }}
                         ondblclick={() => handleMaterialDoubleClick(material)}
                     >
                         <!-- Material preview -->
@@ -298,11 +298,6 @@
                                     style="background-color: {material.color}; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 4px 8px rgba(0,0,0,0.1);"
                                 ></div>
                             </div>
-                            {#if material.type === "pbr"}
-                                <div class="absolute top-1 right-1">
-                                    <Sparkles class="w-3 h-3 text-white/80" />
-                                </div>
-                            {/if}
                         </div>
 
                         <!-- Material info -->
@@ -392,6 +387,112 @@
             </div>
 
             <div class="space-y-2">
+                <div class="text-sm font-medium">Texture Maps</div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="space-y-1.5">
+                        <div class="text-xs text-muted-foreground">
+                            Color Map (required)
+                        </div>
+                        <Select.Root bind:value={selColor} type="single">
+                            <Select.Trigger class="w-full h-9">
+                                {textureAssets.find(
+                                    (tex) => tex.value === selColor
+                                )?.label || "Select Texture"}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="">None</Select.Item>
+                                {#each textureAssets as tex}
+                                    <Select.Item value={tex.value}
+                                        >{tex.label}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-xs text-muted-foreground">
+                            Normal Map
+                        </div>
+                        <Select.Root bind:value={selNormal} type="single">
+                            <Select.Trigger class="w-full h-9">
+                                {textureAssets.find(
+                                    (tex) => tex.value === selNormal
+                                )?.label || "Select Texture"}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="">None</Select.Item>
+                                {#each textureAssets as tex}
+                                    <Select.Item value={tex.value}
+                                        >{tex.label}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-xs text-muted-foreground">
+                            Roughness Map
+                        </div>
+                        <Select.Root bind:value={selRoughness} type="single">
+                            <Select.Trigger class="w-full h-9">
+                                {textureAssets.find(
+                                    (tex) => tex.value === selRoughness
+                                )?.label || "Select Texture"}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="">None</Select.Item>
+                                {#each textureAssets as tex}
+                                    <Select.Item value={tex.value}
+                                        >{tex.label}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-xs text-muted-foreground">
+                            Metallic Map
+                        </div>
+                        <Select.Root bind:value={selMetallic} type="single">
+                            <Select.Trigger class="w-full h-9">
+                                {textureAssets.find(
+                                    (tex) => tex.value === selMetallic
+                                )?.label || "Select Texture"}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="">None</Select.Item>
+                                {#each textureAssets as tex}
+                                    <Select.Item value={tex.value}
+                                        >{tex.label}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="text-xs text-muted-foreground">
+                            Displacement Map
+                        </div>
+                        <Select.Root bind:value={selDisplacement} type="single">
+                            <Select.Trigger class="w-full h-9">
+                                {textureAssets.find(
+                                    (tex) => tex.value === selDisplacement
+                                )?.label || "Select Texture"}
+                            </Select.Trigger>
+                            <Select.Content>
+                                <Select.Item value="">None</Select.Item>
+                                {#each textureAssets as tex}
+                                    <Select.Item value={tex.value}
+                                        >{tex.label}</Select.Item
+                                    >
+                                {/each}
+                            </Select.Content>
+                        </Select.Root>
+                    </div>
+                </div>
+            </div>
+
+            <!--<div class="space-y-2">
                 <label class="text-sm font-medium">Type</label>
                 <div class="flex gap-2">
                     <Button
@@ -417,7 +518,7 @@
                         PBR
                     </Button>
                 </div>
-            </div>
+            </div>-->
         </div>
 
         <Dialog.Footer>

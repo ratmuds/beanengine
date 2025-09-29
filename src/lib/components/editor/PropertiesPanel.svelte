@@ -62,21 +62,6 @@
                 label: "Cylinder",
                 data: { type: "primitive", value: "cylinder" },
             },
-            {
-                value: "primitive-cone",
-                label: "Cone",
-                data: { type: "primitive", value: "cone" },
-            },
-            {
-                value: "primitive-plane",
-                label: "Plane",
-                data: { type: "primitive", value: "plane" },
-            },
-            {
-                value: "primitive-wedge",
-                label: "Wedge",
-                data: { type: "primitive", value: "wedge" },
-            },
         ];
 
         const allAssets = $assetStore.getAllAssets();
