@@ -103,7 +103,7 @@
     };
 
     // Asset selection
-    const handleAssetClick = (asset, event) => {
+    const handleAssetClick = (asset: any, event: MouseEvent) => {
         const multiSelect = event.ctrlKey || event.metaKey;
         
         if (multiSelect) {
@@ -120,13 +120,13 @@
         dispatch('assetSelected', { asset });
     };
 
-    const handleAssetDoubleClick = (asset) => {
+    const handleAssetDoubleClick = (asset: any) => {
         dispatch('assetDoubleClick', { asset });
     };
 
     // Search and filter
-    const handleSearchInput = (event) => {
-        const target = event.target;
+    const handleSearchInput = (event: Event) => {
+        const target = event.target as HTMLInputElement;
         searchQuery = target.value;
     };
 
@@ -146,7 +146,7 @@
         console.log(`Deleted ${count} asset(s)`);
     };
 
-    const handleDownloadAsset = (asset) => {
+    const handleDownloadAsset = (asset: any) => {
         if (asset.url) {
             const a = document.createElement('a');
             a.href = asset.url;

@@ -32,7 +32,7 @@
 
     // Filter states
     let logFilter = "";
-    let selectedLogLevels = new Set(["info", "warn", "error"]);
+    let selectedLogLevels = new Set<LogLevel>(["info", "warn", "error"]);
     let autoScroll = true;
 
     // Console element for auto-scrolling
@@ -220,19 +220,19 @@
                     <div class="flex items-center gap-1 overflow-y-scroll">
                         {#each ["info", "warn", "error"] as level}
                             <Button
-                                variant={selectedLogLevels.has(level)
+                                variant={selectedLogLevels.has(level as LogLevel)
                                     ? "secondary"
                                     : "ghost"}
                                 size="sm"
                                 class="h-9 px-3 text-xs {getLogColor(
-                                    level
-                                )} {selectedLogLevels.has(level)
+                                    level as LogLevel
+                                )} {selectedLogLevels.has(level as LogLevel)
                                     ? 'bg-muted/60'
                                     : 'hover:bg-muted/40'}"
-                                onclick={() => toggleLogLevel(level)}
+                                onclick={() => toggleLogLevel(level as LogLevel)}
                             >
                                 <svelte:component
-                                    this={getLogIcon(level)}
+                                    this={getLogIcon(level as LogLevel)}
                                     class="w-3 h-3 mr-1"
                                 />
                             </Button>

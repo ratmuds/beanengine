@@ -73,7 +73,7 @@
                         {step}
                         {disabled}
                         class="w-full text-center text-sm font-mono text-foreground bg-transparent border-0 p-0 focus:outline-none transition-all duration-200 group-hover:font-bold [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        oninput={(e) => handleInputChange("x", e.target.value)}
+                        oninput={(e) => handleInputChange("x", (e.target as HTMLInputElement).value)}
                     />
                 </div>
 
@@ -87,7 +87,7 @@
                         {step}
                         {disabled}
                         class="w-full text-center text-sm font-mono text-foreground bg-transparent border-0 p-0 focus:outline-none transition-all duration-200 group-hover:font-bold [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
-                        oninput={(e) => handleInputChange("y", e.target.value)}
+                        oninput={(e) => handleInputChange("y", (e.target as HTMLInputElement).value)}
                     />
                 </div>
 

@@ -1,8 +1,8 @@
 // src/lib/materialStore.ts
 import { writable } from "svelte/store";
 import { BMaterial } from "$lib/types";
-import * as THREE from "three";
 import { runtimeStore } from "./runtimeStore";
+import * as THREE from 'three';
 
 class MaterialManager {
     public materials: Map<string, BMaterial>;

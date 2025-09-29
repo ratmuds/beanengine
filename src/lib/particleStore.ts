@@ -1,6 +1,6 @@
 // src/lib/particleStore.ts
 import { writable } from "svelte/store";
-import { BParticle } from "$lib/types";
+import { BParticle, BRange2 } from "$lib/types";
 
 class ParticleManager {
     public particles: Map<string, BParticle>;
@@ -15,17 +15,17 @@ class ParticleManager {
     async initializeBuiltInParticles() {
         await this.addParticle("Fire");
         this.updateParticleProperty(this.getAllParticles()[0].id, {
-            color: "#ff4500",
+            color: new BRange2("#ff4500", "#ff4500", "#ff4500", "#ff4500"),
         });
 
         await this.addParticle("Smoke");
         this.updateParticleProperty(this.getAllParticles()[1].id, {
-            color: "#808080",
+            color: new BRange2("#808080", "#808080", "#808080", "#808080"),
         });
 
         await this.addParticle("Magic");
         this.updateParticleProperty(this.getAllParticles()[2].id, {
-            color: "#9932cc",
+            color: new BRange2("#9932cc", "#9932cc", "#9932cc", "#9932cc"),
         });
     }
 
