@@ -48,7 +48,7 @@
     }));
 
     // File type icons mapping
-    const getAssetIcon = (type) => {
+    const getAssetIcon = (type: string) => {
         switch (type) {
             case 'mesh': return Box;
             case 'texture': return Image;
@@ -60,7 +60,7 @@
     };
 
     // File size formatting
-    const formatFileSize = (bytes) => {
+    const formatFileSize = (bytes: number) => {
         if (bytes === 0) return '0 B';
         const k = 1024;
         const sizes = ['B', 'KB', 'MB', 'GB'];
@@ -69,7 +69,7 @@
     };
 
     // Upload handling
-    const handleFileUpload = async (files) => {
+    const handleFileUpload = async (files: FileList) => {
         if (files.length === 0) return;
         
         try {
@@ -82,7 +82,7 @@
         }
     };
 
-    const handleDrop = (event) => {
+    const handleDrop = (event: DragEvent) => {
         event.preventDefault();
         dragOver = false;
         
@@ -92,12 +92,12 @@
         }
     };
 
-    const handleDragOver = (event) => {
+    const handleDragOver = (event: DragEvent) => {
         event.preventDefault();
         dragOver = true;
     };
 
-    const handleDragLeave = (event) => {
+    const handleDragLeave = (event: DragEvent) => {
         event.preventDefault();
         dragOver = false;
     };
@@ -130,7 +130,7 @@
         searchQuery = target.value;
     };
 
-    const handleFilterChange = (type) => {
+    const handleFilterChange = (type: string) => {
         filterType = type;
     };
 

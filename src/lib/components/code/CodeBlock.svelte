@@ -20,7 +20,7 @@
             const updatedItem = { ...item };
 
             updatedItem.children[
-                updatedItem.children.findIndex((c) => c.id === child.id)
+                updatedItem.children.findIndex((c: any) => c.id === child.id)
             ] = {
                 ...child,
             };

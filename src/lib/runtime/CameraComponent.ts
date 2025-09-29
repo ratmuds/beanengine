@@ -13,7 +13,7 @@ export class CameraComponent extends Component {
     constructor(gameObject: GameObject) {
         super(gameObject);
 
-        const bNode = gameObject.bNode;
+        const bNode = gameObject.bObject;
         const fov =
             bNode instanceof Types.BCamera ? bNode.fieldOfView ?? 75 : 75;
         this.camera = new THREE.PerspectiveCamera(

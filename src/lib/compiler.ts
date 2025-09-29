@@ -35,8 +35,8 @@ export function compileItem(chip: any): CompiledItem | null {
         // Recursively compile children
         if (chip.children && Array.isArray(chip.children)) {
             compiled.children = chip.children
-                .map((child) => compileItem(child))
-                .filter(Boolean);
+                .map((child: any) => compileItem(child))
+                .filter((item: CompiledItem | null): item is CompiledItem => item !== null);
         }
     } else if (chip.fields) {
         // Chip with fields (or block with fields like if statements)
@@ -96,7 +96,7 @@ function compileValue(value: any): any {
  * Compiles an array of script items (commands/chips) to runtime format
  */
 export function compileScript(scriptItems: any[]): CompiledItem[] {
-    return scriptItems.map((item) => compileItem(item)).filter(Boolean);
+    return scriptItems.map((item) => compileItem(item)).filter((item): item is CompiledItem => item !== null);
 }
 
 /**

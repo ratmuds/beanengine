@@ -15,11 +15,11 @@
     const dispatch = createEventDispatcher();
     let showCopied = $state(false);
 
-    function formatNumber(num) {
+    function formatNumber(num: number) {
         return Number(num.toFixed(precision)).toString();
     }
 
-    function handleInputChange(axis, newValue) {
+    function handleInputChange(axis: string, newValue: string) {
         const numValue = parseFloat(newValue) || 0;
         const updatedValue = new BVector2(value.x, value.y);
         updatedValue[axis] = numValue;
