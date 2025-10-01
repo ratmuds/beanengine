@@ -16,6 +16,7 @@
         Hash,
         FileCode,
         RefreshCw,
+        Camera,
     } from "lucide-svelte";
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
@@ -266,6 +267,12 @@
         (object as any).waypointPath = value || "";
         onPropertyChange(object);
     }
+
+    // Camera properties helpers
+    const isActiveCamera = $derived(() => {
+        const active = $sceneStore.getActiveCamera();
+        return !!(active && object && active.id === object.id);
+    });
 </script>
 
 <div
@@ -357,7 +364,7 @@
                     <div class="space-y-3 px-1">
                         <Vector3Input
                             label="Position"
-                            bind:value={object.position}
+                            value={object.position}
                             on:change={(e) => {
                                 object.position = e.detail.value;
                                 onPropertyChange(object);
@@ -365,7 +372,7 @@
                         />
                         <Vector3Input
                             label="Rotation"
-                            bind:value={object.rotation}
+                            value={object.rotation}
                             on:change={(e) => {
                                 // Keep Euler angles for BNode3D (user-facing)
                                 object.rotation = e.detail.value;
@@ -374,7 +381,7 @@
                         />
                         <Vector3Input
                             label="Scale"
-                            bind:value={object.scale}
+                            value={object.scale}
                             on:change={(e) => {
                                 object.scale = e.detail.value;
                                 onPropertyChange(object);
@@ -1396,6 +1403,266 @@
                 </div>
             {/if}
 
+            <!-- Camera Properties -->
+            {#if object instanceof Types.BCamera}
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <Camera class="w-4 h-4 text-cyan-400" />
+                        <h3 class="font-medium text-sm text-foreground">
+                            Camera
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3 px-1">
+                        <!-- Projection Type -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Projection
+                            </label>
+                            <Select.Root
+                                value={object.projectionType}
+                                onValueChange={(val) => {
+                                    if (val === "orthographic") {
+                                        object.setOrthographic(
+                                            object.orthographicSize,
+                                            object.nearClipPlane,
+                                            object.farClipPlane
+                                        );
+                                    } else {
+                                        object.setPerspective(
+                                            object.fieldOfView,
+                                            object.nearClipPlane,
+                                            object.farClipPlane
+                                        );
+                                    }
+                                    onPropertyChange?.(object);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {object.projectionType
+                                        .charAt(0)
+                                        .toUpperCase() +
+                                        object.projectionType.slice(1)}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="perspective"
+                                        >Perspective</Select.Item
+                                    >
+                                    <Select.Item value="orthographic"
+                                        >Orthographic</Select.Item
+                                    >
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Perspective: FOV -->
+                        {#if object.projectionType === "perspective"}
+                            <div class="grid grid-cols-3 gap-2">
+                                <div class="space-y-1.5 col-span-2">
+                                    <label
+                                        class="text-xs font-medium text-foreground/80"
+                                        >Field of View (deg)</label
+                                    >
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        max="179"
+                                        value={object.fieldOfView}
+                                        onchange={(e) => {
+                                            const v =
+                                                parseFloat(
+                                                    (
+                                                        e.target as HTMLInputElement
+                                                    ).value
+                                                ) || 60;
+                                            object.fieldOfView = v;
+                                            onPropertyChange(object);
+                                        }}
+                                        class="h-9"
+                                    />
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label
+                                        class="text-xs font-medium text-foreground/80"
+                                        >Aspect</label
+                                    >
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        min="0.1"
+                                        value={object.aspectRatio}
+                                        onchange={(e) => {
+                                            object.aspectRatio =
+                                                parseFloat(
+                                                    (
+                                                        e.target as HTMLInputElement
+                                                    ).value
+                                                ) || object.aspectRatio;
+                                            onPropertyChange(object);
+                                        }}
+                                        class="h-9"
+                                    />
+                                </div>
+                            </div>
+                        {/if}
+
+                        <!-- Orthographic: Size -->
+                        {#if object.projectionType === "orthographic"}
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                    >Ortho Size (half-height)</label
+                                >
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.01"
+                                    value={object.orthographicSize}
+                                    onchange={(e) => {
+                                        object.orthographicSize =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || object.orthographicSize;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+                        {/if}
+
+                        <!-- Clipping Planes -->
+                        <div class="grid grid-cols-2 gap-2">
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                    >Near</label
+                                >
+                                <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.001"
+                                    value={object.nearClipPlane}
+                                    onchange={(e) => {
+                                        object.nearClipPlane =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || object.nearClipPlane;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                    >Far</label
+                                >
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0.01"
+                                    value={object.farClipPlane}
+                                    onchange={(e) => {
+                                        object.farClipPlane =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || object.farClipPlane;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Background / Clear -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                                >Clear Color</label
+                            >
+                            <Input
+                                type="text"
+                                value={object.clearColor}
+                                onchange={(e) => {
+                                    object.clearColor =
+                                        (e.target as HTMLInputElement).value ||
+                                        object.clearColor;
+                                    onPropertyChange(object);
+                                }}
+                                placeholder="#RRGGBB or css color"
+                                class="h-9"
+                            />
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                                >Clear Flags</label
+                            >
+                            <Select.Root
+                                value={object.clearFlags}
+                                onValueChange={(val) => {
+                                    object.clearFlags =
+                                        val as typeof object.clearFlags;
+                                    onPropertyChange(object);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {object.clearFlags.charAt(0).toUpperCase() +
+                                        object.clearFlags.slice(1)}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="solid_color"
+                                        >Solid Color</Select.Item
+                                    >
+                                    <Select.Item value="skybox"
+                                        >Skybox</Select.Item
+                                    >
+                                    <Select.Item value="depth_only"
+                                        >Depth Only</Select.Item
+                                    >
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Camera Controller Type (placeholder for future use) -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                                >Controller</label
+                            >
+                            <Select.Root
+                                value={object.cameraType}
+                                onValueChange={(val) => {
+                                    object.cameraType =
+                                        val as typeof object.cameraType;
+                                    onPropertyChange(object);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {object.cameraType.charAt(0).toUpperCase() +
+                                        object.cameraType.slice(1)}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="static"
+                                        >Static</Select.Item
+                                    >
+                                    <Select.Item value="fly">Fly</Select.Item>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
             <!-- Constraint Properties -->
             {#if object instanceof Types.BConstraint}
                 <div class="space-y-3">
@@ -1642,11 +1909,19 @@
                                 Path
                             </div>
                             <Select.Root
-                                bind:value={pathSelectorValue}
+                                value={pathSelectorValue}
                                 onValueChange={handlePathChange}
+                                type="single"
                             >
                                 <Select.Trigger class="w-full">
-                                    <Select.Value placeholder="Select a path" />
+                                    {pathOptions().length === 0
+                                        ? "No Waypoint Paths in scene"
+                                        : pathOptions().find(
+                                              (path) =>
+                                                  path.value ===
+                                                  pathSelectorValue
+                                          )?.label ||
+                                          "Select a Waypoint Path..."}
                                 </Select.Trigger>
                                 <Select.Content>
                                     {#if pathOptions().length === 0}
@@ -1664,6 +1939,72 @@
                                     {/if}
                                 </Select.Content>
                             </Select.Root>
+                        </div>
+
+                        <!-- Movement Settings -->
+                        <div class="grid grid-cols-3 gap-2">
+                            <!-- Speed -->
+                            <div class="space-y-1.5 col-span-2">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                    >Speed</label
+                                >
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={object.speed}
+                                    onchange={(e) => {
+                                        object.speed =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+
+                            <!-- Loop Toggle -->
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Loop
+                                </div>
+                                <Switch
+                                    checked={object.loop}
+                                    onCheckedChange={(v) => {
+                                        object.loop = v;
+                                        onPropertyChange(object);
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Wait Time -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                                >Wait Time (s)</label
+                            >
+                            <Input
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={object.waitTime}
+                                onchange={(e) => {
+                                    object.waitTime =
+                                        parseFloat(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 0;
+                                    onPropertyChange(object);
+                                }}
+                                class="h-9"
+                            />
                         </div>
                     </div>
                 </div>

@@ -455,7 +455,7 @@ class RuntimeManager {
         this.inputState.mouseButtons[button] = pressed;
 
         // Capture mouse if not already
-        this.captureMouseIfNotCaptured();
+        if (this.inputState.mouseCaptured) this.captureMouseIfNotCaptured();
 
         // Emit button events on transition
         if (pressed !== prev) {

@@ -318,8 +318,8 @@ export class CodeInterpreter {
         const iterable = Array.isArray(arrayValue)
             ? arrayValue
             : arrayValue && typeof arrayValue === "object"
-              ? Object.values(arrayValue)
-              : [];
+            ? Object.values(arrayValue)
+            : [];
 
         if (!Array.isArray(iterable)) {
             runtimeStore.warn(
@@ -352,7 +352,12 @@ export class CodeInterpreter {
 
         for (let i = 0; i < iterable.length && !this.stopped; i++) {
             if (scriptId) {
-                runtimeStore.setVariable(itemName, iterable[i], "local", scriptId);
+                runtimeStore.setVariable(
+                    itemName,
+                    iterable[i],
+                    "local",
+                    scriptId
+                );
                 if (indexName) {
                     runtimeStore.setVariable(indexName, i, "local", scriptId);
                 }
@@ -377,10 +382,7 @@ export class CodeInterpreter {
                 : "";
 
         if (!propertyName) {
-            runtimeStore.warn(
-                "Set block missing property name",
-                "Interpreter"
-            );
+            runtimeStore.warn("Set block missing property name", "Interpreter");
             return;
         }
 
@@ -401,7 +403,11 @@ export class CodeInterpreter {
                 case "position": {
                     if (parts.length === 1) {
                         const pos = this.parseVector3(value);
-                        targetGameObject.transform.position.set(pos.x, pos.y, pos.z);
+                        targetGameObject.transform.position.set(
+                            pos.x,
+                            pos.y,
+                            pos.z
+                        );
                     } else if (parts.length === 2) {
                         const component = parts[1];
                         if (!/[xyz]/.test(component)) {
@@ -417,7 +423,9 @@ export class CodeInterpreter {
                                     "Interpreter"
                                 );
                             } else {
-                                (targetGameObject.transform.position as any)[component] = num;
+                                (targetGameObject.transform.position as any)[
+                                    component
+                                ] = num;
                             }
                         }
                     }
@@ -427,7 +435,11 @@ export class CodeInterpreter {
                 case "scale": {
                     if (parts.length === 1) {
                         const scl = this.parseVector3(value);
-                        targetGameObject.transform.scale.set(scl.x, scl.y, scl.z);
+                        targetGameObject.transform.scale.set(
+                            scl.x,
+                            scl.y,
+                            scl.z
+                        );
                     } else if (parts.length === 2) {
                         const component = parts[1];
                         if (!/[xyz]/.test(component)) {
@@ -443,7 +455,9 @@ export class CodeInterpreter {
                                     "Interpreter"
                                 );
                             } else {
-                                (targetGameObject.transform.scale as any)[component] = num;
+                                (targetGameObject.transform.scale as any)[
+                                    component
+                                ] = num;
                             }
                         }
                     }
@@ -453,7 +467,8 @@ export class CodeInterpreter {
                 case "rotation": {
                     if (parts.length === 1) {
                         const rotVec = this.parseVector3(value);
-                        const quaternion = RotationUtils.eulerToNormalizedQuaternion(rotVec);
+                        const quaternion =
+                            RotationUtils.eulerToNormalizedQuaternion(rotVec);
                         targetGameObject.transform.rotation.copy(quaternion);
                     } else if (parts.length === 2) {
                         const component = parts[1];
@@ -470,9 +485,10 @@ export class CodeInterpreter {
                                     "Interpreter"
                                 );
                             } else {
-                                const currentEuler = RotationUtils.quaternionToEuler(
-                                    targetGameObject.transform.rotation.clone()
-                                );
+                                const currentEuler =
+                                    RotationUtils.quaternionToEuler(
+                                        targetGameObject.transform.rotation.clone()
+                                    );
                                 const updatedEuler = new Types.BVector3(
                                     currentEuler.x,
                                     currentEuler.y,
@@ -480,8 +496,12 @@ export class CodeInterpreter {
                                 );
                                 (updatedEuler as any)[component] = num;
                                 const quaternion =
-                                    RotationUtils.eulerToNormalizedQuaternion(updatedEuler);
-                                targetGameObject.transform.rotation.copy(quaternion);
+                                    RotationUtils.eulerToNormalizedQuaternion(
+                                        updatedEuler
+                                    );
+                                targetGameObject.transform.rotation.copy(
+                                    quaternion
+                                );
                             }
                         }
                     }
@@ -767,9 +787,18 @@ export class CodeInterpreter {
                 );
                 return;
             }
-            gameObjectManager.addGameObject(clonedObject);
-
-            console.log(gameObjectManager?.getAllGameObjects());
+            // Register the cloned hierarchy (root + all descendants) so child components get updated
+            const registerHierarchy = (go: GameObject) => {
+                gameObjectManager.addGameObject(go);
+                for (const child of go.getChildren()) {
+                    registerHierarchy(child);
+                }
+            };
+            registerHierarchy(clonedObject);
+            // Ensure any required components exist and enabled state matches Storage membership
+            if (gameObjectManager.ensureComponentsRecursive) {
+                gameObjectManager.ensureComponentsRecursive(clonedObject);
+            }
 
             // Store the cloned object's ID in the specified variable
             runtimeStore.setVariable(

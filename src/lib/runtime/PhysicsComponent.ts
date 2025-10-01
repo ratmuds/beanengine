@@ -20,12 +20,26 @@ export class PhysicsComponent extends Component {
     private previousRotation: THREE.Quaternion;
     private previousScale: THREE.Vector3;
     private hasConvexHullCollider = false;
+    // Guards to prevent spamming convex hull generation every frame
+    private isBuildingConvexHull = false;
+    private pendingConvexHullRebuild = false;
+    private lastConvexHullAttemptMs = 0;
+    private convexHullAttemptCooldownMs = 1000; // ms between attempts when not yet possible
     private previousCanCollide: boolean | null = null;
     private currentCollisionGroups: number | null = null;
     private currentSolverGroups: number | null = null;
     private currentActiveCollisionTypes: number | null = null;
     private currentActiveEvents: number | null = null;
     private currentActiveHooks: number | null = null;
+
+    // Deduplicate mesh processing across instances by asset id
+    private static pendingHullByAsset: Map<
+        string,
+        Promise<{
+            centeredPoints: Float32Array;
+            originalCenter: THREE.Vector3;
+        }>
+    > = new Map();
 
     constructor(gameObject: GameObject) {
         super(gameObject);
@@ -181,19 +195,60 @@ export class PhysicsComponent extends Component {
     }
 
     // Build a convex-hull collider from the asset mesh for more accurate physics
-    private async tryBuildConvexHullCollider(): Promise<void> {
+    private async tryBuildConvexHullCollider(
+        forceRebuild = false
+    ): Promise<void> {
         const partObject = this.gameObject.bObject;
         if (!(partObject instanceof Types.BPart)) return;
 
         const meshSource = partObject.meshSource;
         if (!meshSource || meshSource.type !== "asset") return;
 
+        // If we already have a hull and we're not forcing, skip
+        if (this.hasConvexHullCollider && !forceRebuild) return;
+
+        // Cooldown attempts when asset isn't ready yet
+        const now = Date.now();
+        if (!forceRebuild && this.isBuildingConvexHull) return;
+        if (
+            !forceRebuild &&
+            now - this.lastConvexHullAttemptMs <
+                this.convexHullAttemptCooldownMs
+        )
+            return;
+        this.lastConvexHullAttemptMs = now;
+        this.isBuildingConvexHull = true;
+
         const assetId = meshSource.value;
         let cachedMeshData = runtimeStore.getConvexHullCache(assetId);
 
         if (!cachedMeshData) {
-            cachedMeshData = await this.processMeshForConvexHull(assetId);
-            if (!cachedMeshData) return;
+            // Deduplicate processing across instances
+            const existing = PhysicsComponent.pendingHullByAsset.get(assetId);
+            try {
+                if (existing) {
+                    cachedMeshData = await existing;
+                } else {
+                    const promise = this.processMeshForConvexHull(assetId);
+                    PhysicsComponent.pendingHullByAsset.set(
+                        assetId,
+                        promise as Promise<{
+                            centeredPoints: Float32Array;
+                            originalCenter: THREE.Vector3;
+                        }>
+                    );
+                    cachedMeshData = await promise;
+                }
+            } finally {
+                // Clear pending entry regardless of success/failure
+                PhysicsComponent.pendingHullByAsset.delete(assetId);
+            }
+
+            if (!cachedMeshData) {
+                // Failed to process; set a cooldown and exit
+                this.isBuildingConvexHull = false;
+                return;
+            }
         }
 
         // Apply current object scale to the cached mesh data
@@ -210,6 +265,7 @@ export class PhysicsComponent extends Component {
                 `Failed to create convex hull collider for asset ${assetId}`,
                 "PhysicsComponent"
             );
+            this.isBuildingConvexHull = false;
             return;
         }
 
@@ -234,6 +290,15 @@ export class PhysicsComponent extends Component {
             } points`,
             "PhysicsComponent"
         );
+
+        // If a rebuild was requested during build (e.g., scale kept changing), schedule one more rebuild
+        if (this.pendingConvexHullRebuild) {
+            this.pendingConvexHullRebuild = false;
+            // Force rebuild using cached points with updated scale; avoid tight loop by yielding
+            setTimeout(() => void this.tryBuildConvexHullCollider(true), 0);
+        }
+
+        this.isBuildingConvexHull = false;
     }
 
     // Process a 3D model file and extract mesh data for convex hull generation
@@ -241,7 +306,10 @@ export class PhysicsComponent extends Component {
         centeredPoints: Float32Array;
         originalCenter: THREE.Vector3;
     } | null> {
-        console.log("Processing mesh for convex hull:", assetId);
+        runtimeStore.info(
+            `Processing mesh for convex hull: ${assetId}`,
+            "PhysicsComponent"
+        );
 
         const asset = assetStore.getAsset(assetId);
         const modelUrl = asset?.url;
@@ -575,7 +643,7 @@ export class PhysicsComponent extends Component {
     // Try to build convex hull if it hasn't been built yet
     private tryBuildConvexHullIfNeeded(): void {
         if (!this.hasConvexHullCollider) {
-            void this.tryBuildConvexHullCollider();
+            void this.tryBuildConvexHullCollider(false);
         }
     }
 
@@ -591,8 +659,12 @@ export class PhysicsComponent extends Component {
             this.previousScale.copy(currentScale);
 
             if (this.hasConvexHullCollider) {
-                // Rebuild convex hull with new scale
-                void this.tryBuildConvexHullCollider();
+                // Rebuild convex hull with new scale; if a build is in progress, queue a rebuild
+                if (this.isBuildingConvexHull) {
+                    this.pendingConvexHullRebuild = true;
+                } else {
+                    void this.tryBuildConvexHullCollider(true);
+                }
             } else {
                 // Rebuild primitive collider with new scale
                 this.replaceCollider(this.createInitialColliderDesc());

@@ -11,6 +11,7 @@ import { PlayerControllerComponent } from "./PlayerControllerComponent";
 import { WaypointNavigatorComponent } from "./WaypointNavigatorComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { runtimeStore } from "$lib/runtimeStore";
+import { nanoid } from "nanoid";
 
 /**
  * Utility functions for converting between Euler angles and quaternions
@@ -77,6 +78,7 @@ export class GameObject {
 
     private components: Component[] = [];
     private componentMap: Map<string, Component> = new Map();
+    private componentConfigs: Map<string, unknown> = new Map();
 
     private parent: GameObject | null = null;
     private children: GameObject[] = [];
@@ -372,6 +374,20 @@ export class GameObject {
             } else if (comp instanceof CameraComponent) {
                 cloneGO.addComponent(new CameraComponent(cloneGO));
             } else if (comp instanceof WaypointNavigatorComponent) {
+                const originalConfig =
+                    this.getComponentConfig<Types.BWaypointNavigator>(
+                        WaypointNavigatorComponent
+                    );
+                if (originalConfig) {
+                    const clonedConfig =
+                        originalConfig instanceof Types.BWaypointNavigator
+                            ? (originalConfig.clone() as Types.BWaypointNavigator)
+                            : originalConfig;
+                    cloneGO.setComponentConfig(
+                        WaypointNavigatorComponent,
+                        clonedConfig
+                    );
+                }
                 cloneGO.addComponent(new WaypointNavigatorComponent(cloneGO));
             } else {
                 runtimeStore.warn(
@@ -388,101 +404,73 @@ export class GameObject {
      * Clone a Types.BObject while preserving its prototype and issuing a fresh id.
      */
     private static cloneBObjectWithNewId(source: Types.BObject): Types.BObject {
-        // BPlayerController has a custom deep clone that issues a new id
-        if (source instanceof Types.BPlayerController) {
-            const cloned = source.clone();
-            cloned.parent = null;
-            cloned.children = [];
-            return cloned;
+        // Generic, systemic single-object clone that preserves prototype and copies fields.
+        // Mirrors the approach in Types.BObject.clone, but only for this object (no subtree cloning).
+
+        // Helper predicates
+        const hasCloneMethod = (obj: unknown): obj is { clone(): unknown } =>
+            typeof obj === "object" &&
+            obj !== null &&
+            "clone" in (obj as Record<string, unknown>) &&
+            typeof (obj as Record<string, unknown>).clone === "function";
+        const isPlainObject = (obj: unknown): obj is Record<string, unknown> =>
+            typeof obj === "object" &&
+            obj !== null &&
+            (obj as object).constructor === Object;
+
+        // Create an instance with the same prototype without invoking constructors
+        const clone = Object.create(
+            Object.getPrototypeOf(source)
+        ) as Types.BObject;
+        const cloneObj = clone as unknown as Record<string, unknown>;
+
+        // Systemically copy enumerable fields
+        for (const [key, value] of Object.entries(source) as Array<
+            [string, unknown]
+        >) {
+            if (key === "parent" || key === "children") continue; // detach hierarchy
+            if (key === "id") {
+                // New identity for the clone
+                cloneObj.id = nanoid();
+                continue;
+            }
+
+            if (hasCloneMethod(value)) {
+                cloneObj[key] = (value as { clone: () => unknown }).clone();
+            } else if (Array.isArray(value)) {
+                // Clone arrays; deep-clone items that are plain objects or have clone method
+                const arr = value as unknown[];
+                cloneObj[key] = arr.map((item) => {
+                    if (hasCloneMethod(item))
+                        return (item as { clone: () => unknown }).clone();
+                    if (isPlainObject(item)) {
+                        if (typeof structuredClone === "function")
+                            return structuredClone(item);
+                        try {
+                            return JSON.parse(JSON.stringify(item));
+                        } catch {
+                            return { ...(item as Record<string, unknown>) };
+                        }
+                    }
+                    return item as unknown;
+                });
+            } else if (isPlainObject(value)) {
+                // Shallow copy plain objects; avoid pulling in deep structures unnecessarily
+                cloneObj[key] = { ...(value as Record<string, unknown>) };
+            } else {
+                cloneObj[key] = value as unknown;
+            }
         }
 
-        // BPart: create a fresh instance and copy fields (ensures new id)
-        if (source instanceof Types.BPart) {
-            const s = source as Types.BPart;
-            const cloned = new Types.BPart(s.name, null, null);
-            // copy simple fields
-            cloned.color = s.color;
-            cloned.material = s.material;
-            cloned.transparency = s.transparency;
-            cloned.castShadows = s.castShadows;
-            cloned.receiveShadows = s.receiveShadows;
-            cloned.visible = s.visible;
-            cloned.positionLocked = s.positionLocked;
-            cloned.rotationLocked = s.rotationLocked;
-            cloned.canTouch = s.canTouch;
-            cloned.canCollide = s.canCollide;
-            cloned.canQuery = s.canQuery;
-            cloned.meshSource = { ...s.meshSource };
-            // transform
-            cloned.position = s.position.clone();
-            cloned.rotation = s.rotation.clone();
-            cloned.scale = s.scale.clone();
-            cloned.positionOffset = s.positionOffset.clone();
-            cloned.rotationOffset = s.rotationOffset.clone();
-            // detach
-            cloned.parent = null;
-            cloned.children = [];
-            return cloned;
+        // Ensure required base fields exist
+        if ((cloneObj as { name?: string }).name == null) {
+            (cloneObj as { name: string }).name = source.name ?? "Object";
         }
+        (cloneObj as { type: string }).type = source.type;
+        (cloneObj as { parent: Types.BObject | null }).parent = null;
+        (cloneObj as { children: Types.BObject[] }).children = [];
 
-        // BCamera manual clone
-        if (source instanceof Types.BCamera) {
-            const s = source as Types.BCamera;
-            const cloned = new Types.BCamera(s.name, null, null);
-            cloned.fieldOfView = s.fieldOfView;
-            cloned.nearClipPlane = s.nearClipPlane;
-            cloned.farClipPlane = s.farClipPlane;
-            cloned.projectionType = s.projectionType;
-            cloned.orthographicSize = s.orthographicSize;
-            cloned.aspectRatio = s.aspectRatio;
-            cloned.isActive = s.isActive;
-            cloned.clearColor = s.clearColor;
-            cloned.clearFlags = s.clearFlags;
-            // Transform
-            cloned.position = s.position.clone();
-            cloned.rotation = s.rotation.clone();
-            cloned.scale = s.scale.clone();
-            cloned.positionOffset = s.positionOffset.clone();
-            cloned.rotationOffset = s.rotationOffset.clone();
-            return cloned;
-        }
-
-        // BLight manual clone
-        if (source instanceof Types.BLight) {
-            const s = source as Types.BLight;
-            const cloned = new Types.BLight(s.name, null, null);
-            cloned.color = s.color;
-            cloned.intensity = s.intensity;
-            cloned.position = s.position.clone();
-            cloned.rotation = s.rotation.clone();
-            cloned.scale = s.scale.clone();
-            cloned.positionOffset = s.positionOffset.clone();
-            cloned.rotationOffset = s.rotationOffset.clone();
-            return cloned;
-        }
-
-        // Generic BNode3D clone path
-        if (source instanceof Types.BNode3D) {
-            const cloned = source.clone();
-            cloned.parent = null;
-            cloned.children = [];
-            return cloned;
-        }
-
-        // BScript – simple re-instantiation with deep-copied code array
-        if (source instanceof Types.BScript) {
-            const s = source as Types.BScript;
-            const cloned = new Types.BScript(s.name, null, null);
-            cloned.code =
-                typeof structuredClone === "function"
-                    ? structuredClone(s.code)
-                    : JSON.parse(JSON.stringify(s.code ?? []));
-            return cloned;
-        }
-
-        // Fallback: construct a plain BObject with a new id
-        const cloned = new Types.BObject(source.name ?? "Object", null, null);
-        return cloned;
+        return clone as Types.BObject;
     }
 
     /**
@@ -493,6 +481,14 @@ export class GameObject {
         this.componentMap.set(component.constructor.name, component);
         component.onEnable();
         return component;
+    }
+
+    setComponentConfig<T>(componentClass: { name: string }, config: T): void {
+        this.componentConfigs.set(componentClass.name, config as unknown);
+    }
+
+    getComponentConfig<T>(componentClass: { name: string }): T | undefined {
+        return this.componentConfigs.get(componentClass.name) as T | undefined;
     }
 
     /**
@@ -558,6 +554,7 @@ export class GameObject {
         }
         this.components.length = 0;
         this.componentMap.clear();
+        this.componentConfigs.clear();
         // detach children
         for (const child of this.children) {
             child.setParent(null);

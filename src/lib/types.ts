@@ -789,11 +789,9 @@ class BCamera extends BNode3D {
     projectionType: "perspective" | "orthographic";
     orthographicSize: number; // Size for orthographic projection
     aspectRatio: number; // Aspect ratio (width/height)
-
-    // Camera-specific settings
-    isActive: boolean; // Whether this camera is currently active
     clearColor: string; // Background clear color
     clearFlags: "skybox" | "solid_color" | "depth_only";
+    cameraType: "static" | "fly";
 
     constructor(
         name: string | null,
@@ -810,10 +808,9 @@ class BCamera extends BNode3D {
         this.projectionType = "perspective";
         this.orthographicSize = 5;
         this.aspectRatio = 16 / 9;
-
-        this.isActive = false;
         this.clearColor = "#87CEEB"; // Sky blue
         this.clearFlags = "solid_color";
+        this.cameraType = "static";
     }
 
     // Set as perspective camera

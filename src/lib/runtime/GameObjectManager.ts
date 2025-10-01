@@ -362,21 +362,30 @@ export class GameObjectManager {
             gameObject.addComponent(new ConstraintComponent(gameObject));
         }
 
-        // Add WaypointNavigatorComponent when encountering a BWaypointNavigator
-        // Attach the runtime component to the parent Part's GameObject so it moves the Part
+        // Add WaypointNavigatorComponent to the navigator's own GameObject
         if (bObject instanceof Types.BWaypointNavigator) {
-            console.log("Adding navigator component to parent");
-            const parentGO = gameObject.getParent();
-            if (
-                parentGO &&
-                !parentGO.getComponent(WaypointNavigatorComponent)
-            ) {
-                const comp = parentGO.addComponent(
-                    new WaypointNavigatorComponent(parentGO, bObject)
+            const hostGameObject = gameObject.getParent();
+
+            if (!hostGameObject) {
+                runtimeStore.warn(
+                    `WaypointNavigator ${bObject.id} has no parent GameObject to attach to`,
+                    "GameObjectManager"
                 );
-                // Respect Storage state
-                comp.setEnabled(!parentGO.isUnderStorage());
+                return;
             }
+
+            hostGameObject.setComponentConfig(
+                WaypointNavigatorComponent,
+                bObject
+            );
+
+            if (!hostGameObject.getComponent(WaypointNavigatorComponent)) {
+                hostGameObject.addComponent(
+                    new WaypointNavigatorComponent(hostGameObject)
+                );
+            }
+
+            return;
         }
     }
 

@@ -10,7 +10,7 @@
 
     const { renderer } = useThrelte();
     let gameScene: THREE.Scene;
-    let gameCamera: THREE.PerspectiveCamera;
+    let gameCamera: THREE.Camera;
     let gameObjectManager: GameObjectManager;
     let physicsInitialized = false;
     let canvasElement: HTMLCanvasElement;
@@ -25,9 +25,10 @@
             // Update all scene cameras via manager
             gameObjectManager?.updateCameraAspect(aspect);
             // Also update default camera if used
-            if (gameCamera && gameCamera.isPerspectiveCamera) {
-                gameCamera.aspect = aspect;
-                gameCamera.updateProjectionMatrix();
+            const persp = gameCamera as THREE.PerspectiveCamera;
+            if (gameCamera && (persp as any).isPerspectiveCamera) {
+                persp.aspect = aspect;
+                persp.updateProjectionMatrix();
             }
         }
     }
@@ -138,7 +139,7 @@
 
         // Use scene camera if available, otherwise create default
         if (sceneCamera) {
-            gameCamera = sceneCamera as THREE.PerspectiveCamera;
+            gameCamera = sceneCamera as THREE.Camera;
             runtimeStore.info("Using scene camera...", "GameRuntime");
             console.log("Using scene camera:", gameCamera.position);
         } else {

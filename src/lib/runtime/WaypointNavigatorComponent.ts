@@ -22,14 +22,29 @@ export class WaypointNavigatorComponent extends Component {
     private t = 0; // interpolation factor between waypoints
     private waiting = 0; // remaining wait time at current waypoint
 
-    constructor(gameObject: GameObject, navigator: Types.BWaypointNavigator) {
+    constructor(gameObject: GameObject) {
         super(gameObject);
-        this.navigator = navigator;
     }
 
     onEnable(): void {
-        // The navigator is already correctly set in the constructor, no need to search for it again
-        // this.navigator should already be the correct BWaypointNavigator instance
+        // Retrieve the navigator configuration registered on the host GameObject
+        const navigatorConfig =
+            this.gameObject.getComponentConfig<Types.BWaypointNavigator>(
+                WaypointNavigatorComponent
+            );
+
+        if (!navigatorConfig) {
+            runtimeStore.warn(
+                "WaypointNavigatorComponent missing navigator configuration",
+                "WaypointNavigatorComponent"
+            );
+            this.navigator = null;
+            this.targetPartGO = null;
+            this.waypoints = [];
+            return;
+        }
+
+        this.navigator = navigatorConfig;
 
         // Target Part is the nearest ancestor GameObject whose bObject is a BPart
         this.targetPartGO = this.findNearestPartGO(this.gameObject);
@@ -50,6 +65,14 @@ export class WaypointNavigatorComponent extends Component {
             !this.navigator ||
             !this.targetPartGO ||
             this.waypoints.length === 0
+        ) {
+            return;
+        }
+
+        // Check if we are at the last waypoint and not looping
+        if (
+            !this.navigator.loop &&
+            this.currentIndex >= this.waypoints.length - 1
         )
             return;
 
