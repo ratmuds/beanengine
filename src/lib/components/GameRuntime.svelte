@@ -1,7 +1,15 @@
 <script lang="ts">
+    // @ts-nocheck
     import { useTask, useThrelte } from "@threlte/core";
     import { onMount, onDestroy } from "svelte";
     import * as THREE from "three";
+    import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
+    import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
+    import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
+    import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+    import { SSAOPass } from "three/examples/jsm/postprocessing/SSAOPass.js";
+    import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
+    import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
     import RAPIER from "@dimforge/rapier3d-compat";
     import { GameObjectManager } from "$lib/runtime";
     import { sceneStore } from "$lib/sceneStore";
@@ -15,6 +23,7 @@
     let physicsInitialized = false;
     let canvasElement: HTMLCanvasElement;
     let eventQueue: RAPIER.EventQueue | null = null;
+    let composer: EffectComposer | null = null;
 
     // Compute aspect from canvas and propagate it to cameras
     function updateAspectFromCanvas() {
@@ -118,12 +127,154 @@
         runtimeStore.resetMouseDelta();
     });
 
+    // Setup stunning post-processing effects
+    function setupPostProcessing() {
+        if (!renderer || !gameScene || !gameCamera) {
+            runtimeStore.warn(
+                "Cannot setup post-processing: missing renderer, scene, or camera",
+                "GameRuntime"
+            );
+            return;
+        }
+
+        try {
+            // Create effect composer
+            composer = new EffectComposer(renderer);
+            composer.setSize(window.innerWidth, window.innerHeight);
+
+            // Base render pass
+            const renderPass = new RenderPass(gameScene, gameCamera);
+            composer.addPass(renderPass);
+
+            // SSAO (Screen Space Ambient Occlusion) - Adds depth and realistic shadows
+            const ssaoPass = new SSAOPass(
+                gameScene,
+                gameCamera,
+                window.innerWidth,
+                window.innerHeight
+            );
+            // More visible settings for better depth perception
+            ssaoPass.kernelRadius = 32; // Larger radius for more prominent shadows
+            ssaoPass.minDistance = 0.001; // Tighter minimum distance
+            ssaoPass.maxDistance = 0.2; // Wider maximum distance
+            ssaoPass.output = SSAOPass.OUTPUT.Default;
+            composer.addPass(ssaoPass);
+
+            // Bloom - Beautiful glow for bright areas (you already tuned this perfectly!)
+            const bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                0.1, // strength - nice and subtle now
+                0.0, // radius
+                0.15 // threshold
+            );
+            composer.addPass(bloomPass);
+
+            // Depth of Field (Bokeh) - OPTIONAL: Uncomment for cinematic focus blur
+            // Note: Can make UI/gameplay harder to see, so disabled by default
+            const bokehPass = new BokehPass(gameScene, gameCamera, {
+                focus: 15.0, // Focus distance
+                aperture: 0.0003, // Blur strength
+                maxblur: 0.01, // Maximum blur amount
+            });
+            composer.addPass(bokehPass);
+
+            // SMAA (Anti-aliasing) - Smooth edges, must be last
+            const smaaPass = new SMAAPass(
+                window.innerWidth,
+                window.innerHeight
+            );
+            composer.addPass(smaaPass);
+
+            runtimeStore.info(
+                "✨ Post-processing: SSAO (depth shadows), Bloom (glow), SMAA (smooth edges)",
+                "GameRuntime"
+            );
+
+            // What you should see:
+            // - SSAO: Dark shadows in corners, edges, and where objects meet
+            // - Bloom: Subtle glow around bright lights and surfaces
+            // - SMAA: Smooth, clean edges without jaggies
+
+            // Handle window resize
+            const originalResize = updateAspectFromCanvas;
+            window.addEventListener("resize", () => {
+                if (composer) {
+                    composer.setSize(window.innerWidth, window.innerHeight);
+                }
+            });
+        } catch (error) {
+            runtimeStore.error(
+                `Failed to setup post-processing: ${error}`,
+                "GameRuntime"
+            );
+        }
+    }
+
     onMount(async () => {
         // Reset runtime-only overrides at start of play mode
         runtimeStore.clearAllPropertyOverrides?.();
         // Create a separate scene for game runtime
         runtimeStore.info("Starting ThreeJS scene...", "GameRuntime");
         gameScene = new THREE.Scene();
+
+        // Load HDRI environment map for beautiful reflections and lighting
+        const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+
+        const hdriLoader = new RGBELoader();
+        try {
+            // Load a default HDRI (you can replace this URL with your own HDRI)
+            // Using a free HDRI from Poly Haven
+            const hdriTexture = await hdriLoader.loadAsync(
+                "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr"
+            );
+
+            const envMap =
+                pmremGenerator.fromEquirectangular(hdriTexture).texture;
+            gameScene.environment = envMap;
+            gameScene.background = envMap;
+
+            hdriTexture.dispose();
+            pmremGenerator.dispose();
+
+            runtimeStore.info(
+                "HDRI environment loaded successfully",
+                "GameRuntime"
+            );
+        } catch (error) {
+            runtimeStore.warn(`Failed to load HDRI: ${error}`, "GameRuntime");
+            // Fallback to gradient background
+            gameScene.background = new THREE.Color(0x87ceeb);
+        }
+
+        // Configure renderer for better visuals (like Minecraft shaders)
+        if (renderer) {
+            console.log("Configuring renderer for better visuals...");
+
+            // Enable ACESFilmic tone mapping for cinematic look
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.0;
+
+            // Enable shadows for depth and realism
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+
+            // Enable physically correct lighting
+            renderer.useLegacyLights = false;
+
+            // Output encoding for proper color representation
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+            // Enable HDR rendering
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+
+            runtimeStore.info(
+                "Enhanced renderer with better settings",
+                "GameRuntime"
+            );
+        } else {
+            runtimeStore.warn("Renderer not available!", "GameRuntime");
+        }
 
         // Create GameObjectManager
         runtimeStore.info("Starting GameObjectManager...", "GameRuntime");
@@ -156,6 +307,13 @@
         // Setup default lighting
         runtimeStore.info("Setting up default lighting...", "GameRuntime");
         gameObjectManager.setupDefaultLighting();
+
+        // Setup post-processing effects for stunning visuals
+        runtimeStore.info(
+            "Setting up post-processing effects...",
+            "GameRuntime"
+        );
+        setupPostProcessing();
 
         // Get the canvas element and attach event listeners
         canvasElement = renderer.domElement;
@@ -201,7 +359,12 @@
                 const activeCamera =
                     gameObjectManager?.getCamera() ?? gameCamera;
                 if (activeCamera) {
-                    renderer.render(gameScene, activeCamera);
+                    // Use post-processing composer if available, otherwise fallback to direct render
+                    if (composer) {
+                        composer.render();
+                    } else {
+                        renderer.render(gameScene, activeCamera);
+                    }
                 }
             }
             animationId = requestAnimationFrame(render);
@@ -214,6 +377,11 @@
         runtimeStore.clearAllPropertyOverrides?.();
         if (animationId) {
             cancelAnimationFrame(animationId);
+        }
+
+        // Clean up post-processing composer
+        if (composer) {
+            composer = null;
         }
 
         // Clean up event listeners

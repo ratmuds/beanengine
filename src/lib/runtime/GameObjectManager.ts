@@ -288,17 +288,44 @@ export class GameObjectManager {
 
     /**
      * Set up default lighting for the scene
+     * Enhanced for beautiful visuals inspired by Minecraft shaders
      */
     setupDefaultLighting(): void {
-        // Add directional light
-        const directionalLight = new THREE.DirectionalLight(0xffffff, Math.PI);
-        directionalLight.position.set(3, 10, 7);
-        directionalLight.castShadow = true;
-        this.scene.add(directionalLight);
+        // Main directional light (sun) with warmer color
+        const sunLight = new THREE.DirectionalLight(0xfff4e6, 2.5); // Warm sunlight
+        sunLight.position.set(10, 20, 10);
+        sunLight.castShadow = true;
 
-        // Add ambient light
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+        // Configure shadow quality for beautiful soft shadows
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 500;
+        sunLight.shadow.camera.left = -50;
+        sunLight.shadow.camera.right = 50;
+        sunLight.shadow.camera.top = 50;
+        sunLight.shadow.camera.bottom = -50;
+        sunLight.shadow.bias = -0.0001;
+        sunLight.shadow.radius = 2; // Soft shadow edges
+
+        this.scene.add(sunLight);
+
+        // Ambient light for soft fill (sky color)
+        const ambientLight = new THREE.AmbientLight(0xb3d9ff, 0.4); // Cool sky blue
         this.scene.add(ambientLight);
+
+        // Hemisphere light for sky-ground color variation (atmospheric)
+        const hemisphereLight = new THREE.HemisphereLight(
+            0x87ceeb, // Sky color (light blue)
+            0x362312, // Ground color (warm brown)
+            0.6
+        );
+        this.scene.add(hemisphereLight);
+
+        // Optional: Add subtle rim/back light for depth
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.5);
+        rimLight.position.set(-5, 5, -10);
+        this.scene.add(rimLight);
     }
 
     /**

@@ -884,7 +884,11 @@
                                             class="absolute inset-0 flex items-center justify-center"
                                             transition:fade={{ duration: 500 }}
                                         >
-                                            <Canvas>
+                                            <Canvas
+                                                shadows
+                                                toneMapping={3}
+                                                dpr={2}
+                                            >
                                                 {#if play}
                                                     <GameRuntime />
                                                 {:else}
