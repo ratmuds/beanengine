@@ -268,6 +268,44 @@
         onPropertyChange(object);
     }
 
+    // Motor: Wheel part selector reactive variables
+    const motorWheelOptions = $derived(() => {
+        if (!object || !(object instanceof Types.BMotor)) return [];
+
+        const allObjects = $sceneStore.getScene().objects;
+        const parts = allObjects.filter(
+            (obj) => obj instanceof Types.BPart
+        ) as Types.BPart[];
+
+        return parts.map((part) => ({
+            value: part.id,
+            label: part.name,
+            data: { part },
+        }));
+    });
+
+    let motorWheelSelectorValue: string = $state("");
+
+    $effect(() => {
+        if (!object || !(object instanceof Types.BMotor)) {
+            motorWheelSelectorValue = "";
+            return;
+        }
+        motorWheelSelectorValue = object.wheelPart?.id || "";
+    });
+
+    function handleMotorWheelChange(value: string) {
+        if (!object || !(object instanceof Types.BMotor)) return;
+
+        const selectedPart = $sceneStore
+            .getScene()
+            .objects.find((obj) => obj.id === value);
+        if (!selectedPart || !(selectedPart instanceof Types.BPart)) return;
+
+        object.wheelPart = selectedPart;
+        onPropertyChange(object);
+    }
+
     // Camera properties helpers
     const isActiveCamera = $derived(() => {
         const active = $sceneStore.getActiveCamera();
@@ -1770,9 +1808,6 @@
                                     <Select.Item value="prismatic"
                                         >Prismatic</Select.Item
                                     >
-                                    <Select.Item value="motor"
-                                        >Motor</Select.Item
-                                    >
                                     <Select.Item value="spring"
                                         >Spring</Select.Item
                                     >
@@ -1780,8 +1815,8 @@
                             </Select.Root>
                         </div>
 
-                        <!-- Spring/Motor Properties -->
-                        {#if object.constraintType === "spring" || object.constraintType === "motor"}
+                        <!-- Spring Properties -->
+                        {#if object.constraintType === "spring"}
                             <div class="space-y-1.5">
                                 <label
                                     class="text-xs font-medium text-foreground/80"
@@ -2005,6 +2040,151 @@
                                 }}
                                 class="h-9"
                             />
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Motor Properties -->
+            {#if object instanceof Types.BMotor}
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <RefreshCw class="w-4 h-4 text-cyan-400" />
+                        <h3 class="font-medium text-sm text-foreground">
+                            Motor
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3 px-1">
+                        <!-- Wheel Part Selector -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Wheel Part
+                            </label>
+                            <Select.Root
+                                bind:value={motorWheelSelectorValue}
+                                onValueChange={handleMotorWheelChange}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {motorWheelSelectorValue
+                                        ? motorWheelOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  motorWheelSelectorValue
+                                          )?.label || "Select wheel part..."
+                                        : "Select wheel part..."}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each motorWheelOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            {option.label}
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Enabled Toggle -->
+                        <div
+                            class="flex items-center justify-between bg-muted/20 rounded-lg p-3"
+                        >
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Enabled
+                            </label>
+                            <Switch
+                                checked={object.enabled}
+                                onCheckedChange={(v) => {
+                                    object.enabled = v;
+                                    onPropertyChange(object);
+                                }}
+                            />
+                        </div>
+
+                        <!-- Speed (Angular Velocity) -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Speed (rad/s)
+                            </label>
+                            <Input
+                                type="number"
+                                step="0.1"
+                                value={object.speed}
+                                onchange={(e) => {
+                                    object.speed =
+                                        parseFloat(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 0;
+                                    onPropertyChange(object);
+                                }}
+                                class="h-9"
+                            />
+                        </div>
+
+                        <!-- Max Force (Torque) -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Max Force (Torque)
+                            </label>
+                            <Input
+                                type="number"
+                                step="1"
+                                min="0"
+                                value={object.maxForce}
+                                onchange={(e) => {
+                                    object.maxForce =
+                                        parseFloat(
+                                            (e.target as HTMLInputElement).value
+                                        ) || 100;
+                                    onPropertyChange(object);
+                                }}
+                                class="h-9"
+                            />
+                        </div>
+
+                        <!-- Motor Status -->
+                        <div class="bg-muted/20 p-3 rounded-lg">
+                            <p class="text-xs text-muted-foreground mb-2">
+                                Status
+                            </p>
+                            <div class="flex items-center gap-2">
+                                {#if object.wheelPart}
+                                    <div
+                                        class="w-2 h-2 bg-green-400 rounded-full"
+                                    ></div>
+                                    <span class="text-xs text-foreground">
+                                        Ready: {object.parent?.name || "?"} → {object
+                                            .wheelPart.name}
+                                    </span>
+                                {:else}
+                                    <div
+                                        class="w-2 h-2 bg-yellow-400 rounded-full"
+                                    ></div>
+                                    <span class="text-xs text-muted-foreground">
+                                        Incomplete - Select wheel part
+                                    </span>
+                                {/if}
+                            </div>
+                        </div>
+
+                        <!-- Info Box -->
+                        <div
+                            class="bg-blue-500/10 border border-blue-500/20 p-3 rounded-lg"
+                        >
+                            <p class="text-xs text-blue-400/90 leading-relaxed">
+                                <strong>Setup:</strong> Place this Motor as a child
+                                of a BPart (host) and select the wheel BPart to rotate.
+                                The motor connects at the host's center and rotates
+                                around the world Y-axis.
+                            </p>
                         </div>
                     </div>
                 </div>

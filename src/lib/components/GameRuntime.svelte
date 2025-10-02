@@ -146,7 +146,7 @@
             const renderPass = new RenderPass(gameScene, gameCamera);
             composer.addPass(renderPass);
 
-            // SSAO (Screen Space Ambient Occlusion) - Adds depth and realistic shadows
+            // SSAO (Screen Space Ambient Occlusion)
             const ssaoPass = new SSAOPass(
                 gameScene,
                 gameCamera,
@@ -160,7 +160,7 @@
             ssaoPass.output = SSAOPass.OUTPUT.Default;
             composer.addPass(ssaoPass);
 
-            // Bloom - Beautiful glow for bright areas (you already tuned this perfectly!)
+            // Bloom - Beautiful glow for bright areas
             const bloomPass = new UnrealBloomPass(
                 new THREE.Vector2(window.innerWidth, window.innerHeight),
                 0.1, // strength - nice and subtle now
@@ -169,31 +169,20 @@
             );
             composer.addPass(bloomPass);
 
-            // Depth of Field (Bokeh) - OPTIONAL: Uncomment for cinematic focus blur
-            // Note: Can make UI/gameplay harder to see, so disabled by default
+            // Depth of Field (Bokeh)
             const bokehPass = new BokehPass(gameScene, gameCamera, {
                 focus: 15.0, // Focus distance
-                aperture: 0.0003, // Blur strength
+                aperture: 0.0001, // Blur strength
                 maxblur: 0.01, // Maximum blur amount
             });
             composer.addPass(bokehPass);
 
-            // SMAA (Anti-aliasing) - Smooth edges, must be last
+            // SMAA (Anti-aliasing) - Smooth edges
             const smaaPass = new SMAAPass(
                 window.innerWidth,
                 window.innerHeight
             );
             composer.addPass(smaaPass);
-
-            runtimeStore.info(
-                "✨ Post-processing: SSAO (depth shadows), Bloom (glow), SMAA (smooth edges)",
-                "GameRuntime"
-            );
-
-            // What you should see:
-            // - SSAO: Dark shadows in corners, edges, and where objects meet
-            // - Bloom: Subtle glow around bright lights and surfaces
-            // - SMAA: Smooth, clean edges without jaggies
 
             // Handle window resize
             const originalResize = updateAspectFromCanvas;
@@ -223,8 +212,7 @@
 
         const hdriLoader = new RGBELoader();
         try {
-            // Load a default HDRI (you can replace this URL with your own HDRI)
-            // Using a free HDRI from Poly Haven
+            // Load a default HDRI
             const hdriTexture = await hdriLoader.loadAsync(
                 "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/kloppenheim_06_puresky_1k.hdr"
             );
@@ -247,7 +235,7 @@
             gameScene.background = new THREE.Color(0x87ceeb);
         }
 
-        // Configure renderer for better visuals (like Minecraft shaders)
+        // Configure renderer for better visuals
         if (renderer) {
             console.log("Configuring renderer for better visuals...");
 

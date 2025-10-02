@@ -249,6 +249,10 @@ class SceneManager {
                 );
                 break;
             }
+            case "motor": {
+                newObject = new Types.BMotor(name, null, null);
+                break;
+            }
             case "waypointpath":
                 newObject = new Types.BWaypointPath(name, null, null);
                 break;
@@ -815,6 +819,9 @@ class SceneManager {
                     undefined as unknown as Types.BPart,
                     undefined as unknown as Types.BPart
                 );
+                break;
+            case "motor":
+                obj = new Types.BMotor(data.name, data.id, null);
                 break;
             case "camera":
                 obj = new Types.BCamera(data.name, data.id, null);

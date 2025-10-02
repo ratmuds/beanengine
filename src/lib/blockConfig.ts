@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
     Type,
     Hash,
@@ -307,6 +308,66 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Sets the directional velocity in the specified direction to the object this script is on. If no target is provided, it applies the force to the object this script is on.",
+    },
+
+    motorsetvelocity: {
+        color: colorMap.orange,
+        label: "Set Motor Velocity",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "number",
+                bind: "velocity",
+                placeholder: "velocity",
+                icon: Hash,
+            },
+            {
+                type: "number",
+                bind: "maxForce",
+                placeholder: "max force (optional)",
+                icon: Hash,
+            },
+        ],
+        info: "Overrides a motor constraint's target velocity and optionally its maximum force at runtime.",
+    },
+
+    motorsetenabled: {
+        color: colorMap.orange,
+        label: "Set Motor Enabled",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "text",
+                bind: "enabled",
+                placeholder: "true / false",
+                icon: Type,
+            },
+        ],
+        info: "Enables or disables a motor constraint at runtime without changing its defaults in the editor.",
+    },
+
+    motorclearoverrides: {
+        color: colorMap.orange,
+        label: "Reset Motor Overrides",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+        ],
+        info: "Clears all runtime overrides applied to a motor constraint so it falls back to its editor values.",
     },
 
     mousebutton: {

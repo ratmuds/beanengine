@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/lib/types.ts
 // This file defines the types used in Bean Engine.
 
@@ -500,7 +502,7 @@ class BVector2 {
 }
 
 // Represents a rotation in 3D space
-class BQuaternion {
+export class BQuaternion {
     x: number;
     y: number;
     z: number;
@@ -742,16 +744,10 @@ class BConstraint extends BObject {
     partA?: BPart;
     partB?: BPart;
 
-    constraintType:
-        | "fixed"
-        | "spherical"
-        | "revolute"
-        | "prismatic"
-        | "motor"
-        | "spring";
+    constraintType: "fixed" | "spherical" | "revolute" | "prismatic" | "spring";
 
-    stiffness: number; // For spring and motor
-    damping: number; // For spring and motor
+    stiffness: number; // For spring
+    damping: number; // For spring
 
     // Prismatic constraint limits
     prismaticLimitsEnabled: boolean;
@@ -778,6 +774,29 @@ class BConstraint extends BObject {
         this.prismaticLimitsEnabled = false;
         this.prismaticLimitsMin = -3.0;
         this.prismaticLimitsMax = 3.0;
+    }
+}
+
+// Motor node – defines a revolute motor between two parts.
+// Place it as a child of a BPart (the host/knuckle) and select the wheel BPart to connect.
+// The motor automatically connects at the center of the host part, with Y-axis as rotation axis.
+class BMotor extends BObject {
+    enabled: boolean;
+    speed: number; // target angular velocity (rad/s)
+    maxForce: number; // maximum torque
+    wheelPart: BPart | null; // The part to rotate
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name ? name : "Motor", id, parent);
+        this.type = "motor";
+        this.enabled = true;
+        this.speed = 0.0;
+        this.maxForce = 100.0;
+        this.wheelPart = null;
     }
 }
 
@@ -1155,6 +1174,7 @@ export {
     BCamera,
     BLight,
     BConstraint,
+    BMotor,
     BScript,
     BStorage,
     BUIStorage,

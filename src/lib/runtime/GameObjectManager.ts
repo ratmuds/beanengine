@@ -7,6 +7,7 @@ import * as Types from "$lib/types";
 import { PhysicsComponent } from "./PhysicsComponent";
 import { PlayerControllerComponent } from "./PlayerControllerComponent";
 import { ConstraintComponent } from "./ConstraintComponent";
+import { MotorComponent } from "./MotorComponent";
 import { sceneStore } from "$lib/sceneStore";
 import { CameraComponent } from "./CameraComponent";
 import { runtimeStore } from "$lib/runtimeStore";
@@ -387,6 +388,14 @@ export class GameObjectManager {
             !gameObject.getComponent(ConstraintComponent)
         ) {
             gameObject.addComponent(new ConstraintComponent(gameObject));
+        }
+
+        // Add MotorComponent for motors
+        if (
+            bObject instanceof Types.BMotor &&
+            !gameObject.getComponent(MotorComponent)
+        ) {
+            gameObject.addComponent(new MotorComponent(gameObject));
         }
 
         // Add WaypointNavigatorComponent to the navigator's own GameObject

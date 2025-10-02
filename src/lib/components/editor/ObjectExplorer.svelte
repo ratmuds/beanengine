@@ -148,6 +148,8 @@
                 return Lightbulb;
             case "constraint":
                 return Clipboard;
+            case "motor":
+                return Navigation;
             case "waypointpath":
                 return FolderTree;
             case "waypoint":
@@ -550,6 +552,15 @@
                                 >
                                     <Clipboard class="w-4 h-4 mr-2" />
                                     Constraint
+                                </Command.Item>
+                                <Command.Item
+                                    value="motor"
+                                    onSelect={() =>
+                                        handleAddObjectType("Motor")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <Navigation class="w-4 h-4 mr-2" />
+                                    Motor
                                 </Command.Item>
                             </Command.Group>
                             <Command.Separator />

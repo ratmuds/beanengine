@@ -15,9 +15,6 @@ import { PhysicsComponent } from "./PhysicsComponent";
 export class ConstraintComponent extends Component {
     public joint: RAPIER.ImpulseJoint | null = null;
     private intialized: boolean = false;
-    private currentMotorVelocity: number | null = null;
-    private currentMotorMaxForce: number | null = null;
-    private motorEnabled: boolean | null = null;
 
     constructor(gameObject: GameObject) {
         super(gameObject);
@@ -111,6 +108,17 @@ export class ConstraintComponent extends Component {
             if (dirABWorld.lengthSq() < 1e-6) dirABWorld.copy(worldXAxis);
             dirABWorld.normalize();
 
+            const toLocalAxis = (axisWorld: THREE.Vector3) => {
+                const safeAxis = axisWorld.clone();
+                if (safeAxis.lengthSq() < 1e-6) {
+                    safeAxis.set(1, 0, 0);
+                }
+                safeAxis.normalize();
+                return safeAxis
+                    .applyQuaternion(qA.clone().invert())
+                    .normalize();
+            };
+
             if (constraintNode.constraintType === "fixed") {
                 params = RAPIER.JointData.fixed(
                     anchorA,
@@ -126,20 +134,12 @@ export class ConstraintComponent extends Component {
             } else if (constraintNode.constraintType === "spherical") {
                 params = RAPIER.JointData.spherical(anchorA, anchorB);
             } else if (constraintNode.constraintType === "revolute") {
-                // Revolute axis: default to world X.
-                const axis = {
-                    x: worldXAxis.x,
-                    y: worldXAxis.y,
-                    z: worldXAxis.z,
-                } as const;
-                params = RAPIER.JointData.revolute(anchorA, anchorB, axis);
-            } else if (constraintNode.constraintType === "motor") {
-                const axis = {
-                    x: dirABWorld.x,
-                    y: dirABWorld.y,
-                    z: dirABWorld.z,
-                } as const;
-                params = RAPIER.JointData.revolute(anchorA, anchorB, axis);
+                const axisLocal = toLocalAxis(worldXAxis);
+                params = RAPIER.JointData.revolute(anchorA, anchorB, {
+                    x: axisLocal.x,
+                    y: axisLocal.y,
+                    z: axisLocal.z,
+                });
             } else if (constraintNode.constraintType === "prismatic") {
                 // Prismatic axis: along the line from A to B.
                 const axis = {
@@ -192,10 +192,6 @@ export class ConstraintComponent extends Component {
                 true
             );
 
-            if (constraintNode.constraintType === "motor") {
-                this.configureMotor(constraintNode);
-            }
-
             runtimeStore.info(
                 `Created ${constraintNode.constraintType} joint between ${partA.id} and ${partB.id}`,
                 "ConstraintComponent"
@@ -211,15 +207,6 @@ export class ConstraintComponent extends Component {
         if (!this.intialized) {
             this.init();
         }
-
-        if (
-            this.intialized &&
-            this.joint &&
-            this.gameObject.bObject instanceof Types.BConstraint &&
-            this.gameObject.bObject.constraintType === "motor"
-        ) {
-            this.applyMotorOverrides(this.gameObject.bObject);
-        }
     }
 
     onDisable(): void {
@@ -233,62 +220,9 @@ export class ConstraintComponent extends Component {
             this.joint = null;
         }
         this.intialized = false;
-        this.currentMotorVelocity = null;
-        this.currentMotorMaxForce = null;
-        this.motorEnabled = null;
     }
 
     onEnable(): void {
         this.init();
-    }
-
-    private configureMotor(constraintNode: Types.BConstraint): void {
-        if (!this.joint) return;
-        const defaultVelocity = constraintNode.stiffness ?? 0;
-        const defaultMaxForce = constraintNode.damping ?? 1;
-        this.joint.configureMotorVelocity(defaultVelocity, defaultMaxForce);
-        this.currentMotorVelocity = defaultVelocity;
-        this.currentMotorMaxForce = defaultMaxForce;
-        this.motorEnabled = true;
-    }
-
-    private applyMotorOverrides(constraintNode: Types.BConstraint): void {
-        if (!this.joint) return;
-        const id = constraintNode.id;
-        const velocityOverride = runtimeStore.getPropertyOverride<number>(
-            id,
-            "motorVelocity"
-        );
-        const maxForceOverride = runtimeStore.getPropertyOverride<number>(
-            id,
-            "motorMaxForce"
-        );
-        const enabledOverride = runtimeStore.getPropertyOverride<boolean>(
-            id,
-            "motorEnabled"
-        );
-
-        const enabled = enabledOverride ?? true;
-        if (this.motorEnabled !== enabled) {
-            this.motorEnabled = enabled;
-            if (!enabled) {
-                this.joint.configureMotorVelocity(0, 0);
-                this.currentMotorVelocity = 0;
-                this.currentMotorMaxForce = 0;
-                return;
-            }
-        }
-
-        const velocity = velocityOverride ?? constraintNode.stiffness ?? 0;
-        const maxForce = maxForceOverride ?? constraintNode.damping ?? 1;
-
-        if (
-            this.currentMotorVelocity !== velocity ||
-            this.currentMotorMaxForce !== maxForce
-        ) {
-            this.joint.configureMotorVelocity(velocity, maxForce);
-            this.currentMotorVelocity = velocity;
-            this.currentMotorMaxForce = maxForce;
-        }
     }
 }

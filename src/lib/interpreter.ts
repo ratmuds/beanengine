@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable no-console */
 /**
  * Interpreter for running compiled code from compiler.ts
  */
@@ -171,6 +173,15 @@ export class CodeInterpreter {
                     break;
                 case "directionalvelocity":
                     await this.executeDirectionalVelocity(item, context);
+                    break;
+                case "motorsetvelocity":
+                    await this.executeMotorSetVelocity(item, context);
+                    break;
+                case "motorsetenabled":
+                    await this.executeMotorSetEnabled(item, context);
+                    break;
+                case "motorclearoverrides":
+                    await this.executeMotorClearOverrides(item, context);
                     break;
                 case "clone":
                     await this.executeClone(item, context);
@@ -738,6 +749,200 @@ export class CodeInterpreter {
 
         const dir = this.parseVector3(direction);
         targetGameObject.getComponent(PhysicsComponent).setVelocity(dir);
+    }
+
+    private async executeMotorSetVelocity(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const velocityRaw = await context.evaluateChip(item.velocity, context);
+        const maxForceRaw = await context.evaluateChip(item.maxForce, context);
+
+        const resolved = this.resolveMotorConstraintTarget(
+            targetRef,
+            context,
+            "Set Motor Velocity"
+        );
+        if (!resolved) return;
+
+        const { constraintNode } = resolved;
+
+        const velocity = Number(velocityRaw);
+        if (!Number.isFinite(velocity)) {
+            runtimeStore.warn(
+                `Set Motor Velocity: expected a numeric velocity but received '${velocityRaw}'.`,
+                "Interpreter"
+            );
+            return;
+        }
+
+        runtimeStore.setPropertyOverride(
+            constraintNode.id,
+            "motorVelocity",
+            velocity
+        );
+
+        if (this.isValueProvided(maxForceRaw)) {
+            const maxForce = Number(maxForceRaw);
+            if (!Number.isFinite(maxForce)) {
+                runtimeStore.warn(
+                    `Set Motor Velocity: expected a numeric max force but received '${maxForceRaw}'.`,
+                    "Interpreter"
+                );
+            } else {
+                runtimeStore.setPropertyOverride(
+                    constraintNode.id,
+                    "motorMaxForce",
+                    maxForce
+                );
+            }
+        } else {
+            runtimeStore.clearPropertyOverride(
+                constraintNode.id,
+                "motorMaxForce"
+            );
+        }
+    }
+
+    private async executeMotorSetEnabled(item: any, context: RuntimeContext) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const enabledRaw = await context.evaluateChip(item.enabled, context);
+
+        const resolved = this.resolveMotorConstraintTarget(
+            targetRef,
+            context,
+            "Set Motor Enabled"
+        );
+        if (!resolved) return;
+
+        if (!this.isValueProvided(enabledRaw)) {
+            runtimeStore.warn(
+                "Set Motor Enabled: expected a value for enabled state.",
+                "Interpreter"
+            );
+            return;
+        }
+
+        const enabled = this.parseBoolean(enabledRaw);
+        if (enabled === null) {
+            runtimeStore.warn(
+                `Set Motor Enabled: could not interpret '${enabledRaw}' as a boolean value. Use true/false, yes/no, on/off, or 1/0.`,
+                "Interpreter"
+            );
+            return;
+        }
+
+        const { constraintNode } = resolved;
+        runtimeStore.setPropertyOverride(
+            constraintNode.id,
+            "motorEnabled",
+            enabled
+        );
+    }
+
+    private async executeMotorClearOverrides(
+        item: any,
+        context: RuntimeContext
+    ) {
+        const targetRef = await context.evaluateChip(item.target, context);
+
+        const resolved = this.resolveMotorConstraintTarget(
+            targetRef,
+            context,
+            "Reset Motor Overrides"
+        );
+        if (!resolved) return;
+
+        const { constraintNode } = resolved;
+        runtimeStore.clearPropertyOverride(constraintNode.id, "motorVelocity");
+        runtimeStore.clearPropertyOverride(constraintNode.id, "motorMaxForce");
+        runtimeStore.clearPropertyOverride(constraintNode.id, "motorEnabled");
+    }
+
+    private resolveMotorConstraintTarget(
+        rawTarget: unknown,
+        context: RuntimeContext,
+        blockLabel: string
+    ): { constraintNode: Types.BConstraint; gameObject: GameObject } | null {
+        let ref: string | undefined;
+
+        if (typeof rawTarget === "string") {
+            ref = rawTarget;
+        } else if (
+            rawTarget &&
+            typeof rawTarget === "object" &&
+            "id" in rawTarget &&
+            typeof (rawTarget as { id?: unknown }).id === "string"
+        ) {
+            ref = `@id:${(rawTarget as { id: string }).id}`;
+        } else if (rawTarget !== undefined && rawTarget !== null) {
+            ref = String(rawTarget);
+        }
+
+        let targetGameObject = context.gameObject ?? null;
+
+        if (ref && ref.trim() !== "" && ref.trim() !== "(self)") {
+            const resolvedTarget = resolveTargetGameObject(ref, context);
+            if (!resolvedTarget) {
+                const error = getTargetResolutionError(ref, context);
+                runtimeStore.warn(
+                    `${blockLabel}: failed to resolve target '${ref}'.${
+                        error ? ` ${error}` : ""
+                    }`,
+                    "Interpreter"
+                );
+                return null;
+            }
+            targetGameObject = resolvedTarget;
+        }
+
+        if (!targetGameObject) {
+            runtimeStore.warn(
+                `${blockLabel}: no target object available. Does this script have a parent?`,
+                "Interpreter"
+            );
+            return null;
+        }
+
+        if (!(targetGameObject.bObject instanceof Types.BConstraint)) {
+            runtimeStore.warn(
+                `${blockLabel}: target '${targetGameObject.name}' is not a constraint`,
+                "Interpreter"
+            );
+            return null;
+        }
+
+        const constraintNode = targetGameObject.bObject as Types.BConstraint;
+
+        if (constraintNode.constraintType !== "motor") {
+            runtimeStore.warn(
+                `${blockLabel}: constraint '${constraintNode.name}' is not a motor constraint`,
+                "Interpreter"
+            );
+            return null;
+        }
+
+        return { constraintNode, gameObject: targetGameObject };
+    }
+
+    private isValueProvided(value: unknown): boolean {
+        if (value === null || value === undefined) return false;
+        if (typeof value === "string" && value.trim() === "") return false;
+        return true;
+    }
+
+    private parseBoolean(value: unknown): boolean | null {
+        if (typeof value === "boolean") return value;
+        if (typeof value === "number") return value !== 0;
+        if (typeof value === "string") {
+            const normalized = value.trim().toLowerCase();
+            if (["true", "1", "yes", "on"].includes(normalized)) {
+                return true;
+            }
+            if (["false", "0", "no", "off"].includes(normalized)) {
+                return false;
+            }
+        }
+
+        return null;
     }
 
     private async executeClone(item: any, context: RuntimeContext) {
