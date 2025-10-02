@@ -56,16 +56,22 @@ export class PhysicsComponent extends Component {
             RAPIER.RigidBodyDesc.dynamic()
         );
 
-        // Create initial collider based on primitive type or a box fallback
-        this.collider = physicsWorld.createCollider(
-            this.createInitialColliderDesc(),
-            this.body
-        );
+        // Only create collider if collision is enabled
+        const bPart = this.gameObject.bObject as Types.BPart;
+        if (bPart.enableCollision) {
+            // Create initial collider based on primitive type or a box fallback
+            this.collider = physicsWorld.createCollider(
+                this.createInitialColliderDesc(),
+                this.body
+            );
 
-        this.registerHandles();
-        this.enableCollisionEvents();
+            this.registerHandles();
+            this.enableCollisionEvents();
 
-        this.applyCollisionSettings();
+            this.applyCollisionSettings();
+        } else {
+            this.collider = null;
+        }
 
         // Apply initial position and rotation from GameObject
         this.body.setTranslation(
@@ -108,8 +114,10 @@ export class PhysicsComponent extends Component {
         // Apply locks based on object properties
         this.applyLocks();
 
-        // Attempt to build a convex-hull collider (async if needed)
-        void this.tryBuildConvexHullCollider();
+        // Attempt to build a convex-hull collider (async if needed) only if collision is enabled
+        if (bPart.enableCollision) {
+            void this.tryBuildConvexHullCollider();
+        }
     }
 
     private createInitialColliderDesc(): RAPIER.ColliderDesc {
@@ -642,6 +650,7 @@ export class PhysicsComponent extends Component {
 
     // Try to build convex hull if it hasn't been built yet
     private tryBuildConvexHullIfNeeded(): void {
+        if (!this.collider) return; // No collider, skip convex hull
         if (!this.hasConvexHullCollider) {
             void this.tryBuildConvexHullCollider(false);
         }
@@ -649,6 +658,8 @@ export class PhysicsComponent extends Component {
 
     // Rebuild collider when object scale changes
     private rebuildColliderIfScaleChanged(): void {
+        if (!this.collider) return; // No collider, nothing to rebuild
+
         const currentScale = this.gameObject.transform.scale;
         const hasScaleChanged =
             this.previousScale.x !== currentScale.x ||

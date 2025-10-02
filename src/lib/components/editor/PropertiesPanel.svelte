@@ -576,6 +576,54 @@
                             {object}
                             on:change={handleAxisLockChange}
                         />
+
+                        <!-- Physics & Collision Toggles -->
+                        <div class="space-y-2">
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Enable Physics
+                                </div>
+                                <Switch
+                                    checked={object.enablePhysics}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).enablePhysics = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Enable Collision
+                                </div>
+                                <Switch
+                                    checked={object.enableCollision}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).enableCollision = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 </div>
             {/if}

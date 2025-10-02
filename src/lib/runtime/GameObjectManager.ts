@@ -366,9 +366,10 @@ export class GameObjectManager {
             gameObject.addComponent(new CameraComponent(gameObject));
         }
 
-        // Add PhysicsComponent for physical objects
+        // Add PhysicsComponent for physical objects (only if physics is enabled)
         if (
             bObject instanceof Types.BPart &&
+            bObject.enablePhysics &&
             !gameObject.getComponent(PhysicsComponent)
         ) {
             gameObject.addComponent(new PhysicsComponent(gameObject));

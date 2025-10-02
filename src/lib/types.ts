@@ -617,6 +617,8 @@ class BPart extends BNode3D {
     positionLocked: boolean;
     rotationLocked: boolean;
 
+    enablePhysics: boolean; // Enable/disable physics simulation for this part
+    enableCollision: boolean; // Enable/disable collision detection for this part
     canTouch: boolean;
     canCollide: boolean;
     canQuery: boolean;
@@ -638,6 +640,8 @@ class BPart extends BNode3D {
         this.visible = true;
         this.positionLocked = false;
         this.rotationLocked = false;
+        this.enablePhysics = true;
+        this.enableCollision = true;
         this.canTouch = true;
         this.canCollide = true;
         this.canQuery = true;
