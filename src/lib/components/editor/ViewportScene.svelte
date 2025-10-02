@@ -139,7 +139,7 @@
                     {/if}
 
                     {#if object.meshSource.value === "sphere"}
-                        <T.SphereGeometry args={[1, 32, 32]} />
+                        <T.SphereGeometry args={[0.5, 32, 32]} />
                     {/if}
 
                     {#if object.meshSource.value === "cylinder"}

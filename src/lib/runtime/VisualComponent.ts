@@ -79,7 +79,7 @@ export class VisualComponent extends Component {
             }
 
             const fallbackMaterial = new THREE.MeshStandardMaterial({
-                color: "#ff0000",
+                color: "#ffffff",
             });
             const mat =
                 materialStore.getMaterial(part.material || "")?.threeMaterial ||

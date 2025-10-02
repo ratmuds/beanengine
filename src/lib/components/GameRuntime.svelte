@@ -10,6 +10,7 @@
     import { SSAOPass } from "three/examples/jsm/postprocessing/SSAOPass.js";
     import { SMAAPass } from "three/examples/jsm/postprocessing/SMAAPass.js";
     import { BokehPass } from "three/examples/jsm/postprocessing/BokehPass.js";
+    import { AfterimagePass } from "three/examples/jsm/postprocessing/AfterimagePass.js";
     import RAPIER from "@dimforge/rapier3d-compat";
     import { GameObjectManager } from "$lib/runtime";
     import { sceneStore } from "$lib/sceneStore";
@@ -168,6 +169,10 @@
                 0.15 // threshold
             );
             composer.addPass(bloomPass);
+
+            // Motion Blur
+            const motionBlurPass = new AfterimagePass(0.6);
+            composer.addPass(motionBlurPass);
 
             // Depth of Field (Bokeh)
             const bokehPass = new BokehPass(gameScene, gameCamera, {
