@@ -96,7 +96,6 @@ export class MotorComponent extends Component {
             const hostPos = hostPhysics.body.translation();
             const hostRot = hostPhysics.body.rotation();
             const wheelPos = wheelPhysics.body.translation();
-            const wheelRot = wheelPhysics.body.rotation();
 
             // Convert to THREE quaternions
             const qHost = new THREE.Quaternion(
@@ -105,39 +104,50 @@ export class MotorComponent extends Component {
                 hostRot.z,
                 hostRot.w
             );
-            const qWheel = new THREE.Quaternion(
-                wheelRot.x,
-                wheelRot.y,
-                wheelRot.z,
-                wheelRot.w
-            );
             const qHostInv = qHost.clone().invert();
-            const qWheelInv = qWheel.clone().invert();
 
-            // Motor connects at the host's center (origin in local space)
-            const anchorHost = { x: 0.0, y: 0.0, z: 0.0 };
+            // The anchor on the wheel is its own center.
+            const anchorWheel = { x: 0.0, y: 0.0, z: 0.0 };
 
-            // Calculate wheel's anchor: host position in wheel's local space
-            const anchorWheelWorld = new THREE.Vector3(
-                hostPos.x - wheelPos.x,
-                hostPos.y - wheelPos.y,
-                hostPos.z - wheelPos.z
+            // The anchor on the host is the wheel's position in the host's local space.
+            const worldVecFromHostToWheel = new THREE.Vector3(
+                wheelPos.x - hostPos.x,
+                wheelPos.y - hostPos.y,
+                wheelPos.z - hostPos.z
             );
-            const anchorWheel = anchorWheelWorld
-                .clone()
-                .applyQuaternion(qWheelInv);
+            const anchorHost =
+                worldVecFromHostToWheel.applyQuaternion(qHostInv);
 
-            // Rotation axis: world Y-axis transformed to host's local space
-            const worldYAxis = new THREE.Vector3(0, 1, 0);
-            const motorAxisLocalHost = worldYAxis
+            // Rotation axis: perpendicular to the line from host to wheel
+            // This makes the wheel spin like a car wheel around the axle
+            const hostToWheel = new THREE.Vector3(
+                wheelPos.x - hostPos.x,
+                wheelPos.y - hostPos.y,
+                wheelPos.z - hostPos.z
+            ).normalize();
+
+            // Use the right vector (cross product with world up) as the rotation axis
+            // This creates an axis perpendicular to both the connection direction and world up
+            const worldUp = new THREE.Vector3(0, 1, 0);
+            const motorAxisWorld = new THREE.Vector3()
+                .crossVectors(worldUp, hostToWheel)
+                .normalize();
+
+            // If the axis is near zero (wheel is directly above/below), use world X as fallback
+            if (motorAxisWorld.lengthSq() < 0.01) {
+                motorAxisWorld.set(1, 0, 0);
+            }
+
+            // Transform the world axis to host's local space
+            const motorAxisLocalHost = motorAxisWorld
                 .clone()
                 .applyQuaternion(qHostInv)
                 .normalize();
 
             // Create revolute joint with the calculated axis
             const params = RAPIER.JointData.revolute(
-                anchorHost,
-                { x: anchorWheel.x, y: anchorWheel.y, z: anchorWheel.z },
+                { x: anchorHost.x, y: anchorHost.y, z: anchorHost.z },
+                anchorWheel,
                 {
                     x: motorAxisLocalHost.x,
                     y: motorAxisLocalHost.y,
