@@ -43,6 +43,7 @@
         Plus,
         Sparkles,
         Save,
+        Bug,
     } from "lucide-svelte";
 
     import { Canvas } from "@threlte/core";
@@ -54,6 +55,7 @@
     import CodePalette from "$lib/components/code/CodePalette.svelte";
     import PropertiesPanel from "$lib/components/editor/PropertiesPanel.svelte";
     import DevToolsPanel from "$lib/components/DevToolsPanel.svelte";
+    import AgentPanel from "$lib/components/editor/AgentPanel.svelte";
     import ViewportLoader from "$lib/components/editor/ViewportLoader.svelte";
 
     import * as Types from "$lib/types";
@@ -367,6 +369,9 @@
     let activeTool = $state("select");
     let transformMode = $state("translate");
     let transformSpace = $state("local");
+
+    // Right panel tab state
+    let rightPanelTab = $state("properties");
 
     // Visual scripting compiled code
     let compiledCode = $state([]);
@@ -822,7 +827,7 @@
                                         {#if tab.closeable}
                                             <button
                                                 class="absolute -right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 p-0 hover:bg-red-500/20 rounded-md flex items-center justify-center z-10 transition-colors duration-200"
-                                                on:click|stopPropagation={() =>
+                                                onclick={() =>
                                                     closeTab(tab.id)}
                                                 title="Close tab"
                                             >
@@ -1125,27 +1130,79 @@
 
             <ResizableHandle />
 
-            <!-- Right Panel - Properties / DevTools -->
+            <!-- Right Panel - Tabbed Interface -->
             <ResizablePane
                 defaultSize={rightPanelSize}
-                size={rightPanelSize}
                 minSize={0}
                 maxSize={35}
                 collapsible={true}
                 collapsedSize={0}
                 class="transition-all duration-700 ease-out"
             >
-                <!-- this p is for helping svelte realize to switch the panels, idk why this fixes it but yeah -->
-                <p class="hidden">{play}</p>
+                <div class="h-full flex flex-col bg-card/60 backdrop-blur-sm border-l border-border/30">
+                    <!-- Subtle gradient accent -->
+                    <div
+                        class="absolute inset-0 bg-gradient-to-bl from-purple-500/5 via-transparent to-blue-500/3 pointer-events-none"
+                    ></div>
 
-                {#if play}
-                    <DevToolsPanel />
-                {:else}
-                    <PropertiesPanel
-                        {selectedObject}
-                        onPropertyChange={handlePropertyChange}
-                    />
-                {/if}
+                    <!-- Tab Header -->
+                    <div class="border-b border-border/30 relative z-10">
+                        <div class="flex items-center">
+                            <button
+                                onclick={() => (rightPanelTab = "properties")}
+                                class="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 {rightPanelTab ===
+                                'properties'
+                                    ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
+                            >
+                                <div class="flex items-center justify-center gap-2">
+                                    <Settings class="w-4 h-4" />
+                                    Properties
+                                </div>
+                            </button>
+
+                            <button
+                                onclick={() => (rightPanelTab = "devtools")}
+                                class="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 {rightPanelTab ===
+                                'devtools'
+                                    ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
+                            >
+                                <div class="flex items-center justify-center gap-2">
+                                    <Bug class="w-4 h-4" />
+                                    DevTools
+                                </div>
+                            </button>
+
+                            <button
+                                onclick={() => (rightPanelTab = "agent")}
+                                class="flex-1 px-4 py-3 text-sm font-medium transition-all duration-200 {rightPanelTab ===
+                                'agent'
+                                    ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
+                                    : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
+                            >
+                                <div class="flex items-center justify-center gap-2">
+                                    <Sparkles class="w-4 h-4" />
+                                    Agent
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="flex-1 overflow-hidden relative z-10">
+                        {#if rightPanelTab === "properties"}
+                            <PropertiesPanel
+                                {selectedObject}
+                                onPropertyChange={handlePropertyChange}
+                            />
+                        {:else if rightPanelTab === "devtools"}
+                            <DevToolsPanel />
+                        {:else if rightPanelTab === "agent"}
+                            <AgentPanel />
+                        {/if}
+                    </div>
+                </div>
             </ResizablePane>
         </ResizablePaneGroup>
     </div>

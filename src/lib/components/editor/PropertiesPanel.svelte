@@ -320,13 +320,8 @@
 </script>
 
 <div
-    class="h-full bg-card/60 backdrop-blur-sm border-l border-border/30 flex flex-col relative overflow-hidden"
+    class="h-full flex flex-col relative overflow-hidden"
 >
-    <!-- Subtle gradient accent -->
-    <div
-        class="absolute inset-0 bg-gradient-to-bl from-purple-500/5 via-transparent to-blue-500/3 pointer-events-none"
-    ></div>
-
     <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">

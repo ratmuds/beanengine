@@ -109,7 +109,7 @@ export class PhysicsComponent extends Component {
         this.applyLocks();
 
         // Only attempt to build a convex-hull collider if collision is enabled
-        // For non-colliding objects (sensors), a simple box collider is sufficient
+        // For non-colliding objects (sensors), a simple box collider is used idk
         const bPart = this.gameObject.bObject as Types.BPart;
         if (bPart.enableCollision) {
             void this.tryBuildConvexHullCollider();
@@ -151,7 +151,7 @@ export class PhysicsComponent extends Component {
 
         // Default to simple box collider for asset meshes
         // If collision is enabled, this will be replaced with a convex hull later
-        // If collision is disabled (sensor mode), this simple box is sufficient
+        // If collision is disabled (sensor mode), this simple box is enough
         return RAPIER.ColliderDesc.cuboid(
             scale.x / 2,
             scale.y / 2,

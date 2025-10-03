@@ -7,3 +7,4 @@ export { default as ViewportScene } from './ViewportScene.svelte';
 export { default as AssetBrowser } from './AssetBrowser.svelte';
 export { default as MaterialBrowser } from './MaterialBrowser.svelte';
 export { default as ParticleBrowser } from './ParticleBrowser.svelte';
+export { default as AgentPanel } from './AgentPanel.svelte';
