@@ -347,6 +347,8 @@ export class GameObject {
         // 5) Clone components after hierarchy is set and attach to clone
         const scene = runtimeStore.getThreeScene();
         for (const comp of this.getComponents()) {
+            console.log(comp);
+
             if (comp instanceof VisualComponent) {
                 if (scene) {
                     cloneGO.addComponent(new VisualComponent(cloneGO, scene));
@@ -445,11 +447,19 @@ export class GameObject {
                     if (hasCloneMethod(item))
                         return (item as { clone: () => unknown }).clone();
                     if (isPlainObject(item)) {
-                        if (typeof structuredClone === "function")
-                            return structuredClone(item);
+                        // Avoid DataCloneError for Proxy objects by safely attempting deep-ish copies
+                        if (typeof structuredClone === "function") {
+                            try {
+                                return structuredClone(item);
+                            } catch {
+                                // Fall through to JSON/stringify or shallow copy
+                                // This often happens if the object is a Proxy (e.g., from Svelte reactivity)
+                            }
+                        }
                         try {
                             return JSON.parse(JSON.stringify(item));
                         } catch {
+                            // Final fallback: shallow copy (may share nested references, but safe)
                             return { ...(item as Record<string, unknown>) };
                         }
                     }

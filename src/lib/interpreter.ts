@@ -578,7 +578,9 @@ export class CodeInterpreter {
         }
 
         if (!position) {
-            throw new InterpreterScriptError("Move block missing position");
+            throw new InterpreterScriptError(
+                `Move block missing position: ${context.script?.name}`
+            );
         }
 
         // Normalize input into a vector and apply to the target GameObject's THREE.Vector3
@@ -623,7 +625,9 @@ export class CodeInterpreter {
         }
 
         if (!position) {
-            throw new InterpreterScriptError("MoveTo block missing position");
+            throw new InterpreterScriptError(
+                `MoveTo block missing position: ${context.script?.name}`
+            );
         }
 
         // Normalize input into a vector and apply to the target GameObject's THREE.Vector3
@@ -1168,10 +1172,6 @@ export class CodeInterpreter {
                 }
             };
             registerHierarchy(clonedObject);
-            // Ensure any required components exist and enabled state matches Storage membership
-            if (gameObjectManager.ensureComponentsRecursive) {
-                gameObjectManager.ensureComponentsRecursive(clonedObject);
-            }
 
             // Store the cloned object's ID in the specified variable
             runtimeStore.setVariable(

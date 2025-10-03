@@ -30,6 +30,9 @@ export class VisualComponent extends Component {
 
         if (bNode instanceof Types.BPart) {
             this.createPartMesh(bNode);
+        } else if (bNode instanceof Types.BMesh) {
+            // Treat BMesh similarly to BPart but without physics considerations
+            this.createMeshOnly(bNode);
         } else if (bNode instanceof Types.BCamera) {
             this.createCameraVisual(bNode);
         } else if (bNode instanceof Types.BLight) {
@@ -221,6 +224,74 @@ export class VisualComponent extends Component {
 
         // Fire and forget; mesh container already added/synced
         void loadModel();
+    }
+
+    // Create mesh for BMesh (render-only) nodes
+    private createMeshOnly(meshNode: Types.BMesh): void {
+        // Reuse part primitive logic
+        if (meshNode.meshSource?.type === "primitive") {
+            let geometry: THREE.BufferGeometry;
+            switch (meshNode.meshSource.value) {
+                case "block":
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
+                    break;
+                case "sphere":
+                    geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                    break;
+                case "cylinder":
+                    geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+                    break;
+                case "cone":
+                    geometry = new THREE.ConeGeometry(0.5, 1, 32);
+                    break;
+                case "plane":
+                    geometry = new THREE.PlaneGeometry(1, 1);
+                    break;
+                default:
+                    geometry = new THREE.BoxGeometry(1, 1, 1);
+            }
+
+            const fallbackMaterial = new THREE.MeshStandardMaterial({
+                color: "#ffffff",
+            });
+            const mat =
+                materialStore.getMaterial(meshNode.material || "")
+                    ?.threeMaterial || fallbackMaterial;
+
+            const mesh = new THREE.Mesh(geometry, mat);
+            mesh.name = meshNode.id;
+            mesh.castShadow = !!meshNode.castShadows;
+            mesh.receiveShadow = !!meshNode.receiveShadows;
+            mesh.visible = !!meshNode.visible;
+            this.mesh = mesh;
+            return;
+        }
+
+        // Asset-based mesh
+        const container = new THREE.Group();
+        container.name = meshNode.id;
+        container.visible = !!meshNode.visible;
+        this.mesh = container;
+
+        const assetId = meshNode.meshSource?.value;
+        const asset = assetId ? assetStore.getAsset(assetId) : undefined;
+        const url = asset?.url;
+        if (!url) return; // silent for brevity
+
+        const fileType = asset?.metadata.fileType?.toLowerCase();
+        if (fileType !== "gltf" && fileType !== "glb") return;
+
+        const loader = new GLTFLoader();
+        loader.load(
+            url,
+            (gltf: { scene: THREE.Object3D }) => {
+                container.add(gltf.scene);
+            },
+            undefined,
+            () => {
+                /* ignore */
+            }
+        );
     }
 
     /**

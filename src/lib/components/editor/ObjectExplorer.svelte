@@ -164,6 +164,8 @@
                 return Navigation;
             case "value":
                 return Hash;
+            case "bmesh":
+                return FileImage; // Assuming BMesh uses the same icon as mesh
             default:
                 return Box;
         }
@@ -635,6 +637,14 @@
                                 >
                                     <Hash class="w-4 h-4 mr-2" />
                                     Value
+                                </Command.Item>
+                                <Command.Item
+                                    value="mesh"
+                                    onSelect={() => handleAddObjectType("Mesh")}
+                                    class="rounded-lg m-1"
+                                >
+                                    <FileImage class="w-4 h-4 mr-2" />
+                                    Mesh
                                 </Command.Item>
                             </Command.Group>
                         </Command.List>

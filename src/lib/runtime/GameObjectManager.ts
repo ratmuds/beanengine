@@ -350,9 +350,12 @@ export class GameObjectManager {
         // Add VisualComponent for renderable objects (idempotent)
         if (
             (bObject instanceof Types.BPart ||
-                bObject instanceof Types.BLight) &&
+                bObject instanceof Types.BLight ||
+                bObject instanceof Types.BMesh) &&
             !gameObject.getComponent(VisualComponent) &&
-            bObject.enableRendering
+            // BMesh doesn't have enableRendering; treat as always true
+            ((bObject as any).enableRendering === undefined ||
+                (bObject as any).enableRendering)
         ) {
             gameObject.addComponent(
                 new VisualComponent(gameObject, this.scene)

@@ -17,6 +17,7 @@
         FileCode,
         RefreshCw,
         Camera,
+        FileImage,
     } from "lucide-svelte";
     import * as Types from "$lib/types";
     import { assetStore } from "$lib/assetStore";
@@ -45,7 +46,11 @@
 
     // Mesh selector reactive variables
     const meshOptions = $derived(() => {
-        if (!object || !(object instanceof Types.BPart)) return [];
+        if (
+            !object ||
+            !(object instanceof Types.BPart || object instanceof Types.BMesh)
+        )
+            return [];
 
         const primitives = [
             {
@@ -62,6 +67,21 @@
                 value: "primitive-cylinder",
                 label: "Cylinder",
                 data: { type: "primitive", value: "cylinder" },
+            },
+            {
+                value: "primitive-cone",
+                label: "Cone",
+                data: { type: "primitive", value: "cone" },
+            },
+            {
+                value: "primitive-plane",
+                label: "Plane",
+                data: { type: "primitive", value: "plane" },
+            },
+            {
+                value: "primitive-wedge",
+                label: "Wedge",
+                data: { type: "primitive", value: "wedge" },
             },
         ];
 
@@ -87,20 +107,31 @@
     let meshSelectorValue = $state("");
 
     $effect(() => {
-        if (!object || !(object instanceof Types.BPart)) {
+        if (
+            !object ||
+            !(object instanceof Types.BPart || object instanceof Types.BMesh)
+        ) {
             meshSelectorValue = "";
             return;
         }
-
-        if (object.meshSource.type === "primitive") {
-            meshSelectorValue = `primitive-${object.meshSource.value}`;
+        const meshSource = object.meshSource;
+        if (!meshSource) {
+            meshSelectorValue = "";
+            return;
+        }
+        if (meshSource.type === "primitive") {
+            meshSelectorValue = `primitive-${meshSource.value}`;
         } else {
-            meshSelectorValue = `asset-${object.meshSource.value}`;
+            meshSelectorValue = `asset-${meshSource.value}`;
         }
     });
 
     function handleMeshChange(value: string) {
-        if (!object || !(object instanceof Types.BPart)) return;
+        if (
+            !object ||
+            !(object instanceof Types.BPart || object instanceof Types.BMesh)
+        )
+            return;
 
         const selectedOption = meshOptions().find(
             (option: any) => option.value === value
@@ -130,7 +161,10 @@
     let materialSelectorValue = $state("");
 
     $effect(() => {
-        if (!object || !(object instanceof Types.BPart)) {
+        if (
+            !object ||
+            !(object instanceof Types.BPart || object instanceof Types.BMesh)
+        ) {
             materialSelectorValue = "";
             return;
         }
@@ -138,14 +172,18 @@
     });
 
     function handleMaterialChange(value: string) {
-        if (!object || !(object instanceof Types.BPart)) return;
+        if (
+            !object ||
+            !(object instanceof Types.BPart || object instanceof Types.BMesh)
+        )
+            return;
 
         object.material = value;
         onPropertyChange(object);
     }
 
     function handleAxisLockChange(event: any) {
-        if (!object || !(object instanceof Types.BPart)) return;
+        if (!object || !(object instanceof Types.BPart)) return; // Axis lock not relevant for BMesh currently
 
         onPropertyChange(event.detail.object);
     }
@@ -319,9 +357,7 @@
     });
 </script>
 
-<div
-    class="h-full flex flex-col relative overflow-hidden"
->
+<div class="h-full flex flex-col relative overflow-hidden">
     <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">
@@ -642,6 +678,201 @@
                                             object
                                         );
                                         (updated as any).enableCollision = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {/if}
+
+            <!-- Mesh Properties -->
+            {#if object instanceof Types.BMesh}
+                <div class="space-y-3">
+                    <div class="flex items-center gap-2 px-1">
+                        <FileImage class="w-4 h-4 text-sky-400" />
+                        <h3 class="font-medium text-sm text-foreground">
+                            Mesh
+                        </h3>
+                    </div>
+
+                    <div class="space-y-3 px-1">
+                        <!-- Mesh Selector -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Mesh Source
+                            </label>
+                            <Select.Root
+                                bind:value={meshSelectorValue}
+                                onValueChange={handleMeshChange}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {meshSelectorValue
+                                        ? meshOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  meshSelectorValue
+                                          )?.label || "Select a mesh"
+                                        : "Select a mesh"}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each meshOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            <div
+                                                class="flex items-center gap-2"
+                                            >
+                                                {#if option.data.type === "primitive"}
+                                                    {#if option.data.value === "block"}
+                                                        <Box
+                                                            class="w-4 h-4 text-blue-400"
+                                                        />
+                                                    {:else if option.data.value === "sphere"}
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400 rounded-full"
+                                                        ></div>
+                                                    {:else if option.data.value === "cylinder"}
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400 rounded-sm"
+                                                        ></div>
+                                                    {:else if option.data.value === "cone"}
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400"
+                                                            style="clip-path: polygon(50% 0%, 0% 100%, 100% 100%)"
+                                                        ></div>
+                                                    {:else if option.data.value === "plane"}
+                                                        <div
+                                                            class="w-4 h-1 bg-blue-400"
+                                                        ></div>
+                                                    {:else if option.data.value === "wedge"}
+                                                        <div
+                                                            class="w-4 h-4 bg-blue-400"
+                                                            style="clip-path: polygon(0% 100%, 100% 100%, 100% 0%)"
+                                                        ></div>
+                                                    {/if}
+                                                {:else}
+                                                    <FileImage
+                                                        class="w-4 h-4 text-purple-400"
+                                                    />
+                                                {/if}
+                                                <span>{option.label}</span>
+                                                {#if option.data.type === "asset" && (option.data as any).size}
+                                                    <span
+                                                        class="text-xs text-muted-foreground ml-auto"
+                                                    >
+                                                        {(
+                                                            (option.data as any)
+                                                                .size /
+                                                            1024 /
+                                                            1024
+                                                        ).toFixed(2)} MB
+                                                    </span>
+                                                {/if}
+                                            </div>
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Material Selector -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Material
+                            </label>
+                            <Select.Root
+                                bind:value={materialSelectorValue}
+                                onValueChange={handleMaterialChange}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {materialSelectorValue
+                                        ? materialOptions().find(
+                                              (opt: any) =>
+                                                  opt.value ===
+                                                  materialSelectorValue
+                                          )?.label || "Select material..."
+                                        : "Select material..."}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    {#each materialOptions() as option}
+                                        <Select.Item value={option.value}>
+                                            {option.label}
+                                        </Select.Item>
+                                    {/each}
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        <!-- Visibility & Shadow Toggles -->
+                        <div class="space-y-2">
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Visible
+                                </div>
+                                <Switch
+                                    checked={object.visible}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).visible = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Cast Shadows
+                                </div>
+                                <Switch
+                                    checked={object.castShadows}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).castShadows = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Receive Shadows
+                                </div>
+                                <Switch
+                                    checked={object.receiveShadows}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).receiveShadows = v;
                                         onPropertyChange(updated);
                                     }}
                                 />

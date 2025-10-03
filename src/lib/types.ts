@@ -678,6 +678,53 @@ class BPart extends BNode3D {
     }
 }
 
+// Represents a render-only mesh (like a Part but without physics). It only exists visually
+class BMesh extends BNode3D {
+    meshSource: MeshSource; // Only primitive or asset reference
+    color: string; // Keep color so VisualComponent can reuse logic
+    material: string; // Material reference
+    transparency: number;
+    castShadows: boolean;
+    receiveShadows: boolean;
+    visible: boolean;
+
+    constructor(
+        name: string | null,
+        id: string | null,
+        parent: BObject | null
+    ) {
+        super(name, id, parent);
+        this.type = "mesh";
+        this.meshSource = { type: "primitive", value: "block" };
+        this.color = "#ffffff";
+        this.material = "plastic";
+        this.transparency = 0;
+        this.castShadows = true;
+        this.receiveShadows = true;
+        this.visible = true;
+    }
+
+    setPrimitiveMesh(primitive: PrimitiveMeshType) {
+        this.meshSource = { type: "primitive", value: primitive };
+    }
+
+    setAssetMesh(assetId: string) {
+        this.meshSource = { type: "asset", value: assetId };
+    }
+
+    isPrimitiveMesh(): boolean {
+        return this.meshSource.type === "primitive";
+    }
+
+    isAssetMesh(): boolean {
+        return this.meshSource.type === "asset";
+    }
+
+    clone(): BMesh {
+        return super.clone() as BMesh;
+    }
+}
+
 // Represents a group of waypoints as a path. Waypoints should be children to WaypointPaths
 class BWaypointPath extends BObject {
     constructor(
@@ -1181,6 +1228,7 @@ export {
     BVector2,
     BNode3D,
     BPart,
+    BMesh,
     BWaypointPath,
     BWaypoint,
     BWaypointNavigator,
