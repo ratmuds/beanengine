@@ -619,9 +619,8 @@ class BPart extends BNode3D {
 
     enablePhysics: boolean; // Enable/disable physics simulation for this part
     enableCollision: boolean; // Enable/disable collision detection for this part
-    canTouch: boolean;
     canCollide: boolean;
-    canQuery: boolean;
+    enableRendering: boolean; // Enable/disable rendering for this part
 
     constructor(
         name: string | null,
@@ -642,9 +641,8 @@ class BPart extends BNode3D {
         this.rotationLocked = false;
         this.enablePhysics = true;
         this.enableCollision = true;
-        this.canTouch = true;
         this.canCollide = true;
-        this.canQuery = true;
+        this.enableRendering = true;
     }
 
     // Set mesh to a primitive type
@@ -783,12 +781,18 @@ class BConstraint extends BObject {
 
 // Motor node – defines a revolute motor between two parts.
 // Place it as a child of a BPart (the host/knuckle) and select the wheel BPart to connect.
-// The motor automatically connects at the center of the host part, with Y-axis as rotation axis.
+// The motor automatically connects at the center of the host part.
 class BMotor extends BObject {
     enabled: boolean;
-    speed: number; // target angular velocity (rad/s)
+    speed: number; // legacy: target angular velocity (rad/s)
     maxForce: number; // maximum torque
     wheelPart: BPart | null; // The part to rotate
+    motorMode: "velocity" | "position"; // Motor control mode
+    targetVelocity: number; // Target angular velocity (rad/s) for velocity mode
+    targetPosition: number; // Target angle (radians) for position mode
+    stiffness: number; // Spring stiffness for position mode (PID controller)
+    damping: number; // Damping for both modes
+    motorAxis: "auto" | "x" | "y" | "z"; // Rotation axis (auto = perpendicular to connection)
 
     constructor(
         name: string | null,
@@ -798,9 +802,15 @@ class BMotor extends BObject {
         super(name ? name : "Motor", id, parent);
         this.type = "motor";
         this.enabled = true;
-        this.speed = 0.0;
+        this.speed = 0.0; // legacy
         this.maxForce = 100.0;
         this.wheelPart = null;
+        this.motorMode = "velocity";
+        this.targetVelocity = 0.0;
+        this.targetPosition = 0.0;
+        this.stiffness = 1000.0; // Default PID stiffness
+        this.damping = 0.5; // Default damping
+        this.motorAxis = "auto"; // Default to auto-calculated axis
     }
 }
 

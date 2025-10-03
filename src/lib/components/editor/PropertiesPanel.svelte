@@ -285,13 +285,19 @@
     });
 
     let motorWheelSelectorValue: string = $state("");
+    let motorModeValue: string = $state("velocity");
+    let motorAxisValue: string = $state("auto");
 
     $effect(() => {
         if (!object || !(object instanceof Types.BMotor)) {
             motorWheelSelectorValue = "";
+            motorModeValue = "velocity";
+            motorAxisValue = "auto";
             return;
         }
         motorWheelSelectorValue = object.wheelPart?.id || "";
+        motorModeValue = object.motorMode || "velocity";
+        motorAxisValue = object.motorAxis || "auto";
     });
 
     function handleMotorWheelChange(value: string) {
@@ -577,8 +583,30 @@
                             on:change={handleAxisLockChange}
                         />
 
-                        <!-- Physics & Collision Toggles -->
+                        <!-- Component Toggles -->
                         <div class="space-y-2">
+                            <div
+                                class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
+                            >
+                                <div
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Enable Rendering
+                                </div>
+                                <Switch
+                                    checked={object.enableRendering}
+                                    onCheckedChange={(v) => {
+                                        const updated = Object.assign(
+                                            Object.create(
+                                                Object.getPrototypeOf(object)
+                                            ),
+                                            object
+                                        );
+                                        (updated as any).enableRendering = v;
+                                        onPropertyChange(updated);
+                                    }}
+                                />
+                            </div>
                             <div
                                 class="flex items-center justify-between bg-muted/20 rounded-lg p-2.5"
                             >
@@ -2153,27 +2181,191 @@
                             />
                         </div>
 
-                        <!-- Speed (Angular Velocity) -->
+                        <!-- Motor Mode Selector -->
                         <div class="space-y-1.5">
                             <label
                                 class="text-xs font-medium text-foreground/80"
                             >
-                                Speed (rad/s)
+                                Motor Mode
                             </label>
-                            <Input
-                                type="number"
-                                step="0.1"
-                                value={object.speed}
-                                onchange={(e) => {
-                                    object.speed =
-                                        parseFloat(
-                                            (e.target as HTMLInputElement).value
-                                        ) || 0;
+                            <Select.Root
+                                bind:value={motorModeValue}
+                                onValueChange={(v) => {
+                                    object.motorMode = v;
                                     onPropertyChange(object);
                                 }}
-                                class="h-9"
-                            />
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {motorModeValue === "velocity"
+                                        ? "Velocity (Spin)"
+                                        : "Position (Target Angle)"}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="velocity">
+                                        Velocity (Spin)
+                                    </Select.Item>
+                                    <Select.Item value="position">
+                                        Position (Target Angle)
+                                    </Select.Item>
+                                </Select.Content>
+                            </Select.Root>
                         </div>
+
+                        <!-- Motor Axis Selector -->
+                        <div class="space-y-1.5">
+                            <label
+                                class="text-xs font-medium text-foreground/80"
+                            >
+                                Rotation Axis
+                            </label>
+                            <Select.Root
+                                bind:value={motorAxisValue}
+                                onValueChange={(v) => {
+                                    object.motorAxis = v;
+                                    onPropertyChange(object);
+                                }}
+                                type="single"
+                            >
+                                <Select.Trigger class="w-full h-9">
+                                    {motorAxisValue === "auto"
+                                        ? "Auto (Perpendicular)"
+                                        : motorAxisValue === "x"
+                                          ? "X Axis"
+                                          : motorAxisValue === "y"
+                                            ? "Y Axis"
+                                            : "Z Axis"}
+                                </Select.Trigger>
+                                <Select.Content>
+                                    <Select.Item value="auto">
+                                        Auto (Perpendicular)
+                                    </Select.Item>
+                                    <Select.Item value="x">X Axis</Select.Item>
+                                    <Select.Item value="y">Y Axis</Select.Item>
+                                    <Select.Item value="z">Z Axis</Select.Item>
+                                </Select.Content>
+                            </Select.Root>
+                        </div>
+
+                        {#if object.motorMode === "velocity"}
+                            <!-- Target Velocity -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Target Velocity (rad/s)
+                                </label>
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    value={object.targetVelocity}
+                                    onchange={(e) => {
+                                        object.targetVelocity =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+
+                            <!-- Damping -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Damping
+                                </label>
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={object.damping}
+                                    onchange={(e) => {
+                                        object.damping =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0.5;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+                        {:else}
+                            <!-- Target Position (Angle) -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Target Position (radians)
+                                </label>
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    value={object.targetPosition}
+                                    onchange={(e) => {
+                                        object.targetPosition =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+
+                            <!-- Stiffness -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Stiffness (PID)
+                                </label>
+                                <Input
+                                    type="number"
+                                    step="10"
+                                    min="0"
+                                    value={object.stiffness}
+                                    onchange={(e) => {
+                                        object.stiffness =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 1000;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+
+                            <!-- Damping -->
+                            <div class="space-y-1.5">
+                                <label
+                                    class="text-xs font-medium text-foreground/80"
+                                >
+                                    Damping
+                                </label>
+                                <Input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={object.damping}
+                                    onchange={(e) => {
+                                        object.damping =
+                                            parseFloat(
+                                                (e.target as HTMLInputElement)
+                                                    .value
+                                            ) || 0.5;
+                                        onPropertyChange(object);
+                                    }}
+                                    class="h-9"
+                                />
+                            </div>
+                        {/if}
 
                         <!-- Max Force (Torque) -->
                         <div class="space-y-1.5">

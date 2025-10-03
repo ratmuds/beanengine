@@ -126,6 +126,9 @@ export class CodeInterpreter {
         try {
             if (this.stopped) return;
             switch (item.type) {
+                case "setVariable":
+                    await this.executeSetVariable(item, context);
+                    break;
                 case "if":
                     await this.executeIfStatement(item, context);
                     break;
@@ -182,6 +185,12 @@ export class CodeInterpreter {
                     break;
                 case "motorclearoverrides":
                     await this.executeMotorClearOverrides(item, context);
+                    break;
+                case "motorsettargetvelocity":
+                    await this.executeMotorSetTargetVelocity(item, context);
+                    break;
+                case "motorsettargetposition":
+                    await this.executeMotorSetTargetPosition(item, context);
                     break;
                 case "clone":
                     await this.executeClone(item, context);
@@ -857,6 +866,165 @@ export class CodeInterpreter {
         runtimeStore.clearPropertyOverride(constraintNode.id, "motorEnabled");
     }
 
+    private async executeMotorSetTargetVelocity(
+        item: any,
+        context: RuntimeContext
+    ) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const velocityRaw = await context.evaluateChip(item.velocity, context);
+        const dampingRaw = await context.evaluateChip(item.damping, context);
+
+        // Resolve target motor
+        const resolved = this.resolveMotorTarget(
+            targetRef,
+            context,
+            "Set Motor Target Velocity"
+        );
+        if (!resolved) return;
+
+        const { motorNode } = resolved;
+
+        // Parse velocity (required)
+        const velocity = this.isValueProvided(velocityRaw)
+            ? parseFloat(String(velocityRaw))
+            : null;
+
+        if (velocity === null || isNaN(velocity)) {
+            runtimeStore.warn(
+                "Set Motor Target Velocity: velocity parameter is required and must be a number",
+                context.script?.name || "Script"
+            );
+            return;
+        }
+
+        // Parse damping (optional, use motor's current value if not provided)
+        const damping = this.isValueProvided(dampingRaw)
+            ? parseFloat(String(dampingRaw))
+            : motorNode.damping;
+
+        // Switch to velocity mode and set the velocity
+        runtimeStore.setPropertyOverride(motorNode.id, "motorMode", "velocity");
+        runtimeStore.setPropertyOverride(
+            motorNode.id,
+            "targetVelocity",
+            velocity
+        );
+        runtimeStore.setPropertyOverride(motorNode.id, "damping", damping);
+    }
+
+    private async executeMotorSetTargetPosition(
+        item: any,
+        context: RuntimeContext
+    ) {
+        const targetRef = await context.evaluateChip(item.target, context);
+        const positionRaw = await context.evaluateChip(item.position, context);
+        const stiffnessRaw = await context.evaluateChip(
+            item.stiffness,
+            context
+        );
+        const dampingRaw = await context.evaluateChip(item.damping, context);
+
+        // Resolve target motor
+        const resolved = this.resolveMotorTarget(
+            targetRef,
+            context,
+            "Set Motor Target Position"
+        );
+        if (!resolved) return;
+
+        const { motorNode } = resolved;
+
+        // Parse position (required)
+        const position = this.isValueProvided(positionRaw)
+            ? parseFloat(String(positionRaw))
+            : null;
+
+        if (position === null || isNaN(position)) {
+            runtimeStore.warn(
+                "Set Motor Target Position: position parameter is required and must be a number",
+                context.script?.name || "Script"
+            );
+            return;
+        }
+
+        // Parse stiffness and damping (optional, use motor's current values if not provided)
+        const stiffness = this.isValueProvided(stiffnessRaw)
+            ? parseFloat(String(stiffnessRaw))
+            : motorNode.stiffness;
+
+        const damping = this.isValueProvided(dampingRaw)
+            ? parseFloat(String(dampingRaw))
+            : motorNode.damping;
+
+        // Switch to position mode and set the target angle
+        runtimeStore.setPropertyOverride(motorNode.id, "motorMode", "position");
+        runtimeStore.setPropertyOverride(
+            motorNode.id,
+            "targetPosition",
+            position
+        );
+        runtimeStore.setPropertyOverride(motorNode.id, "stiffness", stiffness);
+        runtimeStore.setPropertyOverride(motorNode.id, "damping", damping);
+    }
+
+    private resolveMotorTarget(
+        rawTarget: unknown,
+        context: RuntimeContext,
+        blockLabel: string
+    ): { motorNode: Types.BMotor; gameObject: GameObject } | null {
+        const manager = runtimeStore.getGameObjectManager();
+        if (!manager) {
+            runtimeStore.warn(
+                `${blockLabel}: GameObjectManager not available`,
+                context.script?.name || "Script"
+            );
+            return null;
+        }
+
+        let targetGameObject = context.gameObject;
+
+        // Resolve target if provided
+        if (this.isValueProvided(rawTarget)) {
+            targetGameObject = resolveTargetGameObject(
+                String(rawTarget),
+                context
+            );
+
+            if (!targetGameObject) {
+                runtimeStore.warn(
+                    `${blockLabel}: Could not find target object: ${rawTarget}`,
+                    context.script?.name || "Script"
+                );
+                return null;
+            }
+        }
+
+        // Check if resolved target is a motor
+        if (targetGameObject.bObject instanceof Types.BMotor) {
+            return {
+                motorNode: targetGameObject.bObject as Types.BMotor,
+                gameObject: targetGameObject,
+            };
+        }
+
+        // Find BMotor in the target's children
+        const motorNode = targetGameObject.bObject
+            .getDescendants()
+            .find((child: any) => child instanceof Types.BMotor) as
+            | Types.BMotor
+            | undefined;
+
+        if (!motorNode) {
+            runtimeStore.warn(
+                `${blockLabel}: Target object is not a Motor or "${targetGameObject.bObject.name}" has no Motor child`,
+                context.script?.name || "Script"
+            );
+            return null;
+        }
+
+        return { motorNode, gameObject: targetGameObject };
+    }
+
     private resolveMotorConstraintTarget(
         rawTarget: unknown,
         context: RuntimeContext,
@@ -1153,7 +1321,7 @@ export class CodeInterpreter {
 
     private async executeRotate(item: any, context: RuntimeContext) {
         const targetRef = await context.evaluateChip(item.target, context);
-        const rotation = await context.evaluateChip(item.rotation, context);
+        const rotation = await context.evaluateChip(item.angle, context);
 
         // Resolve target object
         let targetGameObject = context.gameObject; // Default to current object
@@ -1180,7 +1348,7 @@ export class CodeInterpreter {
         }
 
         try {
-            targetGameObject.setRotation(rotation);
+            targetGameObject.setRotation(this.parseVector3(rotation));
         } catch (error) {
             runtimeStore.error(
                 `Error rotating object: ${error}`,
@@ -1262,5 +1430,25 @@ export class CodeInterpreter {
         } catch (error) {
             runtimeStore.error(`Error setting value: ${error}`, "Interpreter");
         }
+    }
+
+    private async executeSetVariable(item: any, context: RuntimeContext) {
+        const variableName = await context.evaluateChip(item.variable, context);
+        const value = await context.evaluateChip(item.value, context);
+        const scope = item.scope || "local";
+
+        if (!variableName || typeof variableName !== "string") {
+            runtimeStore.warn(
+                "Set Variable block missing or invalid variable name",
+                "Interpreter"
+            );
+            return;
+        }
+        runtimeStore.setVariable(
+            variableName,
+            value,
+            scope,
+            context.script?.id
+        );
     }
 }

@@ -963,6 +963,32 @@ export const chipConfig: Record<string, ChipConfig> = {
         },
     },
 
+    keypressed: {
+        color: "red-500",
+        label: "Key Pressed",
+        info: "Returns true if the specified key is currently pressed",
+        fields: [
+            {
+                type: "text",
+                bind: "key",
+                label: "Key",
+                placeholder: "Key",
+                defaultValue: "",
+            },
+        ],
+        evaluate: async (compiled, _context) => {
+            const keyRaw = await evaluateField(compiled.key, _context);
+            const key =
+                typeof keyRaw === "string"
+                    ? keyRaw.trim().toLowerCase()
+                    : String(keyRaw).toLowerCase();
+            if (!key) return false;
+
+            const state = runtimeStore.getKey(key);
+            return state;
+        },
+    },
+
     raycastdistance: {
         color: "blue-600",
         label: "Raycast Distance",

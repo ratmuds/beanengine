@@ -351,7 +351,8 @@ export class GameObjectManager {
         if (
             (bObject instanceof Types.BPart ||
                 bObject instanceof Types.BLight) &&
-            !gameObject.getComponent(VisualComponent)
+            !gameObject.getComponent(VisualComponent) &&
+            bObject.enableRendering
         ) {
             gameObject.addComponent(
                 new VisualComponent(gameObject, this.scene)

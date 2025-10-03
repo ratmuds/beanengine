@@ -57,6 +57,25 @@ export const blockConfig: Record<string, BlockConfig> = {
         ],
         info: "Emits a custom event optionally with a payload",
     },
+    setVariable: {
+        color: colorMap.gray,
+        label: "Set Variable",
+        fields: [
+            {
+                type: "text",
+                bind: "variable",
+                placeholder: "variable name",
+                icon: Variable,
+            },
+            {
+                type: "text",
+                bind: "value",
+                placeholder: "value",
+                icon: Type,
+            },
+        ],
+        info: "Sets a variable to a specified value",
+    },
     if: {
         color: colorMap.blue,
         label: "If",
@@ -101,7 +120,7 @@ export const blockConfig: Record<string, BlockConfig> = {
             {
                 type: "text",
                 bind: "index",
-                placeholder: "index variable (optional)",
+                placeholder: "index variable",
                 icon: Variable,
             },
         ],
@@ -123,7 +142,7 @@ export const blockConfig: Record<string, BlockConfig> = {
             {
                 type: "text",
                 bind: "index",
-                placeholder: "index variable (optional)",
+                placeholder: "index variable",
                 icon: Variable,
             },
         ],
@@ -329,7 +348,7 @@ export const blockConfig: Record<string, BlockConfig> = {
             {
                 type: "number",
                 bind: "maxForce",
-                placeholder: "max force (optional)",
+                placeholder: "max force",
                 icon: Hash,
             },
         ],
@@ -368,6 +387,64 @@ export const blockConfig: Record<string, BlockConfig> = {
             },
         ],
         info: "Clears all runtime overrides applied to a motor constraint so it falls back to its editor values.",
+    },
+
+    motorsettargetvelocity: {
+        color: colorMap.orange,
+        label: "Set Motor Target Velocity",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "number",
+                bind: "velocity",
+                placeholder: "velocity (rad/s)",
+                icon: Hash,
+            },
+            {
+                type: "number",
+                bind: "damping",
+                placeholder: "damping",
+                icon: Hash,
+            },
+        ],
+        info: "Sets the motor to velocity mode and configures target velocity. The motor will spin at the target velocity (rad/s).",
+    },
+
+    motorsettargetposition: {
+        color: colorMap.orange,
+        label: "Set Motor Target Position",
+        fields: [
+            {
+                type: "text",
+                bind: "target",
+                placeholder: "(self)",
+                icon: User,
+            },
+            {
+                type: "number",
+                bind: "position",
+                placeholder: "angle (radians)",
+                icon: Hash,
+            },
+            {
+                type: "text",
+                bind: "stiffness",
+                placeholder: "stiffness",
+                icon: Hash,
+            },
+            {
+                type: "text",
+                bind: "damping",
+                placeholder: "damping",
+                icon: Hash,
+            },
+        ],
+        info: "Sets the motor to position mode and configures target angle. The motor will use PID control to reach the target angle (radians).",
     },
 
     mousebutton: {

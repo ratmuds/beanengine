@@ -117,7 +117,7 @@
         number,
     ]}
     <T.Group bind:ref={groupRefs[object.id]} {position} {rotation} {scale}>
-        {#if object instanceof Types.BPart}
+        {#if object instanceof Types.BPart && object.enableRendering}
             <!-- Render Parts with meshes -->
             <T.Mesh
                 castShadow

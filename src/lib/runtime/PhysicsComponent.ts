@@ -56,22 +56,16 @@ export class PhysicsComponent extends Component {
             RAPIER.RigidBodyDesc.dynamic()
         );
 
-        // Only create collider if collision is enabled
-        const bPart = this.gameObject.bObject as Types.BPart;
-        if (bPart.enableCollision) {
-            // Create initial collider based on primitive type or a box fallback
-            this.collider = physicsWorld.createCollider(
-                this.createInitialColliderDesc(),
-                this.body
-            );
+        // Always create a collider (required for constraints and physics to work)
+        // If collision is disabled, we'll set it as a sensor later
+        this.collider = physicsWorld.createCollider(
+            this.createInitialColliderDesc(),
+            this.body
+        );
 
-            this.registerHandles();
-            this.enableCollisionEvents();
-
-            this.applyCollisionSettings();
-        } else {
-            this.collider = null;
-        }
+        this.registerHandles();
+        this.enableCollisionEvents();
+        this.applyCollisionSettings();
 
         // Apply initial position and rotation from GameObject
         this.body.setTranslation(
@@ -114,7 +108,9 @@ export class PhysicsComponent extends Component {
         // Apply locks based on object properties
         this.applyLocks();
 
-        // Attempt to build a convex-hull collider (async if needed) only if collision is enabled
+        // Only attempt to build a convex-hull collider if collision is enabled
+        // For non-colliding objects (sensors), a simple box collider is sufficient
+        const bPart = this.gameObject.bObject as Types.BPart;
         if (bPart.enableCollision) {
             void this.tryBuildConvexHullCollider();
         }
@@ -153,7 +149,9 @@ export class PhysicsComponent extends Component {
             }
         }
 
-        // Default to box collider
+        // Default to simple box collider for asset meshes
+        // If collision is enabled, this will be replaced with a convex hull later
+        // If collision is disabled (sensor mode), this simple box is sufficient
         return RAPIER.ColliderDesc.cuboid(
             scale.x / 2,
             scale.y / 2,
@@ -185,7 +183,11 @@ export class PhysicsComponent extends Component {
         const partObject = this.gameObject.bObject as Types.BPart;
         this.previousCanCollide = partObject.canCollide;
 
-        this.collider.setSensor(!partObject.canCollide);
+        // If enableCollision is false OR canCollide is false, make it a sensor
+        // Sensor = no physical collision, but still exists in physics world for constraints
+        const shouldBeSensor =
+            !partObject.enableCollision || !partObject.canCollide;
+        this.collider.setSensor(shouldBeSensor);
     }
 
     private ensureCollisionSettingsSynced(): void {
@@ -650,7 +652,12 @@ export class PhysicsComponent extends Component {
 
     // Try to build convex hull if it hasn't been built yet
     private tryBuildConvexHullIfNeeded(): void {
-        if (!this.collider) return; // No collider, skip convex hull
+        // Only build convex hull if collision is enabled
+        // Non-colliding objects (sensors) don't need accurate collision meshes
+        if (!(this.gameObject.bObject instanceof Types.BPart)) return;
+        const partObject = this.gameObject.bObject as Types.BPart;
+        if (!partObject.enableCollision) return;
+
         if (!this.hasConvexHullCollider) {
             void this.tryBuildConvexHullCollider(false);
         }
@@ -658,8 +665,6 @@ export class PhysicsComponent extends Component {
 
     // Rebuild collider when object scale changes
     private rebuildColliderIfScaleChanged(): void {
-        if (!this.collider) return; // No collider, nothing to rebuild
-
         const currentScale = this.gameObject.transform.scale;
         const hasScaleChanged =
             this.previousScale.x !== currentScale.x ||
@@ -669,7 +674,11 @@ export class PhysicsComponent extends Component {
         if (hasScaleChanged) {
             this.previousScale.copy(currentScale);
 
-            if (this.hasConvexHullCollider) {
+            // Only rebuild convex hull if collision is enabled
+            if (!(this.gameObject.bObject instanceof Types.BPart)) return;
+            const partObject = this.gameObject.bObject as Types.BPart;
+
+            if (this.hasConvexHullCollider && partObject.enableCollision) {
                 // Rebuild convex hull with new scale; if a build is in progress, queue a rebuild
                 if (this.isBuildingConvexHull) {
                     this.pendingConvexHullRebuild = true;
@@ -837,7 +846,12 @@ export class PhysicsComponent extends Component {
         );
         this.applyLocks();
         this.applyRuntimeColliderOverrides();
-        void this.tryBuildConvexHullCollider();
+
+        // Only build convex hull if collision is enabled
+        const bPart = this.gameObject.bObject as Types.BPart;
+        if (bPart.enableCollision) {
+            void this.tryBuildConvexHullCollider();
+        }
     }
 
     destroy(): void {

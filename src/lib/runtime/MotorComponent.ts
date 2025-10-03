@@ -21,7 +21,11 @@ export class MotorComponent extends Component {
     public joint: RAPIER.ImpulseJoint | null = null;
     private initialized: boolean = false;
     private currentMotorVelocity: number | null = null;
+    private currentMotorPosition: number | null = null;
     private currentMotorMaxForce: number | null = null;
+    private currentStiffness: number | null = null;
+    private currentDamping: number | null = null;
+    private currentMotorMode: "velocity" | "position" | null = null;
     private motorEnabled: boolean | null = null;
 
     constructor(gameObject: GameObject) {
@@ -118,24 +122,43 @@ export class MotorComponent extends Component {
             const anchorHost =
                 worldVecFromHostToWheel.applyQuaternion(qHostInv);
 
-            // Rotation axis: perpendicular to the line from host to wheel
-            // This makes the wheel spin like a car wheel around the axle
-            const hostToWheel = new THREE.Vector3(
-                wheelPos.x - hostPos.x,
-                wheelPos.y - hostPos.y,
-                wheelPos.z - hostPos.z
-            ).normalize();
+            // Determine rotation axis based on motorAxis setting
+            let motorAxisWorld: THREE.Vector3;
 
-            // Use the right vector (cross product with world up) as the rotation axis
-            // This creates an axis perpendicular to both the connection direction and world up
-            const worldUp = new THREE.Vector3(0, 1, 0);
-            const motorAxisWorld = new THREE.Vector3()
-                .crossVectors(worldUp, hostToWheel)
-                .normalize();
+            if (motorNode.motorAxis === "auto") {
+                // Auto mode: Calculate axis perpendicular to the line from host to wheel
+                // This makes the wheel spin like a car wheel around the axle
+                const hostToWheel = new THREE.Vector3(
+                    wheelPos.x - hostPos.x,
+                    wheelPos.y - hostPos.y,
+                    wheelPos.z - hostPos.z
+                ).normalize();
 
-            // If the axis is near zero (wheel is directly above/below), use world X as fallback
-            if (motorAxisWorld.lengthSq() < 0.01) {
-                motorAxisWorld.set(1, 0, 0);
+                // Use the right vector (cross product with world up) as the rotation axis
+                // This creates an axis perpendicular to both the connection direction and world up
+                const worldUp = new THREE.Vector3(0, 1, 0);
+                motorAxisWorld = new THREE.Vector3()
+                    .crossVectors(worldUp, hostToWheel)
+                    .normalize();
+
+                // If the axis is near zero (wheel is directly above/below), use world X as fallback
+                if (motorAxisWorld.lengthSq() < 0.01) {
+                    motorAxisWorld.set(1, 0, 0);
+                }
+            } else {
+                // Manual axis selection: use the specified world axis
+                motorAxisWorld = new THREE.Vector3();
+                switch (motorNode.motorAxis) {
+                    case "x":
+                        motorAxisWorld.set(1, 0, 0);
+                        break;
+                    case "y":
+                        motorAxisWorld.set(0, 1, 0);
+                        break;
+                    case "z":
+                        motorAxisWorld.set(0, 0, 1);
+                        break;
+                }
             }
 
             // Transform the world axis to host's local space
@@ -182,6 +205,9 @@ export class MotorComponent extends Component {
             this.init();
         }
 
+        // Continuously check and apply motor overrides every frame
+        // This ensures the motor responds immediately to any runtime changes
+        // (e.g., velocity/position targets set by scripts)
         if (
             this.initialized &&
             this.joint &&
@@ -203,7 +229,11 @@ export class MotorComponent extends Component {
         }
         this.initialized = false;
         this.currentMotorVelocity = null;
+        this.currentMotorPosition = null;
         this.currentMotorMaxForce = null;
+        this.currentStiffness = null;
+        this.currentDamping = null;
+        this.currentMotorMode = null;
         this.motorEnabled = null;
     }
 
@@ -214,22 +244,61 @@ export class MotorComponent extends Component {
     private configureMotor(motorNode: Types.BMotor): void {
         if (!this.joint) return;
 
-        const velocity = motorNode.enabled ? motorNode.speed : 0;
-        const maxForce = motorNode.maxForce;
+        const enabled = motorNode.enabled;
+        const mode = motorNode.motorMode;
 
-        this.joint.configureMotorVelocity(velocity, maxForce);
-        this.currentMotorVelocity = velocity;
-        this.currentMotorMaxForce = maxForce;
-        this.motorEnabled = motorNode.enabled;
+        if (mode === "velocity") {
+            const velocity = enabled ? motorNode.targetVelocity : 0;
+            const damping = motorNode.damping;
+            (this.joint as RAPIER.RevoluteImpulseJoint).configureMotorVelocity(
+                velocity,
+                damping
+            );
+            this.currentMotorVelocity = velocity;
+            this.currentDamping = damping;
+        } else if (mode === "position") {
+            const position = motorNode.targetPosition;
+            const stiffness = motorNode.stiffness;
+            const damping = motorNode.damping;
+            (this.joint as RAPIER.RevoluteImpulseJoint).configureMotorPosition(
+                position,
+                stiffness,
+                damping
+            );
+            this.currentMotorPosition = position;
+            this.currentStiffness = stiffness;
+            this.currentDamping = damping;
+        }
+
+        this.currentMotorMode = mode;
+        this.currentMotorMaxForce = motorNode.maxForce;
+        this.motorEnabled = enabled;
     }
 
     private applyMotorOverrides(motorNode: Types.BMotor): void {
         if (!this.joint) return;
 
         const id = motorNode.id;
+
+        // Get overrides from runtime store
+        const modeOverride = runtimeStore.getPropertyOverride<
+            "velocity" | "position"
+        >(id, "motorMode");
         const velocityOverride = runtimeStore.getPropertyOverride<number>(
             id,
-            "speed"
+            "targetVelocity"
+        );
+        const positionOverride = runtimeStore.getPropertyOverride<number>(
+            id,
+            "targetPosition"
+        );
+        const stiffnessOverride = runtimeStore.getPropertyOverride<number>(
+            id,
+            "stiffness"
+        );
+        const dampingOverride = runtimeStore.getPropertyOverride<number>(
+            id,
+            "damping"
         );
         const maxForceOverride = runtimeStore.getPropertyOverride<number>(
             id,
@@ -240,19 +309,82 @@ export class MotorComponent extends Component {
             "enabled"
         );
 
+        // Resolve final values (use override if present, otherwise use motor node value)
         const enabled = enabledOverride ?? motorNode.enabled;
-        const velocity = enabled ? velocityOverride ?? motorNode.speed : 0;
+        const mode = modeOverride ?? motorNode.motorMode;
+        const velocity = velocityOverride ?? motorNode.targetVelocity;
+        const position = positionOverride ?? motorNode.targetPosition;
+        const stiffness = stiffnessOverride ?? motorNode.stiffness;
+        const damping = dampingOverride ?? motorNode.damping;
         const maxForce = maxForceOverride ?? motorNode.maxForce;
 
-        if (
-            this.motorEnabled !== enabled ||
-            this.currentMotorVelocity !== velocity ||
-            this.currentMotorMaxForce !== maxForce
-        ) {
-            this.joint.configureMotorVelocity(velocity, maxForce);
-            this.currentMotorVelocity = velocity;
-            this.currentMotorMaxForce = maxForce;
-            this.motorEnabled = enabled;
+        // Mode change requires full reconfiguration
+        const modeChanged = this.currentMotorMode !== mode;
+        const enabledChanged = this.motorEnabled !== enabled;
+
+        if (mode === "velocity") {
+            const finalVelocity = enabled ? velocity : 0;
+
+            // Check if velocity mode parameters changed
+            const velocityChanged = this.currentMotorVelocity !== finalVelocity;
+            const dampingChanged = this.currentDamping !== damping;
+
+            // Reconfigure if mode changed, enabled state changed, or any velocity parameters changed
+            if (
+                modeChanged ||
+                enabledChanged ||
+                velocityChanged ||
+                dampingChanged
+            ) {
+                (
+                    this.joint as RAPIER.RevoluteImpulseJoint
+                ).configureMotorVelocity(finalVelocity, damping);
+
+                // Update cached values
+                this.currentMotorVelocity = finalVelocity;
+                this.currentDamping = damping;
+                this.currentMotorMode = mode;
+                this.motorEnabled = enabled;
+
+                // Clear position-specific cache when switching to velocity
+                if (modeChanged) {
+                    this.currentMotorPosition = null;
+                    this.currentStiffness = null;
+                }
+            }
+        } else if (mode === "position") {
+            // Check if position mode parameters changed
+            const positionChanged = this.currentMotorPosition !== position;
+            const stiffnessChanged = this.currentStiffness !== stiffness;
+            const dampingChanged = this.currentDamping !== damping;
+
+            // Reconfigure if mode changed or any position parameters changed
+            // Note: enabled doesn't affect position mode the same way
+            if (
+                modeChanged ||
+                positionChanged ||
+                stiffnessChanged ||
+                dampingChanged
+            ) {
+                (
+                    this.joint as RAPIER.RevoluteImpulseJoint
+                ).configureMotorPosition(position, stiffness, damping);
+
+                // Update cached values
+                this.currentMotorPosition = position;
+                this.currentStiffness = stiffness;
+                this.currentDamping = damping;
+                this.currentMotorMode = mode;
+                this.motorEnabled = enabled;
+
+                // Clear velocity-specific cache when switching to position
+                if (modeChanged) {
+                    this.currentMotorVelocity = null;
+                }
+            }
         }
+
+        // Max force is tracked separately (not directly used by Rapier motor config)
+        this.currentMotorMaxForce = maxForce;
     }
 }

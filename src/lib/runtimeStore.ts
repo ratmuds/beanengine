@@ -366,8 +366,6 @@ class RuntimeManager {
             scope,
         };
 
-        console.log("SETTING VARIABLE", name, value, scope, scriptId);
-
         // If a scriptId is provided and a local var with the same name exists,
         // prefer updating the local (script-scoped) variable to override global.
         if (scriptId && this.localVariables.get(scriptId)?.has(name)) {

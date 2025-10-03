@@ -1,6 +1,7 @@
 // @ts-nocheck
 import * as THREE from "three";
 import * as Types from "$lib/types";
+import RAPIER from "@dimforge/rapier3d-compat";
 import { Component } from "./Component";
 import { VisualComponent } from "./VisualComponent";
 import { ScriptComponent } from "./ScriptComponent";
@@ -182,7 +183,7 @@ export class GameObject {
             const rotatedOffset = scaledOffset.applyQuaternion(parentRot);
             this.transform.position.copy(parentPos).add(rotatedOffset);
 
-            // rotation = parentRot * offsetRot
+            // rotation = parentRot  * offsetRot
             this.transform.rotation.multiplyQuaternions(
                 parentRot,
                 this.offsetFromParent.rotation
@@ -577,12 +578,45 @@ export class GameObject {
                 this.offsetFromParent.rotation.copy(q);
                 // Recompute this subtree now so dependents (e.g., camera visuals) see the change this frame
                 this.updateWorldMatrix();
+                // Sync with physics if present
+                this.syncRotationToPhysics();
                 return;
             }
         }
         this.transform.rotation.copy(q);
         // Recompute this subtree now so dependents see the change this frame
         this.updateWorldMatrix();
+        // Sync with physics if present
+        this.syncRotationToPhysics();
+    }
+
+    /**
+     * Sync the current rotation to the physics body if this GameObject has physics.
+     * This should be called after manually changing rotation to prevent physics from overriding it.
+     */
+    private syncRotationToPhysics(): void {
+        const physicsComponent =
+            this.getComponent<PhysicsComponent>(PhysicsComponent);
+        if (physicsComponent && physicsComponent.body) {
+            physicsComponent.body.setRotation(
+                new RAPIER.Quaternion(
+                    this.transform.rotation.x,
+                    this.transform.rotation.y,
+                    this.transform.rotation.z,
+                    this.transform.rotation.w
+                ),
+                true
+            );
+        }
+    }
+
+    /**
+     * Set the rotation using Euler angles (BVector3).
+     * Converts the Euler angles to a quaternion and sets the local rotation.
+     */
+    public setRotation(euler: Types.BVector3): void {
+        const quat = RotationUtils.eulerToNormalizedQuaternion(euler);
+        this.setLocalRotation(quat);
     }
 
     /**
