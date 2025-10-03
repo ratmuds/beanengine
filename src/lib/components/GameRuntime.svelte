@@ -249,8 +249,8 @@
             renderer.toneMappingExposure = 1.0;
 
             // Enable shadows for depth and realism
-            //renderer.shadowMap.enabled = true;
-            //renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Soft shadows
 
             // Enable physically correct lighting
             renderer.useLegacyLights = false;
