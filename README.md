@@ -1,182 +1,144 @@
-# Bean Engine
+# beanengine
 
-> A game development platform that bridges the gap between Scratch and professional game engines
+A web-based 3D game development platform designed to bridge the gap between visual block programming (Scratch) and professional game engines.
 
-# TODO: get custom materials and BMaterial and shi to work
+## What is bean engine?
 
-**Bean Engine** is a visual programming game development environment designed for learners transitioning from block-based programming (like Scratch) to real game development. It combines the approachability of visual scripting with the power of 3D graphics and professional game development concepts.
+bean engine is a proof-of-concept game development environment that combines visual scripting with a fully-featured 3D editor. It provides an accessible introduction to game development concepts while using real game engine architecture.
 
-![Bean Engine Landing Page](https://github.com/user-attachments/assets/508387a1-084a-4490-80ba-e762c0f01e97)
+The platform runs entirely in the browser and uses a custom-built visual scripting language, Three.js for 3D rendering, and Rapier for physics simulation.
 
-_Bean Engine's clean, professional landing page showcasing the project's vision_
+## Why?
 
-![Bean Engine Editor Interface](https://github.com/user-attachments/assets/7b9ccc87-2ae9-4faa-b8df-0e0b5a43dbff)
+Educational game development tools often sacrifice power for simplicity. bean engine attempts to solve this by:
 
-_The main editor interface with resizable panels, 3D viewport, and professional toolbars_
+-   **Custom Visual Scripting**: A from-scratch block-based programming language that feels familiar to Scratch users but compiles to real game logic
+-   **Professional Architecture**: Uses actual game engine patterns (GameObject-Component system, scene graphs, physics integration)
+-   **Simplified Interface**: Cleaner, more focused UI compared to engines like Unity or Unreal, while maintaining professional workflows
+-   **No Installation**: Runs entirely in the browser with cloud project storage
 
-## 🎯 Project Vision
+The goal is to provide a stepping stone for learners who have outgrown Scratch but find Unity or Unreal overwhelming.
 
-This is a **portfolio proof-of-concept** demonstrating a complete game development environment that:
+## Status: Proof of Concept
 
--   **Bridges Educational and Professional Tools**: Makes game development accessible without sacrificing capability
--   **Visual Programming First**: Drag-and-drop blocks that generate real, readable code
--   **3D-Ready**: Built-in 3D graphics, physics, and modern rendering
--   **Immediate Feedback**: See your game running in real-time as you build it
--   **Portfolio Quality**: Demonstrates full-stack development, 3D graphics, and complex UI design
+This is a demonstration project, not production software. It works and showcases the core concepts, but is not intended for actual game development.
 
-## ✨ Current Features
+## Features
 
-### 🎨 Visual Programming System
+### Visual Scripting System
 
--   **Scratch-like Block Interface**: Familiar drag-and-drop programming
--   **Real Code Generation**: Blocks compile to actual game logic
--   **Event-Driven**: Handle clicks, collisions, timers, and more
--   **Variable Management**: Scope-aware variable system with visual chips
+-   Custom block-based programming language
+-   Event-driven logic (object lifecycle, input, collisions)
+-   Variable scoping (global and script-local)
+-   Chip system for value expressions and calculations
+-   Code compilation and runtime interpretation
 
-### 🎮 3D Game Engine
+### 3D Scene Editor
 
--   **Modern 3D Graphics**: Three.js powered 3D viewport with PBR rendering
--   **Interactive Viewport**: Move, rotate, and scale objects with visual gizmos
--   **Object Hierarchy**: Professional scene management with parent-child relationships
--   **Physics Ready**: Foundation for collision detection and physics simulation
+-   Real-time 3D viewport using Three.js
+-   Transform controls (move, rotate, scale)
+-   Object hierarchy with parent-child relationships
 
-### 🛠 Professional Editor
+### Asset Management
 
--   **Multi-Panel Interface**: Resizable panels for optimal workflow
--   **Asset Management**: Import and organize 3D models, textures, and audio
--   **Properties Editing**: Inspect and modify object properties in real-time
--   **Play Mode**: Test your game instantly without leaving the editor
+-   GLTF 3D model importing
+-   Texture uploading and management
+-   Custom material creation and editing
 
-## 🚀 Getting Started
+### Physics System
 
-### Prerequisites
+-   Rapier physics engine integration
+-   Rigid body dynamics
+-   Collision detection and events
+-   Constraints and joints between objects
+-   Axis locking for constrained movement
 
--   Node.js 18+
--   npm or pnpm
+### UI System
 
-### Installation
+-   Built-in UI elements (containers, text, buttons)
+-   Percentage-based positioning and sizing
+
+### Player Controller
+
+-   First-person character controller
+-   Mouse look with configurable sensitivity
+-   WASD movement
+
+### Navigation System
+
+-   Waypoint paths for object movement
+-   Navigator component for automated pathing
+-   Configurable speed and looping
+
+### AI Assistant
+
+-   Integrated AI agent for object creation and modification
+-   Natural language commands for scene editing
+-   Tool-based function calling system
+
+### Project Management
+
+-   User authentication
+-   Cloud project saving and loading
+-   Scene serialization and deserialization
+
+## Technology Stack
+
+-   **Framework**: SvelteKit with Svelte 5 Runes
+-   **3D Graphics**: Three.js via @threlte/core
+-   **Physics**: Rapier (@dimforge/rapier3d-compat)
+-   **UI Components**: Custom component library with bits-ui and Tailwind CSS
+-   **Backend**: Supabase (auth, database, storage)
+-   **Language**: TypeScript
+
+## Architecture
+
+The engine separates editor data (BObject tree) from runtime execution (GameObject-Component system). The editor manipulates data models stored in Svelte stores, while play mode instantiates a parallel runtime system that executes the game logic.
+
+Key systems:
+
+-   **Data Model** (`types.ts`): BObject hierarchy representing scene structure
+-   **State Management**: Svelte stores for scene, assets, materials, runtime state
+-   **Game Runtime** (`runtime/`): Component-based execution system
+-   **Visual Scripting** (`blockConfig.ts`, `interpreter.ts`): Block definitions and code execution
+-   **Editor UI** (`components/editor/`): Svelte components for the interface
+
+See `AGENTS.md` for detailed architecture documentation.
+
+## Getting Started
 
 ```bash
-# Clone the repository
-git clone https://github.com/ratmuds/beanengine
-cd beanengine
-
 # Install dependencies
-npm install
+pnpm install
 
-# Start development server
-npm run dev
+# Run development server
+pnpm dev
+
+# Build for production
+pnpm build
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser to see the landing page, then click "Start Building" to enter the editor.
+Open http://localhost:5173 to access the editor.
 
-### Building for Production
-
-```bash
-npm run build
-npm run preview
-```
-
-## 🎯 Demo Scenarios
-
-### Simple Platformer Game
-
-1. Create a player character that responds to keyboard input
-2. Add platforms and collision detection
-3. Implement jumping physics and movement
-4. Add collectible items and win conditions
-
-### Interactive 3D Scene
-
-1. Place 3D objects in the scene
-2. Add click interactions that trigger animations
-3. Create moving objects with tween animations
-4. Build a simple puzzle or exploration experience
-
-## 🏗 Architecture
-
-### Frontend Stack
-
--   **SvelteKit**: Modern web framework with server-side rendering
--   **Three.js + Threlte**: 3D graphics and WebGL rendering
--   **TailwindCSS**: Utility-first styling for professional UI
--   **TypeScript**: Type-safe development with modern tooling
-
-### Core Systems
-
--   **Visual Programming**: Block-based code generation and compilation
--   **3D Scene Management**: Object hierarchy and transform systems
--   **Asset Pipeline**: Import and manage game assets efficiently
--   **Game Runtime**: Execute compiled scripts with physics and events
-
-### Key Components
+## Project Structure
 
 ```
-src/
-├── routes/
-│   ├── editor/           # Main editor interface
-│   └── +page.svelte     # Landing page
-├── lib/
-│   ├── components/      # Reusable UI components
-│   ├── types.ts         # Core type definitions
-│   ├── sceneStore.ts    # Scene state management
-│   └── blockConfig.ts   # Visual programming blocks
+src/lib/
+├── types.ts              # Core data model (BObject hierarchy)
+├── sceneStore.ts         # Scene state management
+├── runtimeStore.ts       # Runtime state and event bus
+├── blockConfig.ts        # Visual script block definitions
+├── interpreter.ts        # Script execution engine
+├── components/
+│   ├── editor/           # Editor panels (viewport, properties, etc.)
+│   ├── code/             # Visual scripting UI
+│   └── ui/               # Shared UI components
+└── runtime/
+    ├── GameObject.ts     # Runtime entity wrapper
+    ├── GameObjectManager.ts  # Runtime lifecycle management
+    └── *Component.ts     # Runtime component implementations
 ```
 
-## 🎨 Design Philosophy
+## License
 
-### Approachable Yet Powerful
-
--   **Visual First**: Complex concepts explained through interactive visuals
--   **Progressive Complexity**: Start simple, reveal advanced features gradually
--   **Real Tools**: Use actual game development concepts, not simplified analogies
--   **Immediate Feedback**: See results instantly, encouraging experimentation
-
-### Educational Bridge
-
--   **From Scratch to Unity**: Familiar concepts in a more powerful environment
--   **Code Visibility**: Show the real code that blocks generate
--   **Professional Patterns**: Teach industry-standard game development practices
--   **Portfolio Ready**: Projects look and feel like professional games
-
-## 📈 Development Status
-
-This is an active **proof-of-concept** project targeting portfolio demonstration quality. See [TODO.md](./TODO.md) for detailed development roadmap and current status.
-
-### ✅ Completed
-
--   3D editor interface with professional layout
--   Visual programming system with drag-and-drop blocks
--   Basic 3D scene management and object hierarchy
--   Transform gizmos and interactive object manipulation
-
-### 🚧 In Progress
-
--   Complete visual programming block library
--   Game runtime with script execution
--   Physics integration and collision detection
--   Asset import pipeline (GLTF, textures, audio)
-
-### 🎯 Next Milestones
-
--   Playable demo games showcasing engine capabilities
--   Performance optimization for smooth 60fps experience
--   Polish and user experience improvements
-
-## 🤝 Contributing
-
-This is primarily a portfolio project, but feedback and suggestions are welcome! If you're interested in game development education or visual programming tools, I'd love to hear your thoughts.
-
-## 📄 License
-
-MIT License - feel free to explore, learn from, and adapt the code for your own projects.
-
-## 🔗 Links
-
--   **Live Demo**: [Coming Soon]
--   **Development Blog**: [Coming Soon]
--   **Portfolio**: [Your Portfolio URL]
-
----
-
-_Bean Engine represents the intersection of education and professional game development - making the complex simple without losing the power that makes game development exciting._
+This project is open source for educational and reference purposes.
