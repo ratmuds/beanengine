@@ -775,6 +775,9 @@ class SceneManager {
             case "part":
                 obj = new Types.BPart(data.name, data.id, null);
                 break;
+            case "mesh":
+                obj = new Types.BMesh(data.name, data.id, null);
+                break;
             case "waypointpath":
                 obj = new Types.BWaypointPath(data.name, data.id, null);
                 break;

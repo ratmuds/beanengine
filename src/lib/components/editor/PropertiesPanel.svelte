@@ -26,7 +26,7 @@
     import { sceneStore } from "$lib/sceneStore";
     import { Switch } from "$lib/components/ui/switch";
 
-    let { selectedObject, onPropertyChange } = $props();
+    let { selectedObject, onPropertyChange, play } = $props();
 
     const object = $derived(
         $sceneStore.getScene().objects.find((obj) => obj.id === selectedObject)
@@ -396,6 +396,19 @@
 
     <div class="flex-1 overflow-y-auto relative z-10 p-3 space-y-4">
         {#if object}
+            <!-- Play Mode Warning -->
+            {#if play}
+                <Alert.Root
+                    class="bg-gradient-to-r from-yellow-400/10 via-yellow-400/20 to-yellow-400/10 border-yellow-400/40"
+                >
+                    <Alert.Title class="font-semibold">Warning</Alert.Title>
+                    <Alert.Description>
+                        You are currently in play mode. Changes made to object
+                        properties will not be saved or updated here.
+                    </Alert.Description>
+                </Alert.Root>
+            {/if}
+
             <!-- Object Name Section -->
             <div class="space-y-3">
                 <div class="flex items-center gap-2 px-1">
@@ -426,6 +439,7 @@
                     </div>
                 </div>
             </div>
+
             <!-- Node3D Properties -->
             {#if object instanceof Types.BNode3D}
                 <div class="space-y-3">

@@ -827,8 +827,7 @@
                                         {#if tab.closeable}
                                             <button
                                                 class="absolute -right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 p-0 hover:bg-red-500/20 rounded-md flex items-center justify-center z-10 transition-colors duration-200"
-                                                onclick={() =>
-                                                    closeTab(tab.id)}
+                                                onclick={() => closeTab(tab.id)}
                                                 title="Close tab"
                                             >
                                                 <X class="w-3 h-3" />
@@ -1139,7 +1138,9 @@
                 collapsedSize={0}
                 class="transition-all duration-700 ease-out"
             >
-                <div class="h-full flex flex-col bg-card/60 backdrop-blur-sm border-l border-border/30">
+                <div
+                    class="h-full flex flex-col bg-card/60 backdrop-blur-sm border-l border-border/30"
+                >
                     <!-- Subtle gradient accent -->
                     <div
                         class="absolute inset-0 bg-gradient-to-bl from-purple-500/5 via-transparent to-blue-500/3 pointer-events-none"
@@ -1155,7 +1156,9 @@
                                     ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
                             >
-                                <div class="flex items-center justify-center gap-2">
+                                <div
+                                    class="flex items-center justify-center gap-2"
+                                >
                                     <Settings class="w-4 h-4" />
                                     Properties
                                 </div>
@@ -1168,7 +1171,9 @@
                                     ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
                             >
-                                <div class="flex items-center justify-center gap-2">
+                                <div
+                                    class="flex items-center justify-center gap-2"
+                                >
                                     <Bug class="w-4 h-4" />
                                     DevTools
                                 </div>
@@ -1181,7 +1186,9 @@
                                     ? 'text-foreground bg-card/40 border-b-2 border-purple-500'
                                     : 'text-muted-foreground hover:text-foreground hover:bg-muted/20'}"
                             >
-                                <div class="flex items-center justify-center gap-2">
+                                <div
+                                    class="flex items-center justify-center gap-2"
+                                >
                                     <Sparkles class="w-4 h-4" />
                                     Agent
                                 </div>
@@ -1191,16 +1198,31 @@
 
                     <!-- Tab Content -->
                     <div class="flex-1 overflow-hidden relative z-10">
-                        {#if rightPanelTab === "properties"}
+                        <div
+                            class="h-full {rightPanelTab === 'properties'
+                                ? ''
+                                : 'hidden'}"
+                        >
                             <PropertiesPanel
                                 {selectedObject}
                                 onPropertyChange={handlePropertyChange}
+                                {play}
                             />
-                        {:else if rightPanelTab === "devtools"}
+                        </div>
+                        <div
+                            class="h-full {rightPanelTab === 'devtools'
+                                ? ''
+                                : 'hidden'}"
+                        >
                             <DevToolsPanel />
-                        {:else if rightPanelTab === "agent"}
+                        </div>
+                        <div
+                            class="h-full {rightPanelTab === 'agent'
+                                ? ''
+                                : 'hidden'}"
+                        >
                             <AgentPanel />
-                        {/if}
+                        </div>
                     </div>
                 </div>
             </ResizablePane>
