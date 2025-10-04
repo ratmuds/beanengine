@@ -104,23 +104,29 @@ function createProjectStore() {
 
             try {
                 const currentState = get({ subscribe });
-                
+
                 // Normalize projectId to string for comparison
                 const normalizedId = projectId?.toString();
-                
+
                 // Find the target project:
                 // 1. If projectId is provided, try to find it in the projects array
                 // 2. If not found in array but matches currentProject, use currentProject
                 // 3. Otherwise fall back to currentProject if no projectId provided
                 let targetProject = normalizedId
-                    ? currentState.projects.find((p) => p.id.toString() === normalizedId)
+                    ? currentState.projects.find(
+                          (p) => p.id.toString() === normalizedId
+                      )
                     : null;
-                
+
                 // If not found in array, check if it matches currentProject
-                if (!targetProject && normalizedId && currentState.currentProject?.id.toString() === normalizedId) {
+                if (
+                    !targetProject &&
+                    normalizedId &&
+                    currentState.currentProject?.id.toString() === normalizedId
+                ) {
                     targetProject = currentState.currentProject;
                 }
-                
+
                 // If still no target and no projectId specified, use currentProject
                 if (!targetProject && !normalizedId) {
                     targetProject = currentState.currentProject;
