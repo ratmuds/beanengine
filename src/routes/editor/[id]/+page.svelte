@@ -23,13 +23,9 @@
         Move,
         RotateCw,
         Scaling,
-        House,
         Earth,
-        LayoutDashboard,
         MousePointer2,
         Box,
-        Camera,
-        Lightbulb,
         Settings,
         X,
         Code2,
@@ -65,9 +61,6 @@
     import AssetBrowser from "$lib/components/editor/AssetBrowser.svelte";
     import MaterialBrowser from "$lib/components/editor/MaterialBrowser.svelte";
     import ParticleBrowser from "$lib/components/editor/ParticleBrowser.svelte";
-    import { materialStore } from "$lib/materialStore";
-    import { assetStore } from "$lib/assetStore";
-    import { particleStore } from "$lib/particleStore";
     import { runtimeStore } from "$lib/runtimeStore";
     import type { BAsset } from "$lib/types";
 
@@ -608,7 +601,7 @@
                     class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-sm"
                 ></div>
                 <span class="text-foreground font-semibold text-base"
-                    >Test Project</span
+                    >{$projectStore.projectName}</span
                 >
             </Button>
 
@@ -825,7 +818,6 @@
             <!-- Left Panel - Conditional Content -->
             <ResizablePane
                 defaultSize={leftPanelSize}
-                size={leftPanelSize}
                 minSize={0}
                 maxSize={35}
                 collapsible={true}
@@ -867,7 +859,6 @@
             <!-- Center Panel - Tabbed Interface -->
             <ResizablePane
                 defaultSize={centerPanelSize}
-                size={centerPanelSize}
                 minSize={40}
                 class="transition-all duration-700 ease-out"
             >

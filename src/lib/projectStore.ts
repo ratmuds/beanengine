@@ -9,6 +9,7 @@ interface ProjectState {
     currentProject: Project | null;
     loading: boolean;
     error: string | null;
+    projectName?: string;
 }
 
 const initialState: ProjectState = {
@@ -16,6 +17,7 @@ const initialState: ProjectState = {
     currentProject: null,
     loading: false,
     error: null,
+    projectName: "Untitled",
 };
 
 function createProjectStore() {
@@ -199,6 +201,11 @@ function createProjectStore() {
                         error: error.message,
                     }));
                     return { error };
+                }
+
+                // Set name
+                if (data) {
+                    set({ ...initialState, projectName: data.name });
                 }
 
                 // Load the project data into the scene
