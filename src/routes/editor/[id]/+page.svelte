@@ -60,6 +60,7 @@
 
     import * as Types from "$lib/types";
     import { sceneStore } from "$lib/sceneStore";
+    import { projectStore } from "$lib/projectStore";
 
     import AssetBrowser from "$lib/components/editor/AssetBrowser.svelte";
     import MaterialBrowser from "$lib/components/editor/MaterialBrowser.svelte";
@@ -112,6 +113,12 @@
                 target.closest("textarea"))
         ) {
             return;
+        }
+
+        // Ctrl+S to save
+        if (event.ctrlKey && event.key.toLowerCase() === "s") {
+            event.preventDefault();
+            saveProject();
         }
 
         if (event.shiftKey && event.key.toLowerCase() === "a") {
@@ -283,14 +290,33 @@
         console.log("Property changed:", part);
     }
 
+    // Auto-save state
+    let lastSaveTime = $state<Date | null>(null);
+    let autoSaveInterval: ReturnType<typeof setInterval> | null = null;
+    let currentTime = $state(Date.now()); // For reactive time display
+
+    // Update current time every 10 seconds to refresh "saved X ago" text
+    setInterval(() => {
+        currentTime = Date.now();
+    }, 10000);
+
     // Add initial test objects on mount
     onMount(() => {
-        const testPart = new Types.BPart("Test Object", null, null);
-        testPart.position = new Types.BVector3(0, 0, 0);
-        testPart.scale = new Types.BVector3(10, 1, 10);
-        sceneStore.addObject(testPart);
-
         initializeViewport();
+
+        // Start auto-save timer (every 30 seconds)
+        autoSaveInterval = setInterval(() => {
+            if (!play && projectId) {
+                saveProject();
+            }
+        }, 30000);
+
+        // Cleanup on unmount
+        return () => {
+            if (autoSaveInterval) {
+                clearInterval(autoSaveInterval);
+            }
+        };
     });
 
     // Loading state
@@ -305,34 +331,57 @@
             console.log("Attempting to load project with ID:", projectId);
             if (!projectId) return;
 
-            loadingText = `Loading project ${projectId}...`;
-            const raw = localStorage.getItem(`beanengine:project:${projectId}`);
-            console.log("Raw project data:", raw);
-            if (!raw) return;
+            loadingText = `Downloading project data...`;
+            const result = await projectStore.loadProject(projectId);
 
-            const payload = JSON.parse(raw);
-            console.log("Loaded project data:", payload);
-            sceneStore.clearScene();
-            sceneStore.deserialize(payload);
+            // Wait a moment to stabilize
+            await new Promise((r) => setTimeout(r, 1000));
+
+            if (result.error) {
+                console.error("Failed to load project:", result.error);
+                // Optionally show error to user
+                return;
+            }
+
+            console.log("Loaded project data:", result.data);
         } catch (err) {
             console.error("Failed to load project", err);
         }
     }
 
+    let isSaving = $state(false);
+
+    function formatTimeSince(date: Date): string {
+        // Use currentTime for reactivity
+        const seconds = Math.floor((currentTime - date.getTime()) / 1000);
+
+        if (seconds < 60) return "just now";
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes}m ago`;
+        const hours = Math.floor(minutes / 60);
+        if (hours < 24) return `${hours}h ago`;
+        return `${Math.floor(hours / 24)}d ago`;
+    }
+
     async function saveProject() {
         try {
             console.log("Attempting to save project with ID:", projectId);
-            if (!projectId) return;
+            if (!projectId || isSaving) return;
 
-            const payload = sceneStore.serialize();
-            localStorage.setItem(
-                `beanengine:project:${projectId}`,
-                JSON.stringify(payload)
-            );
+            isSaving = true;
+            const result = await projectStore.saveProject(projectId);
 
-            console.log("Project saved:", payload);
+            if (result.error) {
+                console.error("Failed to save project:", result.error);
+                // Optionally show error to user
+            } else {
+                console.log("Project saved successfully");
+                lastSaveTime = new Date();
+            }
         } catch (err) {
             console.error("Failed to save project", err);
+        } finally {
+            isSaving = false;
         }
     }
 
@@ -728,13 +777,32 @@
                     size="sm"
                     class="h-10 px-4 bg-card/60 backdrop-blur-sm border border-border/40 rounded-2xl text-muted-foreground hover:text-foreground hover:bg-card/80 hover:border-border/60 transition-all duration-200 shadow-sm"
                     onclick={() => saveProject()}
-                    title="Save Project"
+                    disabled={isSaving}
+                    title="Save Project (Ctrl+S)"
                 >
                     <div class="flex items-center gap-2">
-                        <Save class="w-4 h-4 text-green-500" />
-                        <span class="text-sm font-medium">Save</span>
+                        {#if isSaving}
+                            <div
+                                class="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"
+                            ></div>
+                        {:else}
+                            <Save class="w-4 h-4 text-green-500" />
+                        {/if}
+                        <span class="text-sm font-medium"
+                            >{isSaving ? "Saving..." : "Save"}</span
+                        >
                     </div>
                 </Button>
+
+                <!-- Last Save Indicator -->
+                {#if lastSaveTime && !isSaving}
+                    <span
+                        class="text-xs text-muted-foreground/60 ml-2"
+                        transition:fade={{ duration: 200 }}
+                    >
+                        Saved {formatTimeSince(lastSaveTime)}
+                    </span>
+                {/if}
             </div>
         </div>
 

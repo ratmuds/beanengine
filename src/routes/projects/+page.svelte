@@ -68,25 +68,9 @@
         }
     }
 
-    async function saveCurrentProject() {
-        if (!$projectStore.currentProject) {
-            // Create new project with current scene
-            showCreateDialog = true;
-            return;
-        }
-
-        await projectStore.saveProject();
-    }
-
     async function loadProject(projectId: string) {
-        const result = await projectStore.loadProject(projectId);
-
-        if (!result.error) {
-            // Navigate to main editor
-            goto(`/editor/${projectId}`);
-        } else {
-            alert("Failed to load project. Please try again.");
-        }
+        // Navigate to editor
+        goto(`/editor/${projectId}`);
     }
 
     async function deleteProject(projectId: string) {
@@ -203,25 +187,11 @@
                     <Plus class="w-4 h-4 mr-2" />
                     New Project
                 </Button>
-                <Button variant="outline" onclick={saveCurrentProject}>
-                    <Save class="w-4 h-4 mr-2" />
-                    {$projectStore.currentProject
-                        ? "Save Current"
-                        : "Save as New"}
-                </Button>
                 <Button variant="outline" onclick={() => goto("/")}>
                     <Home class="w-4 h-4 mr-2" />
                     Back to Editor
                 </Button>
             </div>
-
-            {#if $projectStore.currentProject}
-                <div class="flex items-center gap-2">
-                    <Badge variant="secondary">
-                        Current: {$projectStore.currentProject.name}
-                    </Badge>
-                </div>
-            {/if}
         </div>
 
         <!-- Search and Filter Bar -->
