@@ -12,14 +12,21 @@ The platform runs entirely in the browser and uses a custom-built visual scripti
 
 ## Why?
 
-Educational game development tools often sacrifice power for simplicity. bean engine attempts to solve this by:
+Platforms like Scratch can feel too simple, while full engines like Unity, Unreal, and Godot are powerful, can be intimidating. This engine tries to solve this:
 
 -   **Custom Visual Scripting**: A from-scratch block-based programming language that feels familiar to Scratch users but compiles to real game logic
--   **Professional Architecture**: Uses actual game engine patterns (GameObject-Component system, scene graphs, physics integration)
--   **Simplified Interface**: Cleaner, more focused UI compared to engines like Unity or Unreal, while maintaining professional workflows
+-   **Simplified Interface**: Cleaner, more focused UI compared to bigger engines, while maintaining professional workflows
 -   **No Installation**: Runs entirely in the browser with cloud project storage
 
 The goal is to provide a stepping stone for learners who have outgrown Scratch but find Unity or Unreal overwhelming.
+
+## Visual Scripting
+The visual scripting language was pretty hard to make, especially the drag and drop and chips and nested dragging. The engine first flattens the raw code data into a cleaner format, and then an interpreter runs the code, block by block. It's not perfect, but I think it looks pretty cool.
+
+At first I wanted to use Scratch for the scripting since it was familiar, but it ended up getting too complicated so I ended up just making one myself.
+
+<img width="1919" height="1033" alt="Screenshot 2025-10-04 202958" src="https://github.com/user-attachments/assets/9ee9a55b-0412-4ed0-ab65-daa0a5fc8275" />
+<img width="1097" height="655" alt="Screenshot 2025-10-04 203011" src="https://github.com/user-attachments/assets/2f30d106-e1d9-4f88-8cf3-305d9be205ca" />
 
 ## Status: Proof of Concept
 
@@ -31,7 +38,6 @@ This is a demonstration project, not production software. It works and showcases
 
 -   Custom block-based programming language
 -   Event-driven logic (object lifecycle, input, collisions)
--   Variable scoping (global and script-local)
 -   Chip system for value expressions and calculations
 -   Code compilation and runtime interpretation
 
@@ -59,18 +65,6 @@ This is a demonstration project, not production software. It works and showcases
 
 -   Built-in UI elements (containers, text, buttons)
 -   Percentage-based positioning and sizing
-
-### Player Controller
-
--   First-person character controller
--   Mouse look with configurable sensitivity
--   WASD movement
-
-### Navigation System
-
--   Waypoint paths for object movement
--   Navigator component for automated pathing
--   Configurable speed and looping
 
 ### AI Assistant
 
@@ -147,4 +141,4 @@ src/lib/
 
 ## License
 
-This project is open source for educational and reference purposes.
+This project is open source with a MIT license.
