@@ -120,6 +120,10 @@ pnpm dev
 pnpm build
 ```
 
+Create a new Supabase DB, and run the SQL commands in `supabase.sql` to setup the database. Then copy the DB URL and anon key.
+
+Copy the `.env.example` to `.env` and add the Supabase values, and an OpenAI key if you want to use the agent.
+
 Open http://localhost:5173 to access the editor.
 
 ## Project Structure

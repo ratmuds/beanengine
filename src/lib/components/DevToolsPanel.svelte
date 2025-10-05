@@ -49,15 +49,6 @@
         return matchesFilter && matchesLevel;
     });
 
-    // Auto-scroll to bottom when new logs arrive
-    /*$: if (autoScroll && consoleContainer && logs.length > 0) {
-        setTimeout(() => {
-            if (consoleContainer && consoleContainer.scrollHeight) {
-                consoleContainer.scrollTop = consoleContainer.scrollHeight;
-            }
-        }, 0);
-    }*/
-
     function toggleLogLevel(level: LogLevel) {
         if (selectedLogLevels.has(level)) {
             selectedLogLevels.delete(level);
@@ -136,8 +127,7 @@
             "System"
         );
 
-        // Add some demo variables
-        // TODO: uhh make it not demo :)
+        // Add some demo variables for now
         runtimeStore.setVariable("gameTime", 0.0, "global");
         runtimeStore.setVariable("playerHealth", 100, "global");
         runtimeStore.setVariable("isPlaying", true, "global");
@@ -149,9 +139,7 @@
     });
 </script>
 
-<div
-    class="h-full flex flex-col relative overflow-hidden"
->
+<div class="h-full flex flex-col relative overflow-hidden">
     <!-- Header -->
     <div class="p-5 border-b border-border/30 relative z-10 space-y-4">
         <div class="flex items-center justify-between">

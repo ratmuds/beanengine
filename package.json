@@ -39,6 +39,7 @@
         "eslint-plugin-svelte": "^3.11.0",
         "globals": "^16.3.0",
         "paneforge": "^1.0.0",
+        "supabase": "^2.48.3",
         "svelte": "^5.0.0",
         "svelte-check": "^4.0.0",
         "svelte-eslint-parser": "^1.3.1",
@@ -52,13 +53,13 @@
     },
     "pnpm": {
         "onlyBuiltDependencies": [
-            "esbuild"
+            "esbuild",
+            "supabase"
         ]
     },
     "dependencies": {
         "@dimforge/rapier3d-compat": "^0.19.0",
         "@neodrag/svelte": "^2.3.3",
-        "@newkrok/three-particles": "^2.1.0",
         "@supabase/supabase-js": "^2.57.4",
         "@threejs-addons/threejs-addons": "^0.3.0",
         "@threlte/core": "^8.1.3",
