@@ -150,7 +150,7 @@
 </script>
 
 <svelte:head>
-    <title>Projects - Bean Engine</title>
+    <title>Projects - bean engine</title>
 </svelte:head>
 
 <div class="min-h-screen bg-background">
@@ -186,10 +186,6 @@
                 <Button onclick={() => (showCreateDialog = true)}>
                     <Plus class="w-4 h-4 mr-2" />
                     New Project
-                </Button>
-                <Button variant="outline" onclick={() => goto("/")}>
-                    <Home class="w-4 h-4 mr-2" />
-                    Back to Editor
                 </Button>
             </div>
         </div>
