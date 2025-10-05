@@ -2,6 +2,8 @@
 
 A web-based 3D game development platform designed to bridge the gap between visual block programming (Scratch) and professional game engines.
 
+<img width="1919" height="1029" alt="Screenshot 2025-10-04 142824" src="https://github.com/user-attachments/assets/38c5cb6c-bbf1-4280-8669-4fe12e36259f" />
+
 ## What is bean engine?
 
 bean engine is a proof-of-concept game development environment that combines visual scripting with a fully-featured 3D editor. It provides an accessible introduction to game development concepts while using real game engine architecture.
