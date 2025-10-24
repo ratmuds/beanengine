@@ -32,6 +32,25 @@ At first I wanted to use Scratch for the scripting since it was familiar, but it
 
 This is a demonstration project, not production software. It works and showcases the core concepts, but is not intended for actual game development.
 
+## Videos
+
+
+https://github.com/user-attachments/assets/b4ee244b-3385-4808-86a2-6f47b6552600
+
+
+
+https://github.com/user-attachments/assets/832f4eb4-87fb-4b26-8b7f-b8905ccecdda
+
+
+
+https://github.com/user-attachments/assets/933a5d3b-071c-4fe1-bad8-a6270db767f2
+
+
+
+https://github.com/user-attachments/assets/de1ba16a-1657-49e3-b9a3-a48ec18ea1f3
+
+
+
 ## Features
 
 ### Visual Scripting System
